@@ -5,13 +5,16 @@
 //  Created by Danyil Skrypnichenko on 9/27/25.
 //
 
+// MARK: - InvoicerApp.swift
 import SwiftUI
 
 @main
-struct InvoicerAppApp: App {
+struct InvoicerApp: App {
+    @StateObject private var app = AppState()
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootTabView()
+                .environmentObject(app)
         }
     }
 }

@@ -1,0 +1,30 @@
+//
+//  .gitignore
+//  InvoicerApp
+//
+//  Created by Danyil Skrypnichenko on 9/27/25.
+//
+
+# Xcode / Swift / iOS
+DerivedData/
+build/
+*.xcuserstate
+*.xcuserdata/
+*.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
+.DS_Store
+
+# SwiftPM
+/.build/
+Package.resolved
+
+# CocoaPods (если будешь использовать)
+/Pods/
+
+# Fastlane (если будешь использовать)
+/fastlane/report.xml
+/fastlane/Preview.html
+/fastlane/screenshots
+/fastlane/test_output
+
+# Images/Design exports (большие бинарники — лучше в LFS)
+/DesignExports/
