@@ -204,3 +204,36 @@ struct CustomerDetailsView: View {
         showTemplatePicker = true
     }
 }
+// MARK: - Customer Status Chip
+
+struct CustomerStatusChip: View {
+    let status: CustomerStatus
+
+    private var title: String {
+        switch status {
+        case .active: return "active"
+        case .inactive: return "inactive"
+        }
+    }
+
+    private var tint: Color {
+        switch status {
+        case .active: return .green
+        case .inactive: return .secondary
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(tint)
+                .frame(width: 6, height: 6)
+            Text(title).bold()
+        }
+        .font(.caption2)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Capsule().fill(tint.opacity(0.12)))
+        .foregroundStyle(tint)
+    }
+}

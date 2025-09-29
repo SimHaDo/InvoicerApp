@@ -7,211 +7,244 @@
 
 import SwiftUI
 
-// ============ Customers Tab ============
+// MARK: - ViewModel
 
 final class CustomersVM: ObservableObject {
-    @Published var query = ""
+    @Published var query: String = ""
 
     func filtered(_ customers: [Customer]) -> [Customer] {
-        let q = query.lowercased()
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !q.isEmpty else { return customers }
         return customers.filter {
-            $0.name.lowercased().contains(q)
-            || $0.email.lowercased().contains(q)
-            || ($0.organization ?? "").lowercased().contains(q)
+            $0.name.lowercased().contains(q) || $0.email.lowercased().contains(q)
         }
     }
-
-    func summary(for customer: Customer, invoices: [Invoice]) -> (total: Decimal, count: Int) {
-        let list = invoices.filter { $0.customer.id == customer.id }
-        let total = list.map { $0.subtotal }.reduce(0, +)
-        return (total, list.count)
-    }
 }
+
+// MARK: - Screen
 
 struct CustomersScreen: View {
     @EnvironmentObject private var app: AppState
     @StateObject private var vm = CustomersVM()
 
-    @State private var showAdd = false
-    @State private var showCompanySetup = false
-    @State private var showTemplatePicker = false
+    @State private var showAddCustomer = false
+    @State private var showEmptyPaywall = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 14) {
 
-                    // Header left texts + actions
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Customers").font(.largeTitle).bold()
-                        Text("Manage your client relationships")
-                            .font(.subheadline).foregroundStyle(.secondary)
+                    // Header (единый стиль)
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Customers").font(.largeTitle).bold()
+                            Text("Manage your client relationships")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        if app.isPremium { ProBadge() }
                     }
 
-                    HStack(spacing: 10) {
+                    // Actions
+                    HStack(spacing: 12) {
                         Button {
-                            showAdd = true
+                            showAddCustomer = true
                         } label: {
                             Label("Add Customer", systemImage: "person.crop.circle.badge.plus")
-                                .bold().padding(.horizontal, 14).padding(.vertical, 10)
-                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.08)))
+                                .frame(maxWidth: .infinity)
                         }
+                        .padding(.vertical, 12)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.1)))
 
                         Button {
                             onCreateInvoice()
                         } label: {
                             Label("Create Invoice", systemImage: "doc.badge.plus")
-                                .bold().padding(.horizontal, 14).padding(.vertical, 10)
-                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.black))
-                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
                         }
+                        .padding(.vertical, 12)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.black))
+                        .foregroundStyle(.white)
                     }
 
                     // Search
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                        TextField("Search customers…", text: $vm.query)
-                            .textInputAutocapitalization(.never)
-                            .disableAutocorrection(true)
-                    }
-                    .padding(12)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.08)))
+                    SearchBar(text: $vm.query)
+                        .padding(.top, 2)
 
-                    // Free Plan callout (как на скрине)
-                    FreePlanCustomersCard()
+                    // Free plan banner (только для free)
+                    if !app.isPremium {
+                        FreePlanCardCompact(
+                            remaining: app.remainingFreeInvoices,
+                            onUpgrade: { showEmptyPaywall = true },
+                            onCreate: onCreateInvoice
+                        )
+                    }
 
                     // List
-                    VStack(spacing: 12) {
-                        ForEach(vm.filtered(app.customers)) { c in
-                            NavigationLink {
-                                CustomerDetailsView(customerID: c.id)
-                            } label: {
-                                CustomerRow(customer: c,
-                                            summary: vm.summary(for: c, invoices: app.invoices))
+                    if app.customers.isEmpty {
+                        emptyList
+                    } else {
+                        VStack(spacing: 10) {
+                            ForEach(vm.filtered(app.customers)) { c in
+                                NavigationLink {
+                                    // ВАЖНО: детали открываем по id, внутри вью найдёт Binding сам
+                                    CustomerDetailsView(customerID: c.id)
+                                } label: {
+                                    CustomerRow(customer: c)
+                                }
                             }
                         }
+                        .padding(.top, 4)
                     }
                 }
-                .padding()
+                .padding(.horizontal)
+                .padding(.top, 6)
             }
-            .sheet(isPresented: $showAdd) { AddCustomerView() }
-            .sheet(isPresented: $showCompanySetup) {
-                CompanySetupView {
-                    showCompanySetup = false
-                    showTemplatePicker = true
+            .sheet(isPresented: $showAddCustomer) {
+                AddCustomerSheet { newCustomer in
+                    app.customers.append(newCustomer)
                 }
             }
-            .sheet(isPresented: $showTemplatePicker) {
-                TemplatePickerView()
-            }
+            .sheet(isPresented: $showEmptyPaywall) { EmptyScreen() }
         }
     }
+
+    // MARK: - Helpers
 
     private func onCreateInvoice() {
-        if app.company == nil { showCompanySetup = true }
-        else { showTemplatePicker = true }
-    }
-}
-
-// Premium upsell card (customers tab flavor)
-struct FreePlanCustomersCard: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "crown.fill").foregroundStyle(.yellow)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Free Plan").bold()
-                    Text("Invoice limit reached").font(.caption).foregroundStyle(.secondary)
-                }
-                Spacer()
-            }
-            Button("Upgrade to Create More") { }
-                .bold()
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 12).fill(
-                    LinearGradient(colors: [.orange, .red], startPoint: .leading, endPoint: .trailing)
-                ))
-                .foregroundStyle(.white)
-
-            Button("Create Invoice (Limit Reached)") { }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.06)))
-                .foregroundStyle(.secondary)
-
-            HStack(spacing: 24) {
-                Label("Unlimited invoices", systemImage: "checkmark")
-                Label("Premium templates", systemImage: "checkmark")
-                Label("Advanced features", systemImage: "checkmark")
-            }.font(.caption).foregroundStyle(.secondary)
+        // если бесплатный лимит исчерпан — показываем пэйволл-заглушку
+        guard app.canCreateInvoice else {
+            showEmptyPaywall = true
+            return
         }
+        // поведение по твоему ТЗ: пока тоже показываем заглушку (подключим позже реальный переход)
+        showEmptyPaywall = true
+    }
+
+    private var emptyList: some View {
+        VStack(spacing: 12) {
+            Text("No customers yet").font(.headline)
+            Text("Add a customer to start billing.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Button {
+                showAddCustomer = true
+            } label: {
+                Text("Add Customer")
+                    .bold()
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.black))
+                    .foregroundStyle(.white)
+            }
+        }
+        .frame(maxWidth: .infinity)
         .padding(16)
-        .background(RoundedRectangle(cornerRadius: 16).stroke(Color.yellow.opacity(0.4)))
+        .background(RoundedRectangle(cornerRadius: 16).stroke(Color.secondary.opacity(0.15)))
+        .padding(.top, 6)
     }
 }
 
-struct CustomerRow: View {
-    let customer: Customer
-    let summary: (total: Decimal, count: Int)
+// MARK: - Row
 
-    var initials: String {
-        customer.name.split(separator: " ").compactMap { $0.first }.prefix(2).map(String.init).joined()
-    }
+private struct CustomerRow: View {
+    @EnvironmentObject private var app: AppState
+    let customer: Customer
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 16).fill(Color.white)
-                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.secondary.opacity(0.15)))
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
+                Circle()
+                    .fill(Color.secondary.opacity(0.12))
+                    .frame(width: 44, height: 44)
+                    .overlay(Text(initials(from: customer.name)).bold())
 
-            HStack(alignment: .center, spacing: 12) {
-                Circle().fill(Color.secondary.opacity(0.12)).frame(width: 44, height: 44)
-                    .overlay(Text(initials).bold())
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
-                        Text(customer.name).bold()
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(customer.name).font(.headline)
+                        Spacer()
+                        // Можно заменить на CustomerStatusChip(status: customer.status) если он у тебя уже есть
                         CustomerStatusChip(status: customer.status)
                     }
-                    HStack(spacing: 12) {
+
+                    HStack(spacing: 14) {
                         if !customer.email.isEmpty {
-                            Label(customer.email, systemImage: "envelope").font(.caption)
-                                .foregroundStyle(.secondary)
+                            Label(customer.email, systemImage: "envelope")
                         }
                         if !customer.phone.isEmpty {
-                            Label(customer.phone, systemImage: "phone").font(.caption)
-                                .foregroundStyle(.secondary)
+                            Label(customer.phone, systemImage: "phone")
                         }
                     }
-                    if let org = customer.organization, !org.isEmpty {
-                        Text(org).font(.caption).foregroundStyle(.secondary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                    HStack {
+                        Text("\(invoicesCount) invoices")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text(Money.fmt(totalSpent, code: Locale.current.currency?.identifier ?? "USD"))
+                            .font(.subheadline).bold()
                     }
                 }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(Money.fmt(summary.total, code: Locale.current.currency?.identifier ?? "USD"))
-                        .bold()
-                    HStack(spacing: 4) {
-                        Text("\(summary.count)").font(.caption).foregroundStyle(.secondary)
-                        Text("invoices").font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-                Image(systemName: "chevron.right").foregroundStyle(.tertiary)
             }
-            .padding(16)
+            .padding(14)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.secondary.opacity(0.15))
+            )
         }
+    }
+
+    // Вычисления по данным AppState
+    private var invoicesCount: Int {
+        app.invoices.filter { $0.customer.id == customer.id }.count
+    }
+    private var totalSpent: Decimal {
+        app.invoices.filter { $0.customer.id == customer.id }
+            .map(\.subtotal)
+            .reduce(0, +)
+    }
+    private func initials(from name: String) -> String {
+        name.split(separator: " ").compactMap { $0.first }.prefix(2).map(String.init).joined()
     }
 }
 
-struct CustomerStatusChip: View {
-    let status: CustomerStatus
+// MARK: - AddCustomerSheet
+
+struct AddCustomerSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = ""
+    @State private var email = ""
+    @State private var phone = ""
+    var onSave: (Customer) -> Void
+
+    private var canSave: Bool {
+        !name.trimmingCharacters(in: .whitespaces).isEmpty &&
+        email.contains("@")
+    }
+
     var body: some View {
-        Text(status.rawValue)
-            .font(.caption2).bold()
-            .padding(.horizontal, 8).padding(.vertical, 4)
-            .background(
-                Capsule().fill(status == .active ? Color.black : Color.secondary.opacity(0.15))
-            )
-            .foregroundStyle(status == .active ? .white : .primary)
+        NavigationStack {
+            Form {
+                Section("Basics") {
+                    TextField("Name", text: $name)
+                    TextField("Email", text: $email).textInputAutocapitalization(.never)
+                    TextField("Phone", text: $phone).keyboardType(.phonePad)
+                }
+            }
+            .navigationTitle("Add Customer")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Save") {
+                        onSave(Customer(name: name, email: email, phone: phone))
+                        dismiss()
+                    }.disabled(!canSave)
+                }
+            }
+        }
     }
 }

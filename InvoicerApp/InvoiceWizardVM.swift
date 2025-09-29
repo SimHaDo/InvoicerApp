@@ -274,52 +274,63 @@ struct StepItemsPricingView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Label("Add Products/Services", systemImage: "shippingbox")
-                        Spacer()
-                        Button("+ Add New") { /* later */ }
-                    }
-                    HStack {
-                        TextField("Search products/services…", text: $search).fieldStyle()
-                        Menu(category) {
-                            Picker("", selection: $category) {
-                                Text("All").tag("All")
-                                ForEach(Array(Set(app.products.map { $0.category })), id: \.self) {
-                                    Text($0).tag($0)
+                // Add Products/Services
+                GroupBox {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Label("Add Products/Services", systemImage: "shippingbox")
+                            Spacer()
+                            Button("+ Add New") { /* TODO */ }
+                        }
+
+                        HStack(spacing: 8) {
+                            TextField("Search products/services…", text: $search).fieldStyle()   // <—
+                            Menu {
+                                Picker("Category", selection: $category) {
+                                    Text("All").tag("All")
+                                    ForEach(Array(Set(app.products.map { $0.category })).sorted(), id: \.self) { c in
+                                        Text(c).tag(c)
+                                    }
                                 }
+                            } label: {
+                                HStack { Text(category); Image(systemName: "chevron.down") }
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 8)
+                                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.secondary.opacity(0.1)))
                             }
                         }
-                    }
-                    ForEach(filteredProducts) { p in
-                        ProductRow(p: p) { add(product: p) }
-                    }
-                }
-                .modifier(CompanySetupCard())
 
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("Invoice Items").font(.headline)
-                        Spacer()
-                        Button("+ Add Custom Item") { addCustom() }
+                        ForEach(filteredProducts) { p in
+                            WizardProductRow(p: p) { add(product: p) }
+                        }
                     }
-                    ForEach(vm.items) { item in
-                        ItemEditor(item: binding(for: item))
-                    }
-                    HStack {
-                        Text("Subtotal")
-                        Spacer()
-                        Text(Money.fmt(vm.subtotal, code: vm.currency)).bold()
-                    }
+                    .padding(4)
                 }
-                .modifier(CompanySetupCard())
+
+                // Invoice Items
+                GroupBox {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Invoice Items").font(.headline)
+                            Spacer()
+                            Button("+ Add Custom Item") { addCustom() }
+                        }
+                        ForEach(vm.items) { item in
+                            ItemEditor(item: binding(for: item))
+                        }
+                        HStack {
+                            Text("Subtotal")
+                            Spacer()
+                            Text(Money.fmt(vm.subtotal, code: vm.currency)).bold()
+                        }
+                    }
+                    .padding(4)
+                }
 
                 HStack {
                     Button("Previous", action: prev).buttonStyle(.bordered)
                     Spacer()
-                    Button("Next", action: onSaved)
-                        .buttonStyle(.borderedProminent)
-                        .disabled(vm.items.isEmpty)
+                    Button("Next", action: onSaved).buttonStyle(.borderedProminent).disabled(vm.items.isEmpty)
                 }
             }
             .padding()
@@ -333,18 +344,40 @@ struct StepItemsPricingView: View {
         }
     }
 
-    private func add(product p: Product) {
-        vm.items.append(LineItem(description: p.name, quantity: 1, rate: p.rate))
-    }
-    private func addCustom() {
-        vm.items.append(LineItem(description: "", quantity: 1, rate: 0))
-    }
+    private func add(product p: Product) { vm.items.append(LineItem(description: p.name, quantity: 1, rate: p.rate)) }
+    private func addCustom() { vm.items.append(LineItem(description: "", quantity: 1, rate: 0)) }
+
     private func binding(for item: LineItem) -> Binding<LineItem> {
         guard let idx = vm.items.firstIndex(where: { $0.id == item.id }) else { return .constant(item) }
         return $vm.items[idx]
     }
 }
 
+private struct WizardProductRow: View {
+    let p: Product
+    let onAdd: () -> Void
+    var body: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack { Text(p.name).bold(); Tag(text: p.category) }
+                if !p.details.isEmpty {
+                    Text(p.details).font(.caption).foregroundStyle(.secondary)
+                }
+                Text("\(Money.fmt(p.rate, code: Locale.current.currency?.identifier ?? "USD")) / hour")
+                    .font(.caption)
+            }
+            Spacer()
+            Button(action: onAdd) {
+                HStack { Image(systemName: "cart.badge.plus"); Text("Add") }
+                    .padding(.horizontal, 12).padding(.vertical, 8)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.black))
+                    .foregroundStyle(.white)
+            }
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.15)))
+    }
+}
 // MARK: - Details
 
 struct InvoiceDetailsView: View {
@@ -399,154 +432,7 @@ struct InvoiceDetailsView: View {
 
 // ============ Products & Services ============
 
-final class ProductsVM: ObservableObject {
-    @Published var query = ""
-    @Published var category: String = "All"
 
-    func filtered(_ products: [Product]) -> [Product] {
-        let q = query.lowercased()
-        return products.filter { p in
-            (category == "All" || p.category == category) &&
-            (q.isEmpty || p.name.lowercased().contains(q) || p.details.lowercased().contains(q))
-        }
-    }
-
-    func categories(from products: [Product]) -> [String] {
-        Array(Set(products.map { $0.category })).sorted()
-    }
-
-    func stats(for products: [Product]) -> (count: Int, categories: Int, avgPrice: Decimal) {
-        let count = products.count
-        let catCount = Set(products.map { $0.category }).count
-        let avg: Decimal = count > 0
-            ? products.map { $0.rate }.reduce(0, +) / Decimal(count)
-            : 0
-        return (count, catCount, avg)
-    }
-}
-
-struct ProductsScreen: View {
-    @EnvironmentObject private var app: AppState
-    @StateObject private var vm = ProductsVM()
-    @State private var sheetMode: ProductFormView.Mode? = nil
-    @State private var showAdd = false
-    @State private var editingID: UUID? = nil
-    @State private var showCompanySetup = false
-    @State private var showTemplatePicker = false
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-
-                    // Title & actions
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Products &").font(.largeTitle).bold()
-                        Text("Services").font(.largeTitle).bold()
-                        Text("Manage your service catalog")
-                            .font(.subheadline).foregroundStyle(.secondary)
-                    }
-
-                    HStack(spacing: 10) {
-                        Button {
-                            showAdd = true
-                        } label: {
-                            Label("Add Product", systemImage: "plus")
-                                .bold().padding(.horizontal, 14).padding(.vertical, 10)
-                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.08)))
-                        }
-
-                        Button {
-                            onCreateInvoice()
-                        } label: {
-                            Label("Create Invoice", systemImage: "doc.badge.plus")
-                                .bold().padding(.horizontal, 14).padding(.vertical, 10)
-                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.black))
-                                .foregroundStyle(.white)
-                        }
-                    }
-
-                    // Search + Category
-                    HStack(spacing: 10) {
-                        HStack {
-                            Image(systemName: "magnifyingglass")
-                            TextField("Search products/services...", text: $vm.query)
-                                .textInputAutocapitalization(.never)
-                                .disableAutocorrection(true)
-                        }
-                        .padding(12)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.08)))
-
-                        Menu {
-                            Picker("Category", selection: $vm.category) {
-                                Text("All").tag("All")
-                                ForEach(vm.categories(from: app.products), id: \.self) { Text($0).tag($0) }
-                            }
-                        } label: {
-                            HStack { Text(vm.category); Image(systemName: "chevron.down") }
-                                .padding(.horizontal, 12).padding(.vertical, 10)
-                                .background(RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.08)))
-                        }
-                    }
-
-                    // Free Plan card
-                    FreePlanProductsCard()
-
-                    // List
-                    VStack(spacing: 12) {
-                        ForEach(vm.filtered(app.products)) { p in
-                            ProductCatalogRow(
-                                product: p,
-                                onEdit: { editingID = p.id },
-                                onQuickAdd: { quickAdd(p) }
-                            )
-                        }
-                    }
-
-                    // Stats row
-                    let s = vm.stats(for: vm.filtered(app.products))
-                    HStack(spacing: 12) {
-                        MetricTile(title: "Total Products", value: "\(s.count)")
-                        MetricTile(title: "Categories", value: "\(s.categories)")
-                        MetricTile(title: "Avg. Price", value: Money.fmt(s.avgPrice, code: Locale.current.currency?.identifier ?? "USD"))
-                    }
-
-                    // Premium features footer
-                    PremiumFeaturesCard(
-                        title: "Premium Features",
-                        subtitle: "Bulk import, advanced pricing tiers, and product analytics"
-                    )
-                }
-                .padding()
-            }
-            .sheet(isPresented: $showAdd) {
-                ProductFormView(mode: .add)
-            }
-            .sheet(item: $sheetMode) { mode in
-                ProductFormView(mode: mode)
-            }
-            .sheet(isPresented: $showCompanySetup) {
-                CompanySetupView {
-                    showCompanySetup = false
-                    showTemplatePicker = true
-                }
-            }
-            .sheet(isPresented: $showTemplatePicker) {
-                TemplatePickerView()
-            }
-        }
-    }
-
-    private func onCreateInvoice() {
-        if app.company == nil { showCompanySetup = true }
-        else { showTemplatePicker = true }
-    }
-
-    private func quickAdd(_ p: Product) {
-        app.preselectedItems = [ LineItem(description: p.name, quantity: 1, rate: p.rate) ]
-        onCreateInvoice()
-    }
-}
 
 
 // MARK: - Reusable UI
@@ -568,27 +454,7 @@ struct Avatar: View {
     }
 }
 
-struct ProductRow: View {
-    let p: Product
-    let onAdd: () -> Void
-    var body: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack { Text(p.name).bold(); Tag(text: p.category) }
-                Text(p.details).font(.caption).foregroundStyle(.secondary)
-                Text("$\(NSDecimalNumber(decimal: p.rate))/ hour").font(.caption)
-            }
-            Spacer()
-            Button(action: onAdd) {
-                HStack { Image(systemName: "cart.badge.plus"); Text("Add") }
-                    .padding(.horizontal, 12).padding(.vertical, 8)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.1)))
-            }
-        }
-        .padding(10)
-        .background(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.15)))
-    }
-}
+
 
 struct Tag: View {
     let text: String
@@ -741,72 +607,5 @@ struct PremiumFeaturesCard: View {
         }
         .padding(16)
         .background(RoundedRectangle(cornerRadius: 16).stroke(Color.yellow.opacity(0.4)))
-    }
-}
-struct ProductFormView: View {
-    enum Mode: Identifiable {
-        case add
-        case edit(productID: UUID)
-        var id: String {
-            switch self { case .add: return "add"; case .edit(let id): return id.uuidString }
-        }
-    }
-
-    @EnvironmentObject private var app: AppState
-    @Environment(\.dismiss) private var dismiss
-    let mode: Mode
-
-    @State private var model = Product(id: UUID(), name: "", details: "", rate: 0, category: "General")
-    @State private var title = "Add Product"
-
-    var canSave: Bool { !model.name.trimmingCharacters(in: .whitespaces).isEmpty }
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Basics") {
-                    TextField("Name", text: $model.name)
-                    TextField("Details", text: $model.details, axis: .vertical)
-                }
-                Section("Pricing") {
-                    DecimalField(title: "Hourly rate", value: $model.rate)
-                }
-                Section("Category") {
-                    TextField("Category", text: $model.category)
-                }
-            }
-            .navigationTitle(title)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Save") { save() }.disabled(!canSave)
-                }
-            }
-            .onAppear { loadIfNeeded() }
-        }
-    }
-
-    private func loadIfNeeded() {
-        switch mode {
-        case .add:
-            title = "Add Product"
-        case .edit(let id):
-            title = "Edit Product"
-            if let idx = app.products.firstIndex(where: { $0.id == id }) {
-                model = app.products[idx]
-            }
-        }
-    }
-
-    private func save() {
-        switch mode {
-        case .add:
-            app.products.append(model)
-        case .edit(let id):
-            if let idx = app.products.firstIndex(where: { $0.id == id }) {
-                app.products[idx] = model
-            }
-        }
-        dismiss()
     }
 }

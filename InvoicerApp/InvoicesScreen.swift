@@ -8,92 +8,300 @@
 import SwiftUI
 
 // MARK: - InvoicesScreen
+
 final class InvoicesVM: ObservableObject {
     @Published var query = ""
-    func filtered(_ invoices: [Invoice]) -> [Invoice] { let q = query.lowercased(); guard !q.isEmpty else { return invoices }; return invoices.filter{ $0.number.lowercased().contains(q) || $0.customer.name.lowercased().contains(q) } }
-    func totalOutstanding(_ invoices: [Invoice]) -> Decimal { invoices.filter{ $0.status != .paid }.map{ $0.subtotal }.reduce(0,+) }
-    func totalPaid(_ invoices: [Invoice]) -> Decimal { invoices.filter{ $0.status == .paid }.map{ $0.subtotal }.reduce(0,+) }
+
+    func filtered(_ invoices: [Invoice]) -> [Invoice] {
+        let q = query.lowercased()
+        guard !q.isEmpty else { return invoices }
+        return invoices.filter {
+            $0.number.lowercased().contains(q) ||
+            $0.customer.name.lowercased().contains(q)
+        }
+    }
+
+    func totalOutstanding(_ invoices: [Invoice]) -> Decimal {
+        invoices.filter { $0.status != .paid }.map { $0.subtotal }.reduce(0, +)
+    }
+
+    func totalPaid(_ invoices: [Invoice]) -> Decimal {
+        invoices.filter { $0.status == .paid }.map { $0.subtotal }.reduce(0, +)
+    }
 }
 
 struct InvoicesScreen: View {
     @EnvironmentObject private var app: AppState
     @StateObject private var vm = InvoicesVM()
+
     @State private var showCompanySetup = false
     @State private var showTemplatePicker = false
+    @State private var showEmptyPaywall = false   // экран-заглушка подписки
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 14) {
+
+                    // Header как на Analytics (вынесен из навбара)
+                    screenHeader
+
+                    // Banner / Quick create
                     headerCard
+
+                    // Stats
                     statsRow
+
+                    // Search
                     searchField
+
+                    // List / Empty
                     if app.invoices.isEmpty { emptyState } else { invoiceList }
                 }
                 .padding(.horizontal)
-                .padding(.top, 8)
+                .padding(.top, 6) // подтянули выше
             }
-            .navigationTitle("Invoices")
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { onNewInvoice() } label: { Image(systemName: "plus.circle.fill").imageScale(.large) } } }
-            .sheet(isPresented: $showCompanySetup) { CompanySetupView(onContinue: { showCompanySetup = false; showTemplatePicker = true }) }
+            .navigationBarTitleDisplayMode(.inline) // заголовок в контенте, не в баре
+            .toolbar {
+                // Только кнопка "+" в баре
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { onNewInvoice() } label: {
+                        Image(systemName: app.canCreateInvoice ? "plus.circle.fill" : "lock.circle")
+                            .imageScale(.large)
+                    }
+                }
+            }
+            // флоу создания
+            .sheet(isPresented: $showCompanySetup) {
+                CompanySetupView(onContinue: {
+                    showCompanySetup = false
+                    showTemplatePicker = true
+                })
+            }
             .sheet(isPresented: $showTemplatePicker) { TemplatePickerView() }
+            // экран-заглушка подписки
+            .sheet(isPresented: $showEmptyPaywall) { EmptyScreen() }
+        }
+    }
+
+    // MARK: Sections
+
+    private var screenHeader: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Invoices").font(.largeTitle).bold()
+                Text("Manage all your invoices")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            if app.isPremium { ProBadge() }
         }
     }
 
     private var headerCard: some View {
         Group {
-            if app.invoices.isEmpty {
-                FreePlanCard()
-            } else {
+            if app.isPremium {
                 QuickCreateCard(newAction: onNewInvoice)
+                    .padding(.top, 2)
+            } else {
+                // Free: показываем остаток и апгрейд
+                FreePlanCardCompact(
+                    remaining: app.remainingFreeInvoices,
+                    onUpgrade: { showEmptyPaywall = true },
+                    onCreate: onNewInvoice
+                )
+                .padding(.top, 2)
             }
         }
     }
 
     private var statsRow: some View {
         HStack(spacing: 12) {
-            StatCard(title: "Total Outstanding", value: Money.fmt(vm.totalOutstanding(app.invoices), code: app.invoices.first?.currency ?? "USD"), tint: .blue.opacity(0.15))
-            StatCard(title: "Total Paid", value: Money.fmt(vm.totalPaid(app.invoices), code: app.invoices.first?.currency ?? "USD"), tint: .green.opacity(0.15))
+            StatCard(
+                title: "Total Outstanding",
+                value: Money.fmt(vm.totalOutstanding(app.invoices),
+                                 code: app.invoices.first?.currency ?? "USD"),
+                tint: .blue.opacity(0.15)
+            )
+            StatCard(
+                title: "Total Paid",
+                value: Money.fmt(vm.totalPaid(app.invoices),
+                                 code: app.invoices.first?.currency ?? "USD"),
+                tint: .green.opacity(0.15)
+            )
         }
     }
 
     private var searchField: some View {
-        SearchBar(text: $vm.query).padding(.top, 4)
+        SearchBar(text: $vm.query)
+            .padding(.top, 2)
     }
 
     private var invoiceList: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             ForEach(vm.filtered(app.invoices)) { inv in
                 NavigationLink { InvoiceDetailsView(invoice: inv) } label: {
                     InvoiceCard(invoice: inv)
                 }
             }
         }
+        .padding(.top, 2)
     }
 
     private var emptyState: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 14) {
             ZStack {
-                RoundedRectangle(cornerRadius: 16).stroke(Color.secondary.opacity(0.15))
-                    .background(RoundedRectangle(cornerRadius: 16).fill(Color.secondary.opacity(0.05)))
-                VStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.secondary.opacity(0.15))
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.secondary.opacity(0.05))
+                    )
+                VStack(spacing: 10) {
                     Button(action: onNewInvoice) {
-                        Image(systemName: "plus.circle").font(.system(size: 40))
+                        Image(systemName: app.canCreateInvoice ? "plus.circle" : "lock.circle")
+                            .font(.system(size: 36))
                     }
-                    Text("No invoices found").font(.headline)
-                    Text("Create your first invoice to get started").font(.subheadline).foregroundStyle(.secondary)
-                }.padding(28)
-            }.frame(maxWidth: .infinity, minHeight: 180)
-            Button {
-                // placeholder for paywall
-            } label: {
-                Text("Upgrade to Create").bold().frame(maxWidth: .infinity).padding().background(RoundedRectangle(cornerRadius: 12).fill(Color.yellow.opacity(0.3)))
+                    Text("No invoices yet").font(.headline)
+                    Text(app.isPremium
+                         ? "Create your first invoice to get started"
+                         : app.remainingFreeInvoices > 0
+                            ? "You can create \(app.remainingFreeInvoices) free invoice."
+                            : "Free limit reached. Upgrade to create more.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                }
+                .padding(20)
+            }
+            .frame(maxWidth: .infinity, minHeight: 150) // компактнее
+            // CTA снизу:
+            if !app.isPremium {
+                if app.remainingFreeInvoices == 0 {
+                    Button { showEmptyPaywall = true } label: {
+                        Text("Upgrade to Create Invoice")
+                            .bold()
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(RoundedRectangle(cornerRadius: 12).fill(Color.black))
+                            .foregroundStyle(.white)
+                    }
+                } else {
+                    Button { onNewInvoice() } label: {
+                        Text("Create Free Invoice (\(app.remainingFreeInvoices) left)")
+                            .bold()
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(RoundedRectangle(cornerRadius: 12).fill(Color.black))
+                            .foregroundStyle(.white)
+                    }
+                }
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 6)
     }
 
+    // MARK: Actions
+
     private func onNewInvoice() {
-        if app.company == nil { showCompanySetup = true } else { showTemplatePicker = true }
+        // Если лимит исчерпан и нет подписки — открываем пустой экран подписки
+        guard app.canCreateInvoice else {
+            showEmptyPaywall = true
+            return
+        }
+        if app.company == nil {
+            showCompanySetup = true
+        } else {
+            showTemplatePicker = true
+        }
+    }
+}
+
+// MARK: - PRO badge
+
+
+
+// MARK: - Free plan card (компактная, без disabled Create при 0)
+
+struct FreePlanCardCompact: View {
+    let remaining: Int
+    var onUpgrade: () -> Void
+    var onCreate: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: "crown")
+                Text("Free Plan").bold()
+                Spacer()
+                Text(remaining > 0 ? "\(remaining) free left" : "Limit reached")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if remaining > 0 {
+                HStack(spacing: 10) {
+                    Button(action: onCreate) {
+                        Text("Create Free Invoice").bold().frame(maxWidth: .infinity)
+                    }
+                    .padding()
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.black))
+                    .foregroundStyle(.white)
+
+                    Button(action: onUpgrade) {
+                        Text("Upgrade").bold().frame(maxWidth: .infinity)
+                    }
+                    .padding()
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.1)))
+                }
+            } else {
+                Button(action: onUpgrade) {
+                    Text("Upgrade to Create Invoice").bold().frame(maxWidth: .infinity)
+                }
+                .padding()
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color.black))
+                .foregroundStyle(.white)
+            }
+
+            // Преимущества тарифа
+            HStack(spacing: 20) {
+                Label("Unlimited invoices", systemImage: "checkmark")
+                Label("Premium templates", systemImage: "checkmark")
+                Label("Advanced features", systemImage: "checkmark")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .padding(.top, 4)
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.secondary.opacity(0.15))
+        )
+    }
+}
+
+struct EmptyScreen: View {
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 16) {
+                Image(systemName: "crown.fill").font(.largeTitle)
+                Text("Subscription Coming Soon").font(.title3).bold()
+                Text("Upgrade to create unlimited invoices and unlock premium features.")
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+                Button("Close") {
+                    // закрывается свайпом вниз или кнопкой Done, тут можно оставить пусто
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color.black))
+                .foregroundStyle(.white)
+            }
+            .padding()
+            .navigationTitle("Upgrade")
+            .navigationBarTitleDisplayMode(.inline)
+        }
     }
 }
