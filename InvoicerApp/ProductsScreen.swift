@@ -72,14 +72,12 @@ final class ProductsVM: ObservableObject {
 }
 
 // MARK: - Screen
-
 struct ProductsScreen: View {
     @EnvironmentObject private var app: AppState
     @StateObject private var vm = ProductsVM()
 
     @State private var showAddProduct = false
     @State private var editingProduct: Product? = nil
-    @State private var showEmptyPaywall = false
 
     private let mainBlue = Color.blue
     private let secondaryBlue = Color.blue.opacity(0.6)
@@ -98,7 +96,6 @@ struct ProductsScreen: View {
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()
-                        if app.isPremium { ProBadge() }
                     }
 
                     // Actions
@@ -140,15 +137,6 @@ struct ProductsScreen: View {
                     }
                     .padding(.top, 2)
 
-                    // Free banner
-                    if !app.isPremium {
-                        FreePlanCardCompact(
-                            remaining: app.remainingFreeInvoices,
-                            onUpgrade: { showEmptyPaywall = true },
-                            onCreate: onCreateInvoice
-                        )
-                    }
-
                     // List
                     if app.products.isEmpty {
                         emptyList
@@ -183,21 +171,17 @@ struct ProductsScreen: View {
                     }
                 }
             }
-            .sheet(isPresented: $showEmptyPaywall) { EmptyScreen() }
         }
     }
 
     // MARK: - Helpers
 
     private func onCreateInvoice() {
-        guard app.canCreateInvoice else { showEmptyPaywall = true; return }
-        showEmptyPaywall = true
+        // TODO: open invoice wizard / template picker
     }
 
     private func quickAdd(_ p: Product) {
-        guard app.canCreateInvoice else { showEmptyPaywall = true; return }
-        // TODO: предзаполнить LineItem и открыть визард
-        showEmptyPaywall = true
+        // TODO: prefill line item & open wizard
     }
 
     private var emptyList: some View {
@@ -221,6 +205,7 @@ struct ProductsScreen: View {
         .padding(.top, 6)
     }
 }
+
 
 // MARK: - Card
 

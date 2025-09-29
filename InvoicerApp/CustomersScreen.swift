@@ -28,7 +28,6 @@ struct CustomersScreen: View {
     @StateObject private var vm = CustomersVM()
 
     @State private var showAddCustomer = false
-    @State private var showEmptyPaywall = false
 
     var body: some View {
         NavigationStack {
@@ -44,7 +43,6 @@ struct CustomersScreen: View {
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()
-                        if app.isPremium { ProBadge() }
                     }
 
                     // Actions
@@ -69,15 +67,6 @@ struct CustomersScreen: View {
                     SearchBar(text: $vm.query)
                         .padding(.top, 2)
 
-                    // Free plan banner
-                    if !app.isPremium {
-                        FreePlanCardCompact(
-                            remaining: app.remainingFreeInvoices,
-                            onUpgrade: { showEmptyPaywall = true },
-                            onCreate: onCreateInvoice
-                        )
-                    }
-
                     // List
                     if app.customers.isEmpty {
                         emptyList
@@ -85,7 +74,6 @@ struct CustomersScreen: View {
                         VStack(spacing: 10) {
                             ForEach(vm.filtered(app.customers)) { c in
                                 NavigationLink {
-                                    // детали по id, внутри вью найдёт Binding сам
                                     CustomerDetailsView(customerID: c.id)
                                 } label: {
                                     CustomerRow(customer: c)
@@ -103,19 +91,13 @@ struct CustomersScreen: View {
                     app.customers.append(newCustomer)
                 }
             }
-            .sheet(isPresented: $showEmptyPaywall) { EmptyScreen() }
         }
     }
 
     // MARK: - Helpers
 
     private func onCreateInvoice() {
-        guard app.canCreateInvoice else {
-            showEmptyPaywall = true
-            return
-        }
-        // место под запуск визарда/роутинга; пока показываем заглушку
-        showEmptyPaywall = true
+        // TODO: open invoice wizard / template picker
     }
 
     private var emptyList: some View {
@@ -142,7 +124,7 @@ struct CustomersScreen: View {
     }
 }
 
-// MARK: - Row
+// MARK: - Row (как было)
 
 private struct CustomerRow: View {
     @EnvironmentObject private var app: AppState
@@ -200,6 +182,8 @@ private struct CustomerRow: View {
         name.split(separator: " ").compactMap { $0.first }.prefix(2).map(String.init).joined()
     }
 }
+
+// MARK: - AddCustomerSheet (без изменений с методами оплаты)
 
 // MARK: - AddCustomerSheet
 

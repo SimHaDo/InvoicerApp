@@ -4,10 +4,9 @@
 //
 //  Created by Danyil Skrypnichenko on 9/27/25.
 //
-
 import SwiftUI
 
-// MARK: - VM
+// MARK: - ViewModel
 
 final class InvoicesVM: ObservableObject {
     @Published var query = ""
@@ -68,23 +67,29 @@ struct InvoicesScreen: View {
                     }
                 }
             }
+            // 1) Company setup (если нет компании)
             .sheet(isPresented: $showCompanySetup) {
                 CompanySetupView(onContinue: {
                     showCompanySetup = false
                     showTemplatePicker = true
                 })
             }
+            // 2) Template picker -> после выбора открываем визард
             .sheet(isPresented: $showTemplatePicker) {
                 TemplatePickerView { _ in
+                    // закрываем пикер
                     showTemplatePicker = false
+                    // открываем визард в следующем тике
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
                         showWizard = true
                     }
                 }
             }
+            // 3) Визард создания инвойса
             .sheet(isPresented: $showWizard) {
                 InvoiceWizardView()
             }
+            // Paywall-заглушка
             .sheet(isPresented: $showEmptyPaywall) {
                 EmptyScreen()
             }
@@ -94,7 +99,12 @@ struct InvoicesScreen: View {
     // MARK: - Actions
 
     private func onNewInvoice() {
-        guard app.canCreateInvoice else { showEmptyPaywall = true; return }
+        // если лимит исчерпан и нет подписки — показываем paywall
+        guard app.canCreateInvoice else {
+            showEmptyPaywall = true
+            return
+        }
+        // если компания не настроена — сначала CompanySetup
         if app.company == nil {
             showCompanySetup = true
         } else {
@@ -113,17 +123,18 @@ struct InvoicesScreen: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            if app.isPremium { ProBadge() }
+            if app.isPremium { ProBadge() } // ← бейдж подписки возвращён
         }
     }
 
     private var headerCard: some View {
         Group {
             if app.isPremium {
+                // карточка быстрого создания (если у тебя уже есть реальная реализация — она подставится)
                 QuickCreateCard(newAction: onNewInvoice)
                     .padding(.top, 2)
             } else {
-                FreePlanCardCompact(
+                FreePlanCardCompact(                    // ← карточка Free/Upgrade возвращена
                     remaining: app.remainingFreeInvoices,
                     onUpgrade: { showEmptyPaywall = true },
                     onCreate: onNewInvoice
@@ -150,13 +161,15 @@ struct InvoicesScreen: View {
         }
     }
 
-    private var searchField: some View { SearchBar(text: $vm.query).padding(.top, 2) }
+    private var searchField: some View {
+        SearchBar(text: $vm.query).padding(.top, 2)
+    }
 
     private var invoiceList: some View {
         VStack(spacing: 10) {
             ForEach(vm.filtered(app.invoices)) { inv in
                 NavigationLink { InvoiceDetailsView(invoice: inv) } label: {
-                    InvoiceCard(invoice: inv)
+                    InvoiceCard(invoice: inv) // твоя карточка счета
                 }
             }
         }
@@ -190,6 +203,7 @@ struct InvoicesScreen: View {
             }
             .frame(maxWidth: .infinity, minHeight: 150)
 
+            // CTA снизу
             if !app.isPremium {
                 if app.remainingFreeInvoices == 0 {
                     Button(action: { showEmptyPaywall = true }) {
@@ -216,8 +230,9 @@ struct InvoicesScreen: View {
     }
 }
 
-// FreePlanCardCompact и EmptyScreen — оставлены без изменений в твоей версии
-// MARK: - Compact free plan card (если она у тебя не в другом файле — оставь тут)
+// MARK: - Small UI pieces used here
+
+
 
 struct FreePlanCardCompact: View {
     let remaining: Int
@@ -275,8 +290,6 @@ struct FreePlanCardCompact: View {
         )
     }
 }
-
-// MARK: - Paywall-заглушка (если у тебя уже есть — этот блок можно убрать)
 
 struct EmptyScreen: View {
     var body: some View {

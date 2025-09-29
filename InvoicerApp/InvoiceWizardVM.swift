@@ -5,6 +5,9 @@
 //  Created by Danyil Skrypnichenko on 9/27/25.
 //
 import SwiftUI
+import UIKit
+
+// MARK: - ViewModel
 
 final class InvoiceWizardVM: ObservableObject {
     @Published var step: Int = 1
@@ -20,8 +23,6 @@ final class InvoiceWizardVM: ObservableObject {
 }
 
 // MARK: - Wizard
-
-import SwiftUI
 
 struct InvoiceWizardView: View {
     @EnvironmentObject private var app: AppState
@@ -46,36 +47,28 @@ struct InvoiceWizardView: View {
             .toolbar {
                 // Нажимаем на "лейбл" – открываем выбор шаблона
                 ToolbarItem(placement: .principal) {
-                    Button {
-                        showTemplatePicker = true
-                    } label: {
+                    Button { showTemplatePicker = true } label: {
                         Label(app.selectedTemplate.name, systemImage: "tag")
                             .labelStyle(.titleAndIcon)
                     }
+                    .accessibilityIdentifier("TemplatePickerButton")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { save() } label: { Label("Save", systemImage: "square.and.arrow.down") }
+                    Button { save() } label: {
+                        Label("Save", systemImage: "square.and.arrow.down")
+                    }
+                    .accessibilityIdentifier("SaveInvoiceButton")
                 }
             }
             .sheet(isPresented: $showTemplatePicker) {
-                NavigationStack {
-                    TemplatePickerView { selected in
-                        app.selectedTemplate = selected      // сохраняем выбор
-                        showTemplatePicker = false           // закрываем ТОЛЬКО пикер
-                    }
-                    .navigationTitle("Invoice Templates")
-                    .toolbar {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button("Done") { showTemplatePicker = false }
-                        }
-                    }
+                TemplatePickerView { selected in
+                    app.selectedTemplate = selected      // сохраняем выбор
+                    showTemplatePicker = false           // закрываем ТОЛЬКО пикер
                 }
             }
             .onAppear(perform: configureFromAppState)
             .sheet(isPresented: $showShare, onDismiss: {
-                if shouldDismissAfterShare {
-                    dismiss()
-                }
+                if shouldDismissAfterShare { dismiss() }
             }) {
                 if let url = shareURL {
                     ShareSheet(activityItems: [url]) { _, _, _, _ in
@@ -100,6 +93,7 @@ struct InvoiceWizardView: View {
     }
 
     private func configureFromAppState() {
+        // если пришли из кнопок "быстрого старта"
         var jumped = false
         if vm.customer == nil, let pre = app.preselectedCustomer {
             vm.customer = pre
@@ -108,17 +102,26 @@ struct InvoiceWizardView: View {
             jumped = true
         }
         if let presetItems = app.preselectedItems, !presetItems.isEmpty {
-            if vm.items.isEmpty { vm.items = presetItems } else { vm.items.append(contentsOf: presetItems) }
+            if vm.items.isEmpty {
+                vm.items = presetItems
+            } else {
+                vm.items.append(contentsOf: presetItems)
+            }
             app.preselectedItems = nil
             vm.step = 3
             jumped = true
         }
-        if !jumped, vm.customer != nil, vm.step < 2 { vm.step = 2 }
+        if !jumped, vm.customer != nil, vm.step < 2 {
+            vm.step = 2
+        }
     }
 
     // Save -> PDF -> Share
     private func save() {
-        guard let company = app.company, let customer = vm.customer, !vm.items.isEmpty else { return }
+        guard let company = app.company,
+              let customer = vm.customer,
+              !vm.items.isEmpty
+        else { return }
 
         let invoice = Invoice(
             number: vm.number,
@@ -150,6 +153,7 @@ struct InvoiceWizardView: View {
         }
     }
 }
+
 // MARK: - Step header
 
 struct StepHeader: View {
@@ -208,8 +212,13 @@ struct StepCompanyInfoView: View {
                     Text("Company Information").font(.headline)
                     TextField("Company Name", text: $company.name).fieldStyle()
                     HStack {
-                        TextField("Company Email", text: $company.email).keyboardType(.emailAddress).fieldStyle()
-                        TextField("Company Phone", text: $company.phone).fieldStyle()
+                        TextField("Company Email", text: $company.email)
+                            .keyboardType(.emailAddress)
+                            .textInputAutocapitalization(.never)
+                            .fieldStyle()
+                        TextField("Company Phone", text: $company.phone)
+                            .keyboardType(.phonePad)
+                            .fieldStyle()
                     }
                     TextField("Company Address", text: $company.address.line1).fieldStyle()
                 }
@@ -221,14 +230,20 @@ struct StepCompanyInfoView: View {
                         .disabled(true)
                     Spacer()
                     Button("Next") {
+                        // сохраняем в AppState, чтобы следующие шаги и PDF получили актуальные данные
                         app.company = company
                         next()
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(company.name.isEmpty || company.email.isEmpty)
+                    .disabled(company.name.trimmingCharacters(in: .whitespaces).isEmpty ||
+                              company.email.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
             .padding()
+        }
+        // ВАЖНО: автоподстановка сохранённой компании при открытии шага
+        .onAppear {
+            company = app.company ?? Company()
         }
     }
 }
@@ -381,7 +396,9 @@ struct StepItemsPricingView: View {
                 HStack {
                     Button("Previous", action: prev).buttonStyle(.bordered)
                     Spacer()
-                    Button("Next", action: onSaved).buttonStyle(.borderedProminent).disabled(vm.items.isEmpty)
+                    Button("Generate", action: onSaved)
+                        .buttonStyle(.borderedProminent)
+                        .disabled(vm.items.isEmpty)
                 }
             }
             .padding()
@@ -395,11 +412,17 @@ struct StepItemsPricingView: View {
         }
     }
 
-    private func add(product p: Product) { vm.items.append(LineItem(description: p.name, quantity: 1, rate: p.rate)) }
-    private func addCustom() { vm.items.append(LineItem(description: "", quantity: 1, rate: 0)) }
+    private func add(product p: Product) {
+        vm.items.append(LineItem(description: p.name, quantity: 1, rate: p.rate))
+    }
+    private func addCustom() {
+        vm.items.append(LineItem(description: "", quantity: 1, rate: 0))
+    }
 
     private func binding(for item: LineItem) -> Binding<LineItem> {
-        guard let idx = vm.items.firstIndex(where: { $0.id == item.id }) else { return .constant(item) }
+        guard let idx = vm.items.firstIndex(where: { $0.id == item.id }) else {
+            return .constant(item)
+        }
         return $vm.items[idx]
     }
 }
@@ -422,7 +445,8 @@ private struct WizardProductRow: View {
             Spacer()
             Button(action: onAdd) {
                 HStack { Image(systemName: "cart.badge.plus"); Text("Add") }
-                    .padding(.horizontal, 12).padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
                     .background(RoundedRectangle(cornerRadius: 12).fill(Color.black))
                     .foregroundStyle(.white)
             }
@@ -504,7 +528,8 @@ struct Tag: View {
     var body: some View {
         Text(text)
             .font(.caption2)
-            .padding(.horizontal, 8).padding(.vertical, 4)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
             .background(Capsule().fill(Color.secondary.opacity(0.1)))
     }
 }
@@ -545,8 +570,6 @@ struct DecimalField: View {
 }
 
 // MARK: - ShareSheet wrapper
-
-
 
 struct ShareSheet: UIViewControllerRepresentable {
     let activityItems: [Any]
