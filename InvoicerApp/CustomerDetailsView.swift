@@ -7,8 +7,6 @@
 
 import SwiftUI
 
-// ============ Customer Details ============
-
 struct CustomerDetailsView: View {
     @EnvironmentObject private var app: AppState
     let customerID: UUID
@@ -23,9 +21,7 @@ struct CustomerDetailsView: View {
     }
 
     private var binding: Binding<Customer>? {
-        if let idx = bindingIndex {
-            return $app.customers[idx]
-        }
+        if let idx = bindingIndex { return $app.customers[idx] }
         return nil
     }
 
@@ -61,7 +57,9 @@ struct CustomerDetailsView: View {
                         if isEditing {
                             Picker("Status", selection: customer.status) {
                                 ForEach(CustomerStatus.allCases) { Text($0.rawValue).tag($0) }
-                            }.pickerStyle(.segmented).labelsHidden()
+                            }
+                            .pickerStyle(.segmented)
+                            .labelsHidden()
                         } else {
                             CustomerStatusChip(status: customer.wrappedValue.status)
                         }
@@ -123,6 +121,40 @@ struct CustomerDetailsView: View {
                     .background(RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.06)))
                 }
 
+                // ⬇️⬇️ ВОТ ЗДЕСЬ: СЕКЦИЯ PAYMENT METHODS (между Contact card и Invoices) ⬇️⬇️
+                VStack(alignment: .leading, spacing: 8) {
+                    if isEditing {
+                        // редактор: позволяет добавлять/править/удалять
+                        PaymentMethodsEditor(methods: customer.paymentMethods)
+                    } else {
+                        // режим просмотра
+                        HStack {
+                            Text("Payment Methods").font(.headline)
+                            Spacer()
+                        }
+                        if customer.wrappedValue.paymentMethods.isEmpty {
+                            Text("No payment methods").foregroundStyle(.secondary)
+                                .padding(.vertical, 4)
+                        } else {
+                            ForEach(customer.wrappedValue.paymentMethods) { m in
+                                HStack(alignment: .top, spacing: 12) {
+                                    Image(systemName: icon(for: m.type))
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(m.type.title).bold()
+                                        Text(m.type.subtitle)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                }
+                                .padding(12)
+                                .background(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.15)))
+                            }
+                        }
+                    }
+                }
+                // ⬆️⬆️ КОНЕЦ БЛОКА PAYMENT METHODS ⬆️⬆️
+
                 // Invoices section
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
@@ -175,7 +207,7 @@ struct CustomerDetailsView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button(isEditing ? "Save" : "Edit") {
-                    if isEditing { /* данные уже в биндингах — ничего не делаем */ }
+                    if isEditing { /* данные уже в биндингах — сохранять нечего */ }
                     isEditing.toggle()
                 }
             }
@@ -186,6 +218,17 @@ struct CustomerDetailsView: View {
         }
         .sheet(isPresented: $showTemplatePicker) {
             TemplatePickerView()
+        }
+    }
+
+    private func icon(for t: PaymentMethodType) -> String {
+        switch t {
+        case .bankIBAN: return "building.columns"
+        case .bankUS:   return "banknote"
+        case .paypal:   return "envelope"
+        case .cardLink: return "link"
+        case .crypto:   return "bitcoinsign.circle"
+        case .other:    return "square.and.pencil"
         }
     }
 
@@ -204,6 +247,7 @@ struct CustomerDetailsView: View {
         showTemplatePicker = true
     }
 }
+
 // MARK: - Customer Status Chip
 
 struct CustomerStatusChip: View {

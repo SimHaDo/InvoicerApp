@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-// MARK: - ViewModel
+// MARK: - VM
 
 final class InvoicesVM: ObservableObject {
     @Published var query = ""
@@ -39,7 +39,7 @@ struct InvoicesScreen: View {
     @State private var showCompanySetup = false
     @State private var showTemplatePicker = false
     @State private var showEmptyPaywall = false
-    @State private var showWizard = false   // отдельный флаг на визард
+    @State private var showWizard = false
 
     var body: some View {
         NavigationStack {
@@ -68,29 +68,23 @@ struct InvoicesScreen: View {
                     }
                 }
             }
-            // 1) Company setup (если нет компании)
             .sheet(isPresented: $showCompanySetup) {
                 CompanySetupView(onContinue: {
                     showCompanySetup = false
                     showTemplatePicker = true
                 })
             }
-            // 2) Template picker -> после выбора открываем визард
             .sheet(isPresented: $showTemplatePicker) {
                 TemplatePickerView { _ in
-                    // закрываем пикер
                     showTemplatePicker = false
-                    // открываем визард в следующем тике
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
                         showWizard = true
                     }
                 }
             }
-            // 3) Визард создания инвойса
             .sheet(isPresented: $showWizard) {
                 InvoiceWizardView()
             }
-            // Paywall-заглушка
             .sheet(isPresented: $showEmptyPaywall) {
                 EmptyScreen()
             }
@@ -100,12 +94,7 @@ struct InvoicesScreen: View {
     // MARK: - Actions
 
     private func onNewInvoice() {
-        // если лимит исчерпан и нет подписки — показываем paywall
-        guard app.canCreateInvoice else {
-            showEmptyPaywall = true
-            return
-        }
-        // если компания не настроена — сначала CompanySetup
+        guard app.canCreateInvoice else { showEmptyPaywall = true; return }
         if app.company == nil {
             showCompanySetup = true
         } else {
@@ -131,7 +120,6 @@ struct InvoicesScreen: View {
     private var headerCard: some View {
         Group {
             if app.isPremium {
-                // твоя карточка быстрого создания
                 QuickCreateCard(newAction: onNewInvoice)
                     .padding(.top, 2)
             } else {
@@ -162,9 +150,7 @@ struct InvoicesScreen: View {
         }
     }
 
-    private var searchField: some View {
-        SearchBar(text: $vm.query).padding(.top, 2)
-    }
+    private var searchField: some View { SearchBar(text: $vm.query).padding(.top, 2) }
 
     private var invoiceList: some View {
         VStack(spacing: 10) {
@@ -204,7 +190,6 @@ struct InvoicesScreen: View {
             }
             .frame(maxWidth: .infinity, minHeight: 150)
 
-            // CTA снизу
             if !app.isPremium {
                 if app.remainingFreeInvoices == 0 {
                     Button(action: { showEmptyPaywall = true }) {
@@ -231,6 +216,7 @@ struct InvoicesScreen: View {
     }
 }
 
+// FreePlanCardCompact и EmptyScreen — оставлены без изменений в твоей версии
 // MARK: - Compact free plan card (если она у тебя не в другом файле — оставь тут)
 
 struct FreePlanCardCompact: View {

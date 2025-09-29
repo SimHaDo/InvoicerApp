@@ -12,7 +12,6 @@ final class PDFService {
 
     static let shared = PDFService()
 
-    // Основной API
     func generatePDF(invoice: Invoice,
                      company: Company,
                      customer: Customer,
@@ -32,12 +31,12 @@ final class PDFService {
         let data = renderer.pdfData { ctx in
             ctx.beginPage()
             switch template.style {
-            case .modern:  ModernTemplate(theme: template.theme)
-                .draw(in: ctx.cgContext, page: pageRect, invoice: invoice, company: company, customer: customer, currency: currencyCode, logo: logo)
-            case .minimal: MinimalTemplate(theme: template.theme)
-                .draw(in: ctx.cgContext, page: pageRect, invoice: invoice, company: company, customer: customer, currency: currencyCode, logo: logo)
-            case .classic: ClassicTemplate(theme: template.theme)
-                .draw(in: ctx.cgContext, page: pageRect, invoice: invoice, company: company, customer: customer, currency: currencyCode, logo: logo)
+            case .modern:
+                ModernTemplate(theme: template.theme).draw(in: ctx.cgContext, page: pageRect, invoice: invoice, company: company, customer: customer, currency: currencyCode, logo: logo)
+            case .minimal:
+                MinimalTemplate(theme: template.theme).draw(in: ctx.cgContext, page: pageRect, invoice: invoice, company: company, customer: customer, currency: currencyCode, logo: logo)
+            case .classic:
+                ClassicTemplate(theme: template.theme).draw(in: ctx.cgContext, page: pageRect, invoice: invoice, company: company, customer: customer, currency: currencyCode, logo: logo)
             }
         }
 
@@ -72,16 +71,16 @@ private extension CGContext {
     }
 }
 
-// MARK: - Таблица
+// MARK: - Items table
 
 private struct ItemsTable {
     let inset: CGFloat = 36
     let rowH: CGFloat = 24
     let headerH: CGFloat = 28
-    let col1: CGFloat = 260 // description
-    let col2: CGFloat = 60  // qty
-    let col3: CGFloat = 90  // rate
-    let col4: CGFloat = 90  // total
+    let col1: CGFloat = 260
+    let col2: CGFloat = 60
+    let col3: CGFloat = 90
+    let col4: CGFloat = 90
 
     func qtyString(_ d: Decimal) -> String { NSDecimalNumber(decimal: d).stringValue }
 
@@ -89,7 +88,6 @@ private struct ItemsTable {
         let startX: CGFloat = inset
         var y = yStart
 
-        // Header
         context.fill(CGRect(x: startX, y: y, width: Paper.a4.width - inset*2, height: headerH), color: theme.primary.withAlphaComponent(0.08))
         let headerFont = UIFont.systemFont(ofSize: 11, weight: .semibold)
         context.draw(text: "DESCRIPTION", in: CGRect(x: startX+8, y: y+6, width: col1-16, height: headerH), font: headerFont, color: theme.primary)
@@ -98,7 +96,6 @@ private struct ItemsTable {
         context.draw(text: "AMOUNT",      in: CGRect(x: startX+col1+col2+col3, y: y+6, width: col4, height: headerH), font: headerFont, color: theme.primary, alignment: .right)
         y += headerH + 2
 
-        // Rows
         let font = UIFont.systemFont(ofSize: 11)
         for it in invoice.items {
             context.draw(text: it.description, in: CGRect(x: startX+8, y: y+6, width: col1-12, height: rowH), font: font, color: .label)
@@ -115,7 +112,180 @@ private struct ItemsTable {
     }
 }
 
-// MARK: - Протокол и шаблоны
+// MARK: - Payment formatter + block (использует customer.paymentMethods)
+
+private struct PaymentFormatter {
+    struct Line { let title: String; let value: String }
+
+    static func lines(from methods: [Any]) -> [Line] {
+        methods.compactMap { format(method: $0) }
+    }
+
+    private static func format(method: Any) -> Line? {
+        let m = Mirror(reflecting: method)
+        if let typeChild = m.children.first(where: { $0.label == "type" }) {
+            return formatTypeValue(typeChild.value)
+        }
+        return formatTypeValue(method)
+    }
+
+    private static func formatTypeValue(_ v: Any) -> Line {
+        let mirror = Mirror(reflecting: v)
+
+        if mirror.displayStyle == .enum {
+            let caseName = String(describing: v).components(separatedBy: "(").first ?? "\(v)"
+            let lower = caseName.lowercased()
+            let payloadStrings = extractFields(from: v)
+
+            switch true {
+            case lower.contains("bankiban"):
+                let value = text(from: payloadStrings, preferredOrder: ["iban","bic","beneficiary","name","holder"]) ?? ""
+                return .init(title: "Bank (IBAN)", value: value)
+            case lower.contains("bankus"):
+                let value = text(from: payloadStrings, preferredOrder: ["account","routing","name","holder"]) ?? ""
+                return .init(title: "Bank (US)", value: value)
+            case lower.contains("paypal"):
+                let value = text(from: payloadStrings, preferredOrder: ["email","id"]) ?? ""
+                return .init(title: "PayPal", value: value)
+            case lower.contains("cardlink"), lower.contains("card"):
+                let value = text(from: payloadStrings, preferredOrder: ["url","link"]) ?? ""
+                return .init(title: "Card Payment", value: value)
+            case lower.contains("crypto"):
+                let value = text(from: payloadStrings, preferredOrder: ["kind","symbol","network","address"]) ?? ""
+                return .init(title: "Crypto", value: value)
+            default:
+                let title = (payloadStrings["name"]?.nonEmpty) ?? humanize(caseName)
+                let value = payloadStrings["details"]?.nonEmpty
+                    ?? text(from: payloadStrings, preferredOrder: ["value","address","info","note"]) ?? ""
+                return .init(title: title, value: value)
+            }
+        }
+
+        let dict = extractFields(from: v)
+        let title = dict["name"]?.nonEmpty ?? dict["method"]?.nonEmpty ?? "Payment"
+        let value = dict["details"]?.nonEmpty
+            ?? text(from: dict, preferredOrder: ["iban","account","email","url","address"]) ?? ""
+        return .init(title: title, value: value)
+    }
+
+    private static func extractFields(from any: Any) -> [String:String] {
+        var out: [String:String] = [:]
+        let mirror = Mirror(reflecting: any)
+
+        if mirror.displayStyle == .enum, let payload = mirror.children.first?.value {
+            return extractFields(from: payload)
+        }
+
+        for (labelOpt, value) in mirror.children {
+            guard let rawLabel = labelOpt else { continue }
+            let label = rawLabel.lowercased()
+
+            if let s = value as? String, !s.isEmpty {
+                out[label] = s
+            } else if let sOpt = value as? String?, let s = sOpt, !s.isEmpty {
+                out[label] = s
+            } else if let desc = value as? CustomStringConvertible {
+                let s = desc.description
+                if !s.isEmpty { out[label] = s }
+            } else {
+                let nested = Mirror(reflecting: value)
+                if !nested.children.isEmpty {
+                    let nestedMap = extractFields(from: value)
+                    for (k, v) in nestedMap where !v.isEmpty { out[k] = v }
+                }
+            }
+        }
+        return out
+    }
+
+    private static func text(from dict: [String:String], preferredOrder keys: [String]) -> String? {
+        var parts: [String] = []
+        for k in keys {
+            if let v = dict[k], !v.isEmpty {
+                switch k {
+                case "iban": parts.append("IBAN: \(v)")
+                case "bic": parts.append("BIC/SWIFT: \(v)")
+                case "account": parts.append("Account: \(v)")
+                case "routing": parts.append("Routing: \(v)")
+                case "email": parts.append("Email: \(v)")
+                case "url", "link": parts.append(v)
+                case "address": parts.append(v)
+                case "network": parts.append("Network: \(v)")
+                case "symbol", "kind": parts.append(v.uppercased())
+                case "beneficiary","name","holder": parts.append(v)
+                default: parts.append(v)
+                }
+            }
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " • ")
+    }
+
+    private static func humanize(_ raw: String) -> String {
+        let s1 = raw.replacingOccurrences(of: "_", with: " ")
+        var s2 = ""
+        for ch in s1 {
+            if ch.isUppercase { s2.append(" ") }
+            s2.append(ch)
+        }
+        return s2.trimmingCharacters(in: .whitespaces).capitalized
+    }
+}
+
+private extension String {
+    var nonEmpty: String? {
+        let t = trimmingCharacters(in: .whitespacesAndNewlines)
+        return t.isEmpty ? nil : t
+    }
+}
+
+private struct PaymentBlock {
+    static func draw(on ctx: CGContext,
+                     page r: CGRect,
+                     yStart: CGFloat,
+                     theme: TemplateTheme,
+                     customer: Customer) -> CGFloat {
+
+        // берём customer.paymentMethods
+        let methodsAny: [Any] = customer.paymentMethods.map { $0 } // как [Any]
+        let lines = PaymentFormatter.lines(from: methodsAny)
+        guard !lines.isEmpty else { return yStart }
+
+        var y = yStart + 14
+        let titleFont = UIFont.systemFont(ofSize: 12, weight: .semibold)
+        ctx.draw(text: "Payment Methods",
+                 in: CGRect(x: 36, y: y, width: r.width-72, height: 16),
+                 font: titleFont, color: theme.primary)
+
+        y += 20
+
+        let boxX: CGFloat = 36
+        let boxW: CGFloat = r.width - 72
+        let rowH: CGFloat = 18
+        let leftW: CGFloat = 140
+
+        let boxH = CGFloat(lines.count) * (rowH + 6) + 16
+        ctx.fill(CGRect(x: boxX, y: y, width: boxW, height: boxH), color: theme.background)
+        ctx.stroke(CGRect(x: boxX, y: y, width: boxW, height: boxH), color: theme.line, width: 1)
+
+        let keyFont = UIFont.systemFont(ofSize: 11, weight: .semibold)
+        let valFont = UIFont.systemFont(ofSize: 11)
+
+        var cy = y + 8
+        for ln in lines {
+            ctx.draw(text: ln.title,
+                     in: CGRect(x: boxX + 10, y: cy, width: leftW - 10, height: rowH),
+                     font: keyFont, color: theme.subtleText)
+            ctx.draw(text: ln.value,
+                     in: CGRect(x: boxX + leftW, y: cy, width: boxW - leftW - 12, height: rowH),
+                     font: valFont, color: .label)
+            cy += rowH + 6
+        }
+
+        return cy
+    }
+}
+
+// MARK: - Templates
 
 private protocol Template {
     var theme: TemplateTheme { get }
@@ -126,10 +296,8 @@ private struct ModernTemplate: Template {
     let theme: TemplateTheme
 
     func draw(in ctx: CGContext, page r: CGRect, invoice: Invoice, company: Company, customer: Customer, currency: String, logo: UIImage?) {
-        // Accent bar
         ctx.fill(CGRect(x: 0, y: 0, width: r.width, height: 8), color: theme.primary)
 
-        // Header
         let left = CGRect(x: 36, y: 24, width: r.width * 0.5 - 42, height: 120)
         let right = CGRect(x: r.width * 0.5, y: 24, width: r.width * 0.5 - 36, height: 120)
 
@@ -153,17 +321,14 @@ private struct ModernTemplate: Template {
             my += 16
         }
 
-        // Bill to
         let billY: CGFloat = 160
         ctx.draw(text: "Bill To", in: CGRect(x: 36, y: billY, width: 200, height: 16), font: .systemFont(ofSize: 12, weight: .semibold), color: theme.primary)
         ctx.draw(text: customer.name,  in: CGRect(x: 36, y: billY+18, width: r.width/2-72, height: 16), font: .systemFont(ofSize: 12), color: .label)
         ctx.draw(text: customer.email, in: CGRect(x: 36, y: billY+34, width: r.width/2-72, height: 16), font: .systemFont(ofSize: 11), color: .secondaryLabel)
 
-        // Items table
         let table = ItemsTable()
         let afterTableY = table.draw(context: ctx, yStart: billY+64, invoice: invoice, currency: currency, theme: theme)
 
-        // Totals
         let totalBoxX = r.width - 36 - 240
         var ty = afterTableY + 8
         func row(_ title: String, _ value: String, bold: Bool = false) {
@@ -176,8 +341,9 @@ private struct ModernTemplate: Template {
         row("Tax", "—")
         row("Total", Money.fmt(invoice.subtotal, code: currency), bold: true)
 
-        // Footer
-        let footY = r.height - 80
+        let afterPayments = PaymentBlock.draw(on: ctx, page: r, yStart: ty + 8, theme: theme, customer: customer)
+
+        let footY = max(afterPayments + 10, r.height - 80)
         ctx.fill(CGRect(x: 36, y: footY, width: r.width-72, height: 1), color: theme.line)
         ctx.draw(text: "Thanks for your business!", in: CGRect(x: 36, y: footY+10, width: r.width-72, height: 16), font: .systemFont(ofSize: 11), color: theme.subtleText, alignment: .center)
     }
@@ -207,6 +373,8 @@ private struct MinimalTemplate: Template {
         let f = UIFont.systemFont(ofSize: 12, weight: .semibold)
         ctx.draw(text: "TOTAL", in: CGRect(x: r.width-36-240, y: after+10, width: 120, height: 20), font: f, color: theme.subtleText)
         ctx.draw(text: Money.fmt(invoice.subtotal, code: currency), in: CGRect(x: r.width-36-120, y: after+10, width: 120, height: 20), font: f, color: .label, alignment: .right)
+
+        _ = PaymentBlock.draw(on: ctx, page: r, yStart: after + 36, theme: theme, customer: customer)
     }
 }
 
@@ -234,5 +402,7 @@ private struct ClassicTemplate: Template {
         ctx.draw(text: Money.fmt(invoice.subtotal, code: currency), in: CGRect(x: r.width-36-100, y: after+8, width: 100, height: 18), font: f, color: .label, alignment: .right)
         ctx.draw(text: "Total:", in: CGRect(x: r.width-36-200, y: after+28, width: 100, height: 18), font: .systemFont(ofSize: 12, weight: .semibold), color: .label)
         ctx.draw(text: Money.fmt(invoice.subtotal, code: currency), in: CGRect(x: r.width-36-100, y: after+28, width: 100, height: 18), font: .systemFont(ofSize: 12, weight: .semibold), color: .label, alignment: .right)
+
+        _ = PaymentBlock.draw(on: ctx, page: r, yStart: after + 56, theme: theme, customer: customer)
     }
 }

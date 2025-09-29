@@ -4,13 +4,35 @@
 //
 //  Created by Danyil Skrypnichenko on 9/27/25.
 //
+// Models.swift
+import Foundation
 
-import SwiftUI
+// Address / Company
+struct Address: Codable, Hashable, Identifiable {
+    var id = UUID()
+    var line1 = ""
+    var line2 = ""
+    var city = ""
+    var state = ""
+    var zip = ""
+    var country = ""
+    var oneLine: String { [line1, line2, city, state, zip, country].filter { !$0.isEmpty }.joined(separator: ", ") }
+}
 
-// MARK: - Models
-struct Address: Codable, Hashable, Identifiable { var id = UUID(); var line1 = ""; var line2 = ""; var city = ""; var state = ""; var zip = ""; var country = ""; var oneLine: String { [line1,line2,city,state,zip,country].filter{!$0.isEmpty}.joined(separator: ", ") } }
+struct Company: Codable, Hashable, Identifiable {
+    var id = UUID()
+    var name = ""
+    var email = ""
+    var phone = ""
+    var address = Address()
+    var website: String? = nil
+}
 
-struct Company: Codable, Hashable, Identifiable { var id = UUID(); var name = ""; var email = ""; var phone = ""; var address = Address(); var website: String? = nil }
+// Customers
+enum CustomerStatus: String, Codable, CaseIterable, Identifiable {
+    case active, inactive
+    var id: String { rawValue }
+}
 
 struct Customer: Codable, Hashable, Identifiable {
     var id = UUID()
@@ -18,17 +40,24 @@ struct Customer: Codable, Hashable, Identifiable {
     var email = ""
     var phone = ""
     var address = Address()
-    var organization: String? = nil     // для строки "Acme Corporation"
+    var organization: String? = nil
     var status: CustomerStatus = .active
+
+    // Реквизиты конкретного клиента (в PDF)
+    var billingDetails: String? = nil
+    var paymentMethods: [PaymentMethod] = []
 }
 
-enum CustomerStatus: String, Codable, CaseIterable, Identifiable {
-    case active, inactive
-    var id: String { rawValue }
-}
+// Catalog / Invoices
 struct Product: Codable, Hashable, Identifiable { var id = UUID(); var name: String; var details: String; var rate: Decimal; var category: String }
 
-struct LineItem: Codable, Hashable, Identifiable { var id = UUID(); var description: String; var quantity: Decimal; var rate: Decimal; var total: Decimal { quantity * rate } }
+struct LineItem: Codable, Hashable, Identifiable {
+    var id = UUID()
+    var description: String
+    var quantity: Decimal
+    var rate: Decimal
+    var total: Decimal { quantity * rate }
+}
 
 struct Invoice: Codable, Hashable, Identifiable {
     enum Status: String, Codable, CaseIterable, Identifiable { case draft, sent, paid, overdue; var id: String { rawValue } }
@@ -41,7 +70,7 @@ struct Invoice: Codable, Hashable, Identifiable {
     var customer: Customer
     var currency: String = Locale.current.currency?.identifier ?? "USD"
     var items: [LineItem]
-    var subtotal: Decimal { items.map{$0.total}.reduce(0,+) }
+    var subtotal: Decimal { items.map(\.total).reduce(0, +) }
     var totalPaid: Decimal = 0
     var totalDue: Decimal { max(0, subtotal - totalPaid) }
 }

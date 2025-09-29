@@ -203,11 +203,16 @@ private struct CustomerRow: View {
 
 // MARK: - AddCustomerSheet
 
+
+
 struct AddCustomerSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
     @State private var email = ""
     @State private var phone = ""
+    @State private var billingDetails = ""
+    @State private var methods: [PaymentMethod] = []     // ✅
+
     var onSave: (Customer) -> Void
 
     private var canSave: Bool {
@@ -222,13 +227,24 @@ struct AddCustomerSheet: View {
                     TextField("Email", text: $email).textInputAutocapitalization(.never)
                     TextField("Phone", text: $phone).keyboardType(.phonePad)
                 }
+                Section("Billing details (optional)") {
+                    TextEditor(text: $billingDetails).frame(minHeight: 90)
+                    Text("IBAN/SWIFT, инструкции, PayPal email и пр. — сюда, если нужно общее примечание.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Section {
+                    PaymentMethodsEditor(methods: $methods)   // ✅ редактор
+                }
             }
             .navigationTitle("Add Customer")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
-                        onSave(Customer(name: name, email: email, phone: phone))
+                        var c = Customer(name: name, email: email, phone: phone)
+                        c.billingDetails = billingDetails.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : billingDetails
+                        c.paymentMethods = methods
+                        onSave(c)
                         dismiss()
                     }.disabled(!canSave)
                 }
