@@ -7,13 +7,13 @@
 
 import SwiftUI
 
-// MARK: - InvoicesScreen
+// MARK: - ViewModel
 
 final class InvoicesVM: ObservableObject {
     @Published var query = ""
 
     func filtered(_ invoices: [Invoice]) -> [Invoice] {
-        let q = query.lowercased()
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !q.isEmpty else { return invoices }
         return invoices.filter {
             $0.number.lowercased().contains(q) ||
@@ -22,13 +22,15 @@ final class InvoicesVM: ObservableObject {
     }
 
     func totalOutstanding(_ invoices: [Invoice]) -> Decimal {
-        invoices.filter { $0.status != .paid }.map { $0.subtotal }.reduce(0, +)
+        invoices.filter { $0.status != .paid }.map(\.subtotal).reduce(0, +)
     }
 
     func totalPaid(_ invoices: [Invoice]) -> Decimal {
-        invoices.filter { $0.status == .paid }.map { $0.subtotal }.reduce(0, +)
+        invoices.filter { $0.status == .paid }.map(\.subtotal).reduce(0, +)
     }
 }
+
+// MARK: - Screen
 
 struct InvoicesScreen: View {
     @EnvironmentObject private var app: AppState
@@ -36,55 +38,82 @@ struct InvoicesScreen: View {
 
     @State private var showCompanySetup = false
     @State private var showTemplatePicker = false
-    @State private var showEmptyPaywall = false   // экран-заглушка подписки
+    @State private var showEmptyPaywall = false
+    @State private var showWizard = false   // отдельный флаг на визард
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-
-                    // Header как на Analytics (вынесен из навбара)
                     screenHeader
-
-                    // Banner / Quick create
                     headerCard
-
-                    // Stats
                     statsRow
-
-                    // Search
                     searchField
 
-                    // List / Empty
-                    if app.invoices.isEmpty { emptyState } else { invoiceList }
+                    if app.invoices.isEmpty {
+                        emptyState
+                    } else {
+                        invoiceList
+                    }
                 }
                 .padding(.horizontal)
-                .padding(.top, 6) // подтянули выше
+                .padding(.top, 6)
             }
-            .navigationBarTitleDisplayMode(.inline) // заголовок в контенте, не в баре
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // Только кнопка "+" в баре
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { onNewInvoice() } label: {
+                    Button(action: onNewInvoice) {
                         Image(systemName: app.canCreateInvoice ? "plus.circle.fill" : "lock.circle")
                             .imageScale(.large)
                     }
                 }
             }
-            // флоу создания
+            // 1) Company setup (если нет компании)
             .sheet(isPresented: $showCompanySetup) {
                 CompanySetupView(onContinue: {
                     showCompanySetup = false
                     showTemplatePicker = true
                 })
             }
-            .sheet(isPresented: $showTemplatePicker) { TemplatePickerView() }
-            // экран-заглушка подписки
-            .sheet(isPresented: $showEmptyPaywall) { EmptyScreen() }
+            // 2) Template picker -> после выбора открываем визард
+            .sheet(isPresented: $showTemplatePicker) {
+                TemplatePickerView { _ in
+                    // закрываем пикер
+                    showTemplatePicker = false
+                    // открываем визард в следующем тике
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                        showWizard = true
+                    }
+                }
+            }
+            // 3) Визард создания инвойса
+            .sheet(isPresented: $showWizard) {
+                InvoiceWizardView()
+            }
+            // Paywall-заглушка
+            .sheet(isPresented: $showEmptyPaywall) {
+                EmptyScreen()
+            }
         }
     }
 
-    // MARK: Sections
+    // MARK: - Actions
+
+    private func onNewInvoice() {
+        // если лимит исчерпан и нет подписки — показываем paywall
+        guard app.canCreateInvoice else {
+            showEmptyPaywall = true
+            return
+        }
+        // если компания не настроена — сначала CompanySetup
+        if app.company == nil {
+            showCompanySetup = true
+        } else {
+            showTemplatePicker = true
+        }
+    }
+
+    // MARK: - Sections
 
     private var screenHeader: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -102,10 +131,10 @@ struct InvoicesScreen: View {
     private var headerCard: some View {
         Group {
             if app.isPremium {
+                // твоя карточка быстрого создания
                 QuickCreateCard(newAction: onNewInvoice)
                     .padding(.top, 2)
             } else {
-                // Free: показываем остаток и апгрейд
                 FreePlanCardCompact(
                     remaining: app.remainingFreeInvoices,
                     onUpgrade: { showEmptyPaywall = true },
@@ -121,21 +150,20 @@ struct InvoicesScreen: View {
             StatCard(
                 title: "Total Outstanding",
                 value: Money.fmt(vm.totalOutstanding(app.invoices),
-                                 code: app.invoices.first?.currency ?? "USD"),
+                                 code: app.invoices.first?.currency ?? app.currency),
                 tint: .blue.opacity(0.15)
             )
             StatCard(
                 title: "Total Paid",
                 value: Money.fmt(vm.totalPaid(app.invoices),
-                                 code: app.invoices.first?.currency ?? "USD"),
+                                 code: app.invoices.first?.currency ?? app.currency),
                 tint: .green.opacity(0.15)
             )
         }
     }
 
     private var searchField: some View {
-        SearchBar(text: $vm.query)
-            .padding(.top, 2)
+        SearchBar(text: $vm.query).padding(.top, 2)
     }
 
     private var invoiceList: some View {
@@ -174,11 +202,12 @@ struct InvoicesScreen: View {
                 }
                 .padding(20)
             }
-            .frame(maxWidth: .infinity, minHeight: 150) // компактнее
-            // CTA снизу:
+            .frame(maxWidth: .infinity, minHeight: 150)
+
+            // CTA снизу
             if !app.isPremium {
                 if app.remainingFreeInvoices == 0 {
-                    Button { showEmptyPaywall = true } label: {
+                    Button(action: { showEmptyPaywall = true }) {
                         Text("Upgrade to Create Invoice")
                             .bold()
                             .frame(maxWidth: .infinity)
@@ -187,7 +216,7 @@ struct InvoicesScreen: View {
                             .foregroundStyle(.white)
                     }
                 } else {
-                    Button { onNewInvoice() } label: {
+                    Button(action: onNewInvoice) {
                         Text("Create Free Invoice (\(app.remainingFreeInvoices) left)")
                             .bold()
                             .frame(maxWidth: .infinity)
@@ -200,28 +229,9 @@ struct InvoicesScreen: View {
         }
         .padding(.vertical, 6)
     }
-
-    // MARK: Actions
-
-    private func onNewInvoice() {
-        // Если лимит исчерпан и нет подписки — открываем пустой экран подписки
-        guard app.canCreateInvoice else {
-            showEmptyPaywall = true
-            return
-        }
-        if app.company == nil {
-            showCompanySetup = true
-        } else {
-            showTemplatePicker = true
-        }
-    }
 }
 
-// MARK: - PRO badge
-
-
-
-// MARK: - Free plan card (компактная, без disabled Create при 0)
+// MARK: - Compact free plan card (если она у тебя не в другом файле — оставь тут)
 
 struct FreePlanCardCompact: View {
     let remaining: Int
@@ -263,7 +273,6 @@ struct FreePlanCardCompact: View {
                 .foregroundStyle(.white)
             }
 
-            // Преимущества тарифа
             HStack(spacing: 20) {
                 Label("Unlimited invoices", systemImage: "checkmark")
                 Label("Premium templates", systemImage: "checkmark")
@@ -281,6 +290,8 @@ struct FreePlanCardCompact: View {
     }
 }
 
+// MARK: - Paywall-заглушка (если у тебя уже есть — этот блок можно убрать)
+
 struct EmptyScreen: View {
     var body: some View {
         NavigationStack {
@@ -291,13 +302,11 @@ struct EmptyScreen: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
-                Button("Close") {
-                    // закрывается свайпом вниз или кнопкой Done, тут можно оставить пусто
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color.black))
-                .foregroundStyle(.white)
+                Button("Close") { }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.black))
+                    .foregroundStyle(.white)
             }
             .padding()
             .navigationTitle("Upgrade")

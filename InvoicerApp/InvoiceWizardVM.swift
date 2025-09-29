@@ -4,7 +4,6 @@
 //
 //  Created by Danyil Skrypnichenko on 9/27/25.
 //
-
 import SwiftUI
 
 final class InvoiceWizardVM: ObservableObject {
@@ -20,10 +19,22 @@ final class InvoiceWizardVM: ObservableObject {
     var subtotal: Decimal { items.map { $0.total }.reduce(0, +) }
 }
 
+// MARK: - Wizard
+
+import SwiftUI
+
 struct InvoiceWizardView: View {
     @EnvironmentObject private var app: AppState
     @Environment(\.dismiss) private var dismiss
     @StateObject private var vm = InvoiceWizardVM()
+
+    // Template picker
+    @State private var showTemplatePicker = false
+
+    // PDF share
+    @State private var shareURL: URL?
+    @State private var showShare = false
+    @State private var shouldDismissAfterShare = false
 
     var body: some View {
         NavigationStack {
@@ -33,44 +44,50 @@ struct InvoiceWizardView: View {
             }
             .navigationTitle("Create Invoice")
             .toolbar {
+                // Нажимаем на "лейбл" – открываем выбор шаблона
                 ToolbarItem(placement: .principal) {
-                    Label(app.selectedTemplate?.name ?? "Classic Business", systemImage: "tag")
+                    Button {
+                        showTemplatePicker = true
+                    } label: {
+                        Label(app.selectedTemplate.name, systemImage: "tag")
+                            .labelStyle(.titleAndIcon)
+                    }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { save() } label: { Label("Save", systemImage: "square.and.arrow.down") }
                 }
             }
-            .onAppear {
-                var jumped = false
-
-                // 1) Если пришёл предвыбранный клиент — подставляем
-                if vm.customer == nil, let pre = app.preselectedCustomer {
-                    vm.customer = pre
-                    app.preselectedCustomer = nil
-                    if vm.step < 2 { vm.step = 2 }
-                    jumped = true
-                }
-
-                // 2) Если пришли предзаполненные позиции — подставляем и идём на шаг 3
-                if let presetItems = app.preselectedItems, !presetItems.isEmpty {
-                    if vm.items.isEmpty {
-                        vm.items = presetItems
-                    } else {
-                        vm.items.append(contentsOf: presetItems)
+            .sheet(isPresented: $showTemplatePicker) {
+                NavigationStack {
+                    TemplatePickerView { selected in
+                        app.selectedTemplate = selected      // сохраняем выбор
+                        showTemplatePicker = false           // закрываем ТОЛЬКО пикер
                     }
-                    app.preselectedItems = nil
-                    vm.step = 3
-                    jumped = true
+                    .navigationTitle("Invoice Templates")
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Done") { showTemplatePicker = false }
+                        }
+                    }
                 }
-
-                // 3) Если ничего не пришло, оставляем как есть; если пришёл только клиент — шаг 2
-                if !jumped, vm.customer != nil, vm.step < 2 {
-                    vm.step = 2
+            }
+            .onAppear(perform: configureFromAppState)
+            .sheet(isPresented: $showShare, onDismiss: {
+                if shouldDismissAfterShare {
+                    dismiss()
+                }
+            }) {
+                if let url = shareURL {
+                    ShareSheet(activityItems: [url]) { _, _, _, _ in
+                        // Пользователь закрыл контроллер шаринга
+                        shouldDismissAfterShare = true
+                    }
                 }
             }
         }
     }
 
+    // Steps routing
     @ViewBuilder private var content: some View {
         switch vm.step {
         case 1:
@@ -82,8 +99,27 @@ struct InvoiceWizardView: View {
         }
     }
 
+    private func configureFromAppState() {
+        var jumped = false
+        if vm.customer == nil, let pre = app.preselectedCustomer {
+            vm.customer = pre
+            app.preselectedCustomer = nil
+            if vm.step < 2 { vm.step = 2 }
+            jumped = true
+        }
+        if let presetItems = app.preselectedItems, !presetItems.isEmpty {
+            if vm.items.isEmpty { vm.items = presetItems } else { vm.items.append(contentsOf: presetItems) }
+            app.preselectedItems = nil
+            vm.step = 3
+            jumped = true
+        }
+        if !jumped, vm.customer != nil, vm.step < 2 { vm.step = 2 }
+    }
+
+    // Save -> PDF -> Share
     private func save() {
-        guard let company = app.company, let customer = vm.customer else { return }
+        guard let company = app.company, let customer = vm.customer, !vm.items.isEmpty else { return }
+
         let invoice = Invoice(
             number: vm.number,
             status: vm.status,
@@ -95,11 +131,26 @@ struct InvoiceWizardView: View {
             items: vm.items
         )
         app.invoices.append(invoice)
-        dismiss()
+
+        do {
+            let url = try PDFService.shared.generatePDF(
+                invoice: invoice,
+                company: company,
+                customer: customer,
+                currencyCode: vm.currency,
+                template: app.selectedTemplate,
+                logo: app.logoImage
+            )
+            shareURL = url
+            shouldDismissAfterShare = false
+            showShare = true
+        } catch {
+            print("PDF generation error:", error)
+            // если что-то пошло не так — просто остаёмся в визарде
+        }
     }
 }
-
-// Step header
+// MARK: - Step header
 
 struct StepHeader: View {
     let step: Int
@@ -134,7 +185,7 @@ struct StepHeader: View {
     }
 }
 
-// Step 1: Company
+// MARK: - Step 1: Company
 
 struct CompanySetupCard: ViewModifier {
     func body(content: Content) -> some View {
@@ -182,7 +233,7 @@ struct StepCompanyInfoView: View {
     }
 }
 
-// Step 2: Client
+// MARK: - Step 2: Client
 
 struct StepClientInfoView: View {
     @EnvironmentObject private var app: AppState
@@ -260,7 +311,7 @@ struct StepClientInfoView: View {
     }
 }
 
-// Step 3: Items & Pricing
+// MARK: - Step 3: Items & Pricing
 
 struct StepItemsPricingView: View {
     @EnvironmentObject private var app: AppState
@@ -284,7 +335,7 @@ struct StepItemsPricingView: View {
                         }
 
                         HStack(spacing: 8) {
-                            TextField("Search products/services…", text: $search).fieldStyle()   // <—
+                            TextField("Search products/services…", text: $search).fieldStyle()
                             Menu {
                                 Picker("Category", selection: $category) {
                                     Text("All").tag("All")
@@ -353,6 +404,8 @@ struct StepItemsPricingView: View {
     }
 }
 
+// MARK: - Local product row for wizard
+
 private struct WizardProductRow: View {
     let p: Product
     let onAdd: () -> Void
@@ -378,7 +431,8 @@ private struct WizardProductRow: View {
         .background(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.15)))
     }
 }
-// MARK: - Details
+
+// MARK: - Details (read-only)
 
 struct InvoiceDetailsView: View {
     let invoice: Invoice
@@ -426,15 +480,6 @@ struct InvoiceDetailsView: View {
     }
 }
 
-// MARK: - Other tabs (light)
-
-
-
-// ============ Products & Services ============
-
-
-
-
 // MARK: - Reusable UI
 
 extension View {
@@ -453,8 +498,6 @@ struct Avatar: View {
             .overlay(Text(initials).font(.caption).bold())
     }
 }
-
-
 
 struct Tag: View {
     let text: String
@@ -488,124 +531,32 @@ struct DecimalField: View {
     let title: String
     @Binding var value: Decimal
     var body: some View {
-        TextField(title,
-                  text: Binding(
-                    get: { NSDecimalNumber(decimal: value).stringValue },
-                    set: { value = Decimal(string: $0) ?? value }
-                  )
+        TextField(
+            title,
+            text: Binding(
+                get: { NSDecimalNumber(decimal: value).stringValue },
+                set: { value = Decimal(string: $0.replacingOccurrences(of: ",", with: ".")) ?? value }
+            )
         )
         .keyboardType(.decimalPad)
         .padding(12)
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.08)))
     }
 }
-struct FreePlanProductsCard: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 10) {
-                Image(systemName: "crown.fill").foregroundStyle(.yellow)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Free Plan").bold()
-                    Text("Invoice limit reached").font(.caption).foregroundStyle(.secondary)
-                }
-                Spacer()
-            }
-            Button("Upgrade to Create More") { }
-                .bold()
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 12).fill(
-                    LinearGradient(colors: [.orange, .red], startPoint: .leading, endPoint: .trailing)
-                ))
-                .foregroundStyle(.white)
 
-            Button("Create Invoice (Limit Reached)") { }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.06)))
-                .foregroundStyle(.secondary)
+// MARK: - ShareSheet wrapper
 
-            HStack(spacing: 24) {
-                Label("Unlimited invoices", systemImage: "checkmark")
-                Label("Premium templates", systemImage: "checkmark")
-                Label("Advanced features", systemImage: "checkmark")
-            }.font(.caption).foregroundStyle(.secondary)
-        }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 16).stroke(Color.yellow.opacity(0.4)))
+
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+    var completion: UIActivityViewController.CompletionWithItemsHandler? = nil
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let vc = UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+        vc.completionWithItemsHandler = completion
+        return vc
     }
-}
 
-struct ProductCatalogRow: View {
-    let product: Product
-    let onEdit: () -> Void
-    let onQuickAdd: () -> Void
-
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white)
-                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.secondary.opacity(0.15)))
-
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 8) {
-                    Image(systemName: "shippingbox")
-                    Text(product.name).bold()
-                    Tag(text: product.category)
-                    Spacer()
-                }
-                Text(product.details)
-                    .font(.caption).foregroundStyle(.secondary)
-
-                HStack {
-                    Text(Money.fmt(product.rate, code: Locale.current.currency?.identifier ?? "USD"))
-                        .bold()
-                    Text("/ hour").font(.caption).foregroundStyle(.secondary)
-                    Spacer()
-                    Button("Edit", action: onEdit)
-                        .padding(.horizontal, 12).padding(.vertical, 8)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.08)))
-                    Button("Quick Add", action: onQuickAdd)
-                        .padding(.horizontal, 12).padding(.vertical, 8)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.black))
-                        .foregroundStyle(.white)
-                }
-            }
-            .padding(16)
-        }
-    }
-}
-
-struct MetricTile: View {
-    let title: String
-    let value: String
-
-    var body: some View {
-        VStack(spacing: 6) {
-            Text(title).font(.caption).foregroundStyle(.secondary)
-            Text(value).font(.title3).bold()
-        }
-        .frame(maxWidth: .infinity, minHeight: 72)
-        .background(RoundedRectangle(cornerRadius: 14).stroke(Color.secondary.opacity(0.15)))
-    }
-}
-
-struct PremiumFeaturesCard: View {
-    let title: String
-    let subtitle: String
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Image(systemName: "crown").foregroundStyle(.yellow)
-                Text(title).bold()
-                Spacer()
-                Button("Upgrade") { }
-                    .padding(.horizontal, 12).padding(.vertical, 6)
-                    .background(RoundedRectangle(cornerRadius: 10).stroke(Color.yellow))
-            }
-            Text(subtitle).font(.caption).foregroundStyle(.secondary)
-        }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 16).stroke(Color.yellow.opacity(0.4)))
-    }
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

@@ -7,8 +7,6 @@
 
 import SwiftUI
 
-import SwiftUI
-
 // MARK: - ViewModel
 
 final class AnalyticsVM: ObservableObject {
@@ -90,15 +88,18 @@ struct AnalyticsScreen: View {
     // MARK: - Free Plan
 
     private var freeView: some View {
-        return VStack(spacing: 16) {
+        VStack(spacing: 16) {
             HStack {
-                StatCard(title: "Total Invoices",
-                         value: String(app.invoices.count),
-                         tint: .blue.opacity(0.15))
-                StatCard(title: "Total Revenue",
-                         value: Money.fmt(vm.totalRevenue(app.invoices),
-                                          code: app.currency),
-                         tint: .green.opacity(0.15))
+                StatCard(
+                    title: "Total Invoices",
+                    value: String(app.invoices.count),
+                    tint: .blue.opacity(0.15)
+                )
+                StatCard(
+                    title: "Total Revenue",
+                    value: Money.fmt(vm.totalRevenue(app.invoices), code: app.currency),
+                    tint: .green.opacity(0.15)
+                )
             }
 
             VStack(spacing: 16) {
@@ -107,10 +108,12 @@ struct AnalyticsScreen: View {
                     .foregroundStyle(.secondary)
                 Text("Unlock Advanced Analytics").font(.headline)
                 Text("Get detailed insights, trends, and reports to grow your business.")
-                    .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
 
                 Button("Upgrade to Premium") {
-                    // TODO: подключим к подписке
+                    // TODO: paywall
                 }
                 .bold()
                 .frame(maxWidth: .infinity)
@@ -125,7 +128,8 @@ struct AnalyticsScreen: View {
                     Label("Detailed financial reports", systemImage: "checkmark")
                     Label("Export analytics data", systemImage: "checkmark")
                 }
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
             .padding()
             .background(RoundedRectangle(cornerRadius: 16).stroke(Color.secondary.opacity(0.15)))
@@ -136,17 +140,20 @@ struct AnalyticsScreen: View {
 
     private var premiumView: some View {
         let breakdown = vm.breakdown(app.invoices)
-        return  VStack(spacing: 16) {
+        return VStack(spacing: 16) {
 
             // Header cards
             HStack {
-                StatCard(title: "Total Invoices",
-                         value: String(app.invoices.count),
-                         tint: .blue.opacity(0.15))
-                StatCard(title: "Total Revenue",
-                         value: Money.fmt(vm.totalRevenue(app.invoices),
-                                          code: app.currency),
-                         tint: .green.opacity(0.15))
+                StatCard(
+                    title: "Total Invoices",
+                    value: String(app.invoices.count),
+                    tint: .blue.opacity(0.15)
+                )
+                StatCard(
+                    title: "Total Revenue",
+                    value: Money.fmt(vm.totalRevenue(app.invoices), code: app.currency),
+                    tint: .green.opacity(0.15)
+                )
             }
 
             // Revenue breakdown
@@ -156,29 +163,33 @@ struct AnalyticsScreen: View {
                         Circle().fill(Color.green).frame(width: 8, height: 8)
                         Text("Paid (\(breakdown.paid.count) invoices)")
                         Spacer()
-                        Text(Money.fmt(breakdown.paid.map(\.subtotal).reduce(0,+), code: app.currency))
+                        Text(Money.fmt(breakdown.paid.map(\.subtotal).reduce(0, +), code: app.currency))
                     }
                     HStack {
                         Circle().fill(Color.blue).frame(width: 8, height: 8)
                         Text("Pending (\(breakdown.pending.count) invoices)")
                         Spacer()
-                        Text(Money.fmt(breakdown.pending.map(\.subtotal).reduce(0,+), code: app.currency))
+                        Text(Money.fmt(breakdown.pending.map(\.subtotal).reduce(0, +), code: app.currency))
                     }
                     HStack {
                         Circle().fill(Color.red).frame(width: 8, height: 8)
                         Text("Overdue (\(breakdown.overdue.count) invoices)")
                         Spacer()
-                        Text(Money.fmt(breakdown.overdue.map(\.subtotal).reduce(0,+), code: app.currency))
+                        Text(Money.fmt(breakdown.overdue.map(\.subtotal).reduce(0, +), code: app.currency))
                     }
                 }
             }
 
             // Metrics
             HStack {
-                MetricTile(title: "Payment Rate",
-                           value: "\(Int(vm.paymentRate(app.invoices)*100))%")
-                MetricTile(title: "Avg Invoice Value",
-                           value: Money.fmt(vm.avgInvoice(app.invoices), code: app.currency))
+                MetricTile(
+                    title: "Payment Rate",
+                    value: "\(Int(vm.paymentRate(app.invoices) * 100))%"
+                )
+                MetricTile(
+                    title: "Avg Invoice Value",
+                    value: Money.fmt(vm.avgInvoice(app.invoices), code: app.currency)
+                )
             }
 
             // Quick Stats
@@ -192,8 +203,10 @@ struct AnalyticsScreen: View {
                     HStack {
                         Text("Latest Invoice")
                         Spacer()
-                        Text(vm.latestInvoice(app.invoices)?
-                            .issueDate.formatted(date: .abbreviated, time: .omitted) ?? "—")
+                        Text(
+                            vm.latestInvoice(app.invoices)?
+                                .issueDate.formatted(date: .abbreviated, time: .omitted) ?? "—"
+                        )
                     }
                     HStack {
                         Text("Unique Clients")
@@ -211,4 +224,25 @@ struct AnalyticsScreen: View {
     }
 }
 
+// MARK: - Local UI bits
 
+private struct MetricTile: View {
+    let title: String
+    let value: String
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.title3)
+                .bold()
+        }
+        .frame(maxWidth: .infinity, minHeight: 72)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.secondary.opacity(0.15))
+        )
+    }
+}

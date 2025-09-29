@@ -10,6 +10,13 @@ import SwiftUI
 // MARK: - AppState.swift
 final class AppState: ObservableObject {
     // Business data
+    @Published var selectedTemplate: InvoiceTemplateDescriptor = TemplateCatalog.all.first!
+       @Published var logoData: Data? = nil
+
+       var logoImage: UIImage? {
+           get { logoData.flatMap(UIImage.init(data:)) }
+           set { logoData = newValue?.pngData() }
+       }
     @Published var isPremium: Bool = false
     let freeInvoiceLimit: Int = 1
     var remainingFreeInvoices: Int { max(0, freeInvoiceLimit - invoices.count) }
@@ -23,7 +30,7 @@ final class AppState: ObservableObject {
     @Published var preselectedLineItem: LineItem?
     @Published var preselectedItems: [LineItem]? = nil
     @Published var subscription: SubscriptionState = .freeViewOnly
-    @Published var selectedTemplate: InvoiceTemplate? = nil
+   
     @Published var currency: String = Locale.current.currency?.identifier ?? "USD"
     init() { self.company = Storage.load(Company?.self, key: .company, fallback: nil) }
 }

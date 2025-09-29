@@ -18,6 +18,14 @@ enum Storage {
 
 extension Decimal { static func + (l: Decimal, r: Decimal) -> Decimal { var a=l,b=r,c=Decimal(); NSDecimalAdd(&c,&a,&b,.plain); return c } ; static func * (l: Decimal, r: Decimal) -> Decimal { var a=l,b=r,c=Decimal(); NSDecimalMultiply(&c,&a,&b,.plain); return c } }
 
-enum Money { static func fmt(_ amount: Decimal, code: String) -> String { let n = amount as NSDecimalNumber; let f = NumberFormatter(); f.numberStyle = .currency; f.currencyCode = code; f.maximumFractionDigits = 2; f.minimumFractionDigits = 2; return f.string(from: n) ?? "\(n)" } }
+enum Money {
+    static func fmt(_ value: Decimal, code: String) -> String {
+        let nf = NumberFormatter()
+        nf.numberStyle = .currency
+        nf.currencyCode = code
+        nf.maximumFractionDigits = 2
+        return nf.string(from: value as NSNumber) ?? "\(value)"
+    }
+}
 
 enum Dates { static let display: DateFormatter = { let df = DateFormatter(); df.dateStyle = .medium; return df }() }

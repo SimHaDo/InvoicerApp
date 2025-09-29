@@ -55,49 +55,101 @@ struct CompanySetupView: View {
     }
 }
 
+// TemplatePickerView.swift
+import SwiftUI
+import PhotosUI
+
+import SwiftUI
+import PhotosUI
+
 struct TemplatePickerView: View {
     @EnvironmentObject private var app: AppState
-    @State private var selected: InvoiceTemplate? = Mock.templates.first
+    @Environment(\.dismiss) private var dismiss
+
+    // 👇 делаем onSelect с дефолтным значением
+    let onSelect: (InvoiceTemplateDescriptor) -> Void
+    init(onSelect: @escaping (InvoiceTemplateDescriptor) -> Void = { _ in }) {
+        self.onSelect = onSelect
+    }
+
+    @State private var photoItem: PhotosPickerItem?
+    private let templates = TemplateCatalog.all
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Free Templates").font(.subheadline).foregroundStyle(.secondary)
-                    ForEach(Mock.templates.filter { !$0.isPremium }) { t in
-                        TemplateRow(tpl: t, selected: $selected)
+            VStack(spacing: 16) {
+                headerLogo
+                ScrollView {
+                    LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 12) {
+                        ForEach(templates) { t in
+                            Button {
+                                app.selectedTemplate = t
+                                onSelect(t)          // 👉 сообщаем наверх
+                                dismiss()            // 👉 закрываем только этот шит
+                            } label: {
+                                VStack(spacing: 8) {
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color(t.theme.primary))
+                                        .frame(height: 90)
+                                        .overlay(Text(t.style.rawValue.capitalized)
+                                                    .font(.caption).bold().foregroundStyle(.white))
+                                    Text(t.name).font(.footnote).multilineTextAlignment(.center)
+                                }
+                                .padding(10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .stroke(t.id == app.selectedTemplate.id ? .black : .secondary.opacity(0.15),
+                                                lineWidth: t.id == app.selectedTemplate.id ? 2 : 1)
+                                )
+                            }
+                        }
                     }
-
-                    Text("Premium Templates").font(.subheadline).foregroundStyle(.secondary).padding(.top, 8)
-                    ForEach(Mock.templates.filter { $0.isPremium }) { t in
-                        TemplateRow(tpl: t, selected: $selected, isLocked: true)
-                    }
-
-                    UpgradeCallout()
-
-                    Button {
-                        app.selectedTemplate = selected
-                    } label: {
-                        Text("Continue with \(selected?.name ?? "Template")")
-                            .bold()
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(RoundedRectangle(cornerRadius: 14).fill(Color.black))
-                            .foregroundStyle(.white)
-                    }
+                    .padding(.horizontal)
+                    .padding(.bottom, 16)
                 }
-                .padding()
             }
-            .navigationTitle("Choose Template")
-            .navigationDestination(
-                isPresented: Binding(
-                    get: { app.selectedTemplate != nil },
-                    set: { if !$0 { app.selectedTemplate = nil } }
-                )
-            ) {
-                InvoiceWizardView()
+            .navigationTitle("Invoice Templates")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } }
             }
         }
+    }
+
+    // MARK: - Header (логотип) — iOS16-friendly onChange
+    @ViewBuilder private var headerLogo: some View {
+        HStack(spacing: 12) {
+            if let img = app.logoImage {
+                Image(uiImage: img).resizable().scaledToFit()
+                    .frame(width: 56, height: 56)
+                    .background(Color.secondary.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            } else {
+                RoundedRectangle(cornerRadius: 8).fill(Color.secondary.opacity(0.08))
+                    .overlay(Text("Logo").foregroundStyle(.secondary))
+                    .frame(width: 56, height: 56)
+            }
+
+            PhotosPicker(selection: $photoItem, matching: .images) {
+                Label("Add / Change Logo", systemImage: "photo")
+            }
+            // iOS 16 сигнатура: один аргумент
+            .onChange(of: photoItem) { new in
+                guard let new else { return }
+                Task {
+                    if let data = try? await new.loadTransferable(type: Data.self) {
+                        app.logoData = data
+                    }
+                }
+            }
+
+            if app.logoData != nil {
+                Button(role: .destructive) { app.logoData = nil } label: {
+                    Label("Remove", systemImage: "trash")
+                }
+            }
+            Spacer()
+        }
+        .padding(.horizontal)
     }
 }
 
