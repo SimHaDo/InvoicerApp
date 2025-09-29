@@ -35,7 +35,7 @@ struct CustomersScreen: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
 
-                    // Header (единый стиль)
+                    // Header
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Customers").font(.largeTitle).bold()
@@ -49,18 +49,14 @@ struct CustomersScreen: View {
 
                     // Actions
                     HStack(spacing: 12) {
-                        Button {
-                            showAddCustomer = true
-                        } label: {
+                        Button { showAddCustomer = true } label: {
                             Label("Add Customer", systemImage: "person.crop.circle.badge.plus")
                                 .frame(maxWidth: .infinity)
                         }
                         .padding(.vertical, 12)
                         .background(RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.1)))
 
-                        Button {
-                            onCreateInvoice()
-                        } label: {
+                        Button { onCreateInvoice() } label: {
                             Label("Create Invoice", systemImage: "doc.badge.plus")
                                 .frame(maxWidth: .infinity)
                         }
@@ -73,7 +69,7 @@ struct CustomersScreen: View {
                     SearchBar(text: $vm.query)
                         .padding(.top, 2)
 
-                    // Free plan banner (только для free)
+                    // Free plan banner
                     if !app.isPremium {
                         FreePlanCardCompact(
                             remaining: app.remainingFreeInvoices,
@@ -89,7 +85,7 @@ struct CustomersScreen: View {
                         VStack(spacing: 10) {
                             ForEach(vm.filtered(app.customers)) { c in
                                 NavigationLink {
-                                    // ВАЖНО: детали открываем по id, внутри вью найдёт Binding сам
+                                    // детали по id, внутри вью найдёт Binding сам
                                     CustomerDetailsView(customerID: c.id)
                                 } label: {
                                     CustomerRow(customer: c)
@@ -114,12 +110,11 @@ struct CustomersScreen: View {
     // MARK: - Helpers
 
     private func onCreateInvoice() {
-        // если бесплатный лимит исчерпан — показываем пэйволл-заглушку
         guard app.canCreateInvoice else {
             showEmptyPaywall = true
             return
         }
-        // поведение по твоему ТЗ: пока тоже показываем заглушку (подключим позже реальный переход)
+        // место под запуск визарда/роутинга; пока показываем заглушку
         showEmptyPaywall = true
     }
 
@@ -165,17 +160,12 @@ private struct CustomerRow: View {
                     HStack {
                         Text(customer.name).font(.headline)
                         Spacer()
-                        // Можно заменить на CustomerStatusChip(status: customer.status) если он у тебя уже есть
                         CustomerStatusChip(status: customer.status)
                     }
 
                     HStack(spacing: 14) {
-                        if !customer.email.isEmpty {
-                            Label(customer.email, systemImage: "envelope")
-                        }
-                        if !customer.phone.isEmpty {
-                            Label(customer.phone, systemImage: "phone")
-                        }
+                        if !customer.email.isEmpty { Label(customer.email, systemImage: "envelope") }
+                        if !customer.phone.isEmpty { Label(customer.phone, systemImage: "phone") }
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -198,7 +188,6 @@ private struct CustomerRow: View {
         }
     }
 
-    // Вычисления по данным AppState
     private var invoicesCount: Int {
         app.invoices.filter { $0.customer.id == customer.id }.count
     }
@@ -222,8 +211,7 @@ struct AddCustomerSheet: View {
     var onSave: (Customer) -> Void
 
     private var canSave: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty &&
-        email.contains("@")
+        !name.trimmingCharacters(in: .whitespaces).isEmpty && email.contains("@")
     }
 
     var body: some View {

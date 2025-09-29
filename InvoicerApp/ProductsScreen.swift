@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+// MARK: - VM
+
 final class ProductsVM: ObservableObject {
     @Published var query: String = ""
     @Published var category: String = "All"
@@ -16,7 +18,9 @@ final class ProductsVM: ObservableObject {
         if category != "All" { items = items.filter { $0.category == category } }
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !q.isEmpty else { return items }
-        return items.filter { $0.name.lowercased().contains(q) || $0.details.lowercased().contains(q) }
+        return items.filter {
+            $0.name.lowercased().contains(q) || $0.details.lowercased().contains(q)
+        }
     }
 
     func categories(from products: [Product]) -> [String] {
@@ -24,12 +28,14 @@ final class ProductsVM: ObservableObject {
     }
 }
 
+// MARK: - Screen
+
 struct ProductsScreen: View {
     @EnvironmentObject private var app: AppState
     @StateObject private var vm = ProductsVM()
 
     @State private var showAddProduct = false
-    @State private var editingProduct: Product? = nil        // <— было UUID?
+    @State private var editingProduct: Product? = nil   // sheet(item:)
     @State private var showEmptyPaywall = false
 
     var body: some View {
@@ -37,7 +43,7 @@ struct ProductsScreen: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
 
-                    // Header (как на Analytics/Invoices)
+                    // Header
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Products & Services").font(.largeTitle).bold()
@@ -88,7 +94,7 @@ struct ProductsScreen: View {
                     }
                     .padding(.top, 2)
 
-                    // Free banner (для фри)
+                    // Free banner
                     if !app.isPremium {
                         FreePlanCardCompact(
                             remaining: app.remainingFreeInvoices,
@@ -105,7 +111,7 @@ struct ProductsScreen: View {
                             ForEach(vm.filtered(app.products)) { p in
                                 ProductRow(
                                     product: p,
-                                    onEdit: { editingProduct = p },     // <— теперь передаём сам Product
+                                    onEdit: { editingProduct = p },
                                     onQuickAdd: { quickAdd(p) }
                                 )
                             }
@@ -122,7 +128,7 @@ struct ProductsScreen: View {
                     app.products.append(new)
                 }
             }
-            .sheet(item: $editingProduct) { product in         // <— item: Product?
+            .sheet(item: $editingProduct) { product in
                 ProductFormView(mode: .edit(productID: product.id), initial: product) { updated in
                     if let idx = app.products.firstIndex(where: { $0.id == product.id }) {
                         app.products[idx] = updated
@@ -137,13 +143,13 @@ struct ProductsScreen: View {
 
     private func onCreateInvoice() {
         guard app.canCreateInvoice else { showEmptyPaywall = true; return }
-        // пока подключаем заглушку paywall
+        // подключишь визард — дерни роутер/флаг; временно:
         showEmptyPaywall = true
     }
 
     private func quickAdd(_ p: Product) {
         guard app.canCreateInvoice else { showEmptyPaywall = true; return }
-        // TODO: интеграция с визардом (предзаполнить LineItem и открыть визард)
+        // TODO: предзаполнить LineItem и открыть визард
         showEmptyPaywall = true
     }
 
@@ -153,9 +159,7 @@ struct ProductsScreen: View {
             Text("Add services you offer to invoice faster.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            Button {
-                showAddProduct = true
-            } label: {
+            Button { showAddProduct = true } label: {
                 Text("Add Product")
                     .bold()
                     .frame(maxWidth: .infinity)
@@ -171,7 +175,7 @@ struct ProductsScreen: View {
     }
 }
 
-// Row
+// MARK: - Row
 
 private struct ProductRow: View {
     let product: Product
@@ -268,7 +272,11 @@ struct ProductFormView: View {
                 ToolbarItem(placement: .topBarLeading) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
-                        let p = Product(id: initial?.id ?? UUID(), name: name, details: details, rate: rate, category: category)
+                        let p = Product(id: initial?.id ?? UUID(),
+                                        name: name,
+                                        details: details,
+                                        rate: rate,
+                                        category: category)
                         onSave(p)
                         dismiss()
                     }.disabled(!canSave)
@@ -287,7 +295,7 @@ struct ProductFormView: View {
 
 // MARK: - Small helpers reused
 
- struct ProBadge: View {
+struct ProBadge: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: "crown.fill")
