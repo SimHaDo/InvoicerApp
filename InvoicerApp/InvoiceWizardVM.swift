@@ -19,6 +19,22 @@ final class InvoiceWizardVM: ObservableObject {
     @Published var items: [LineItem] = []
     @Published var currency: String = Locale.current.currency?.identifier ?? "USD"
 
+    // Payment step state
+    enum PaymentChoice: String, CaseIterable, Identifiable { case saved, custom, none
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .saved:  return "Saved methods"
+            case .custom: return "Custom for this invoice"
+            case .none:   return "Do not include"
+            }
+        }
+    }
+    @Published var paymentChoice: PaymentChoice = .saved
+    @Published var selectedSaved: Set<UUID> = []              // выбранные из app.paymentMethods
+    @Published var customMethods: [PaymentMethod] = []        // кастомные для этого инвойса
+    @Published var paymentNotes: String = ""                  // дополнительные примечания (на инвойсе)
+
     var subtotal: Decimal { items.map { $0.total }.reduce(0, +) }
 }
 
@@ -87,8 +103,10 @@ struct InvoiceWizardView: View {
             StepCompanyInfoView { vm.step = 2 }
         case 2:
             StepClientInfoView(vm: vm, next: { vm.step = 3 }, prev: { vm.step = 1 })
+        case 3:
+            StepPaymentDetailsView(vm: vm, prev: { vm.step = 2 }, next: { vm.step = 4 })
         default:
-            StepItemsPricingView(vm: vm, prev: { vm.step = 2 }, onSaved: save)
+            StepItemsPricingView(vm: vm, prev: { vm.step = 3 }, onSaved: save)
         }
     }
 
@@ -108,11 +126,24 @@ struct InvoiceWizardView: View {
                 vm.items.append(contentsOf: presetItems)
             }
             app.preselectedItems = nil
-            vm.step = 3
+            vm.step = 4
             jumped = true
         }
         if !jumped, vm.customer != nil, vm.step < 2 {
             vm.step = 2
+        }
+    }
+
+    // Собираем финальный список реквизитов на основе выбора на шаге
+    private func resolvedPaymentMethods() -> [PaymentMethod] {
+        switch vm.paymentChoice {
+        case .none:
+            return []
+        case .custom:
+            return vm.customMethods
+        case .saved:
+            let all = app.paymentMethods
+            return all.filter { vm.selectedSaved.contains($0.id) }
         }
     }
 
@@ -123,7 +154,7 @@ struct InvoiceWizardView: View {
               !vm.items.isEmpty
         else { return }
 
-        let invoice = Invoice(
+        var invoice = Invoice(
             number: vm.number,
             status: vm.status,
             issueDate: vm.issueDate,
@@ -133,6 +164,11 @@ struct InvoiceWizardView: View {
             currency: vm.currency,
             items: vm.items
         )
+
+        // Применяем реквизиты и заметки, выбранные на шаге Payment Details
+        invoice.paymentMethods = resolvedPaymentMethods()
+        invoice.paymentNotes = vm.paymentNotes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : vm.paymentNotes
+
         app.invoices.append(invoice)
 
         do {
@@ -159,18 +195,20 @@ struct InvoiceWizardView: View {
 struct StepHeader: View {
     let step: Int
     var body: some View {
-        HStack(spacing: 24) {
-            stepItem(1, "Company Info", "Your business details")
+        HStack(spacing: 18) {
+            stepItem(1, "Company", "Your business details")
             divider
-            stepItem(2, "Client Info", "Client information")
+            stepItem(2, "Client", "Client information")
             divider
-            stepItem(3, "Items & Pricing", "Add invoice items")
+            stepItem(3, "Payment", "What to show on invoice")
+            divider
+            stepItem(4, "Items", "Add invoice items")
         }
         .padding()
         .background(.ultraThinMaterial)
     }
     private var divider: some View {
-        Rectangle().fill(Color.secondary.opacity(0.2)).frame(width: 24, height: 2)
+        Rectangle().fill(Color.secondary.opacity(0.2)).frame(width: 18, height: 2)
     }
     private func stepItem(_ n: Int, _ title: String, _ sub: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -326,7 +364,163 @@ struct StepClientInfoView: View {
     }
 }
 
-// MARK: - Step 3: Items & Pricing
+// MARK: - Step 3: Payment Details
+
+struct StepPaymentDetailsView: View {
+    @EnvironmentObject private var app: AppState
+    @ObservedObject var vm: InvoiceWizardVM
+    var prev: () -> Void
+    var next: () -> Void
+
+    @State private var showAddSheet = false
+    @State private var editing: PaymentMethod? = nil
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+
+                // Choice
+                GroupBox {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Payment Details on Invoice").font(.headline)
+
+                        Picker("Show on invoice", selection: $vm.paymentChoice) {
+                            ForEach(InvoiceWizardVM.PaymentChoice.allCases) { ch in
+                                Text(ch.title).tag(ch)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+
+                        // Saved
+                        if vm.paymentChoice == .saved {
+                            if app.paymentMethods.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("You have no saved payment methods").foregroundStyle(.secondary)
+                                    Button {
+                                        showAddSheet = true
+                                    } label: {
+                                        Label("Add Method", systemImage: "plus")
+                                    }
+                                }
+                            } else {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    ForEach(app.paymentMethods) { m in
+                                        SavedMethodRow(
+                                            method: m,
+                                            isSelected: vm.selectedSaved.contains(m.id),
+                                            onToggle: {
+                                                if vm.selectedSaved.contains(m.id) {
+                                                    vm.selectedSaved.remove(m.id)
+                                                } else {
+                                                    vm.selectedSaved.insert(m.id)
+                                                }
+                                            },
+                                            onEdit: { editing = m }
+                                        )
+                                    }
+                                    Button {
+                                        showAddSheet = true
+                                    } label: {
+                                        Label("Add Another", systemImage: "plus")
+                                    }
+                                }
+                            }
+                        }
+
+                        // Custom per-invoice
+                        if vm.paymentChoice == .custom {
+                            // Используем твой общий редактор методов, который уже есть в проекте
+                            PaymentMethodsEditor(methods: $vm.customMethods)
+                        }
+
+                        // Notes
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Additional notes (optional)")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            TextField("Shown below the payment block in PDF",
+                                      text: $vm.paymentNotes,
+                                      axis: .vertical)
+                            .textInputAutocapitalization(.never)
+                            .lineLimit(2...5)
+                            .padding(10)
+                            .background(RoundedRectangle(cornerRadius: 10).fill(Color.secondary.opacity(0.08)))
+                        }
+                    }
+                    .padding(4)
+                }
+
+                HStack {
+                    Button("Previous", action: prev).buttonStyle(.bordered)
+                    Spacer()
+                    Button("Next", action: next)
+                        .buttonStyle(.borderedProminent)
+                        .disabled(!canProceed)
+                }
+            }
+            .padding()
+        }
+        .sheet(isPresented: $showAddSheet) {
+            AddEditPaymentMethodSheet { new in
+                // если мы в режиме saved — добавляем в сохранённые и сразу отмечаем выбранным
+                if vm.paymentChoice == .saved {
+                    app.paymentMethods.append(new)
+                    app.savePaymentMethods()
+                    vm.selectedSaved.insert(new.id)
+                } else {
+                    vm.customMethods.append(new)
+                }
+            }
+        }
+        .sheet(item: $editing) { m in
+            AddEditPaymentMethodSheet(existing: m) { updated in
+                if let idx = app.paymentMethods.firstIndex(where: { $0.id == m.id }) {
+                    app.paymentMethods[idx] = updated
+                    app.savePaymentMethods()
+                }
+            }
+        }
+    }
+
+    private var canProceed: Bool {
+        switch vm.paymentChoice {
+        case .none:   return true
+        case .saved:  return !vm.selectedSaved.isEmpty
+        case .custom: return !vm.customMethods.isEmpty
+        }
+    }
+}
+
+private struct SavedMethodRow: View {
+    let method: PaymentMethod
+    let isSelected: Bool
+    let onToggle: () -> Void
+    let onEdit: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Button(action: onToggle) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .imageScale(.large)
+            }
+            .buttonStyle(.plain)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(method.type.title).bold()
+                Text(method.type.subtitle).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button("Edit", action: onEdit)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(RoundedRectangle(cornerRadius: 10).fill(Color.secondary.opacity(0.1)))
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.15)))
+    }
+}
+
+// MARK: - Step 4: Items & Pricing
 
 struct StepItemsPricingView: View {
     @EnvironmentObject private var app: AppState

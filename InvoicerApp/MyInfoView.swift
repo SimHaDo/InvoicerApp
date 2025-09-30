@@ -8,6 +8,7 @@
 // MyInfoView.swift
 // MyInfoView.swift
 import SwiftUI
+import PhotosUI
 
 struct MyInfoView: View {
     @EnvironmentObject private var app: AppState
@@ -17,9 +18,48 @@ struct MyInfoView: View {
     @State private var isEditingCompany = false
     @State private var showAddEditMethod = false
     @State private var editingMethod: PaymentMethod? = nil
+    @State private var photoItem: PhotosPickerItem?
 
     var body: some View {
         List {
+            // MARK: Logo
+            Section("Logo") {
+                HStack(spacing: 12) {
+                    if let img = app.logoImage {
+                        Image(uiImage: img)
+                            .resizable().scaledToFit()
+                            .frame(width: 64, height: 64)
+                            .background(Color.secondary.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    } else {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.secondary.opacity(0.06))
+                            .frame(width: 64, height: 64)
+                            .overlay(Text("Logo").foregroundStyle(.secondary))
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        PhotosPicker(selection: $photoItem, matching: .images) {
+                            Label(app.logoImage == nil ? "Add Logo" : "Change Logo", systemImage: "photo")
+                        }
+                        .onChange(of: photoItem) { new in
+                            guard let new else { return }
+                            Task {
+                                if let data = try? await new.loadTransferable(type: Data.self) {
+                                    app.logoData = data
+                                }
+                            }
+                        }
+
+                        if app.logoData != nil {
+                            Button(role: .destructive) {
+                                app.logoData = nil
+                            } label: { Label("Remove Logo", systemImage: "trash") }
+                        }
+                    }
+                }
+            }
+
             // MARK: Company
             Section("My Company") {
                 if let c = app.company, !isEditingCompany {

@@ -60,7 +60,11 @@ struct LineItem: Codable, Hashable, Identifiable {
 }
 
 struct Invoice: Codable, Hashable, Identifiable {
-    enum Status: String, Codable, CaseIterable, Identifiable { case draft, sent, paid, overdue; var id: String { rawValue } }
+    enum Status: String, Codable, CaseIterable, Identifiable {
+        case draft, sent, paid, overdue
+        var id: String { rawValue }
+    }
+
     var id = UUID()
     var number: String
     var status: Status = .draft
@@ -70,11 +74,15 @@ struct Invoice: Codable, Hashable, Identifiable {
     var customer: Customer
     var currency: String = Locale.current.currency?.identifier ?? "USD"
     var items: [LineItem]
+
+    // NEW: реквизиты и заметки, выбранные в визарде
+    var paymentMethods: [PaymentMethod] = []
+    var paymentNotes: String? = nil
+
     var subtotal: Decimal { items.map(\.total).reduce(0, +) }
     var totalPaid: Decimal = 0
     var totalDue: Decimal { max(0, subtotal - totalPaid) }
 }
-
 struct InvoiceTemplate: Hashable, Identifiable { let id = UUID(); let name: String; let summary: String; let tags: [String]; let isPremium: Bool }
 
 enum SubscriptionState: String, Codable { case freeViewOnly, pro }
