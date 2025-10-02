@@ -7,6 +7,17 @@
 
 import SwiftUI
 
+// MARK: - FloatingElement
+
+private struct FloatingElement: Identifiable {
+    let id = UUID()
+    var x: Double
+    var y: Double
+    var opacity: Double
+    var scale: Double
+    var rotation: Double
+}
+
 // MARK: - Internal pricing meta (не меняем модель Product)
 
 private enum PricingKind: Equatable {
@@ -75,28 +86,56 @@ final class ProductsVM: ObservableObject {
 struct ProductsScreen: View {
     @EnvironmentObject private var app: AppState
     @StateObject private var vm = ProductsVM()
+    @Environment(\.colorScheme) private var scheme
 
     @State private var showAddProduct = false
     @State private var editingProduct: Product? = nil
-
-    private let mainBlue = Color.blue
-    private let secondaryBlue = Color.blue.opacity(0.6)
+    @State private var showContent = false
+    @State private var pulseAnimation = false
+    @State private var shimmerOffset: CGFloat = -1
+    @State private var floatingElements: [FloatingElement] = []
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
+            ZStack {
+                // Анимированный фон
+                backgroundView
+                
+                // Плавающие элементы
+                ForEach(floatingElements) { element in
+                    Circle()
+                        .fill(Color.primary.opacity(0.05))
+                        .frame(width: 40, height: 40)
+                        .scaleEffect(element.scale)
+                        .opacity(element.opacity)
+                        .rotationEffect(.degrees(element.rotation))
+                        .position(x: element.x, y: element.y)
+                        .animation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true), value: element.scale)
+                }
+                
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
 
-                    // Header
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Products & Services").font(.largeTitle).bold()
-                            Text("Manage your service catalog")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                        // Header с анимациями
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Products & Services")
+                                    .font(.system(size: 32, weight: .black))
+                                    .foregroundColor(.primary)
+                                    .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
+                                    .offset(y: showContent ? 0 : -20)
+                                    .opacity(showContent ? 1 : 0)
+                                    .animation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.1), value: showContent)
+                                
+                                Text("Manage your service catalog")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                                    .offset(y: showContent ? 0 : -15)
+                                    .opacity(showContent ? 1 : 0)
+                                    .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2), value: showContent)
+                            }
+                            Spacer()
                         }
-                        Spacer()
-                    }
 
                     // Actions
                     HStack(spacing: 12) {
@@ -145,8 +184,6 @@ struct ProductsScreen: View {
                             ForEach(vm.filtered(app.products)) { p in
                                 ProductCard(
                                     product: p,
-                                    mainBlue: mainBlue,
-                                    secondaryBlue: secondaryBlue,
                                     onEdit: { editingProduct = p },
                                     onQuickAdd: { quickAdd(p) }
                                 )
@@ -171,6 +208,13 @@ struct ProductsScreen: View {
                     }
                 }
             }
+        }
+        .onAppear {
+            showContent = true
+            pulseAnimation = true
+            startShimmerAnimation()
+            createFloatingElements()
+        }
         }
     }
 
@@ -211,8 +255,6 @@ struct ProductsScreen: View {
 
 private struct ProductCard: View {
     let product: Product
-    let mainBlue: Color
-    let secondaryBlue: Color
     var onEdit: () -> Void
     var onQuickAdd: () -> Void
 
@@ -230,9 +272,9 @@ private struct ProductCard: View {
                 HStack(alignment: .firstTextBaseline) {
                     HStack(spacing: 8) {
                         Image(systemName: "shippingbox")
-                            .foregroundStyle(mainBlue)
+                            .foregroundStyle(.primary)
                         Text(product.name)
-                            .foregroundStyle(mainBlue)
+                            .foregroundStyle(.primary)
                             .font(.headline)
                             .lineLimit(1)
                             .truncationMode(.tail)
@@ -256,14 +298,14 @@ private struct ProductCard: View {
                 if !cleanDetails.isEmpty {
                     Text(cleanDetails)
                         .font(.caption)
-                        .foregroundStyle(secondaryBlue)
+                        .foregroundStyle(.secondary)
                 }
 
                 // Price row
                 HStack {
                     Text(Money.fmt(product.rate, code: Locale.current.currency?.identifier ?? "USD"))
                         .bold()
-                        .foregroundStyle(mainBlue)
+                        .foregroundStyle(.primary)
                     Group {
                         switch kind {
                         case .hourly:            Text("/ hour")
@@ -271,7 +313,7 @@ private struct ProductCard: View {
                         case .perUnit(let u):    Text("/ \(u)")
                         }
                     }
-                    .foregroundStyle(secondaryBlue)
+                    .foregroundStyle(.secondary)
                     Spacer()
                 }
             }
@@ -472,5 +514,128 @@ struct DecimalTextField: View {
             })
         )
         .keyboardType(.decimalPad)
+    }
+}
+
+// MARK: - Background View
+
+extension ProductsScreen {
+    private var backgroundView: some View {
+        Group {
+            if scheme == .light {
+                ZStack {
+                    // Основной градиент
+                    LinearGradient(
+                        colors: [Color.white, Color(white: 0.97), Color(white: 0.95)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    
+                    // Радиальный градиент с анимацией
+                    RadialGradient(
+                        colors: [Color.white, Color(white: 0.96), .clear],
+                        center: .topLeading,
+                        startRadius: 24,
+                        endRadius: 520
+                    )
+                    .blendMode(.screen)
+                    
+                    // Анимированный shimmer эффект
+                    LinearGradient(
+                        colors: [.clear, Color.white.opacity(0.3), .clear],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .offset(x: shimmerOffset * 400)
+                    .blendMode(.overlay)
+                    
+                    // Плавающие световые пятна
+                    ForEach(0..<3, id: \.self) { i in
+                        Circle()
+                            .fill(Color.primary.opacity(0.05))
+                            .frame(width: 200, height: 200)
+                            .position(
+                                x: CGFloat(100 + i * 150),
+                                y: CGFloat(200 + i * 100)
+                            )
+                            .scaleEffect(pulseAnimation ? 1.2 : 0.8)
+                            .opacity(pulseAnimation ? 0.6 : 0.3)
+                            .animation(
+                                .easeInOut(duration: 3.0 + Double(i) * 0.5)
+                                .repeatForever(autoreverses: true)
+                                .delay(Double(i) * 0.3),
+                                value: pulseAnimation
+                            )
+                    }
+                }
+            } else {
+                ZStack {
+                    // Основной градиент для темной темы
+                    LinearGradient(
+                        colors: [Color.black, Color.black.opacity(0.92)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    
+                    // Радиальный градиент
+                    RadialGradient(
+                        colors: [Color.white.opacity(0.08), .clear],
+                        center: .topLeading,
+                        startRadius: 24,
+                        endRadius: 520
+                    )
+                    .blendMode(.screen)
+                    
+                    // Анимированный shimmer эффект для темной темы
+                    LinearGradient(
+                        colors: [.clear, Color.white.opacity(0.1), .clear],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .offset(x: shimmerOffset * 400)
+                    .blendMode(.overlay)
+                    
+                    // Плавающие световые пятна для темной темы
+                    ForEach(0..<3, id: \.self) { i in
+                        Circle()
+                            .fill(Color.primary.opacity(0.08))
+                            .frame(width: 240, height: 240)
+                            .position(
+                                x: CGFloat(120 + i * 180),
+                                y: CGFloat(180 + i * 120)
+                            )
+                            .scaleEffect(pulseAnimation ? 1.3 : 0.7)
+                            .opacity(pulseAnimation ? 0.8 : 0.4)
+                            .animation(
+                                .easeInOut(duration: 4.0 + Double(i) * 0.7)
+                                .repeatForever(autoreverses: true)
+                                .delay(Double(i) * 0.4),
+                                value: pulseAnimation
+                            )
+                    }
+                }
+            }
+        }
+        .ignoresSafeArea()
+    }
+    
+    // MARK: - Animation Functions
+    
+    private func startShimmerAnimation() {
+        withAnimation(.linear(duration: 3.0).repeatForever(autoreverses: false)) {
+            shimmerOffset = 1
+        }
+    }
+    
+    private func createFloatingElements() {
+        floatingElements = (0..<5).map { _ in
+            FloatingElement(
+                x: Double.random(in: 50...350),
+                y: Double.random(in: 100...600),
+                opacity: Double.random(in: 0.3...0.7),
+                scale: Double.random(in: 0.8...1.2),
+                rotation: Double.random(in: 0...360)
+            )
+        }
     }
 }
