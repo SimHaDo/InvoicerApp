@@ -11,10 +11,18 @@ import SwiftUI
 @main
 struct InvoicerApp: App {
     @StateObject private var app = AppState()
+
     var body: some Scene {
         WindowGroup {
-            RootTabView()
+            // Контейнер сам решает, что показать: онбординг или табы
+            RootContainer()
                 .environmentObject(app)
+                .task {
+                    // Обновляем статус подписки на старте
+                    await SubscriptionManager.shared.refreshStatus()
+                    // Явный sync KVS (на всякий случай)
+                    CloudSync.shared.synchronize()
+                }
         }
     }
 }

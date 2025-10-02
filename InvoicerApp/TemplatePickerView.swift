@@ -33,12 +33,13 @@ struct TemplatePickerView: View {
                                 dismiss()
                             } label: {
                                 VStack(spacing: 8) {
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color(t.theme.primary))
-                                        .frame(height: 90)
-                                        .overlay(Text(t.style.rawValue.capitalized)
-                                            .font(.caption).bold().foregroundStyle(.white))
-                                    Text(t.name).font(.footnote).multilineTextAlignment(.center)
+                                    TemplateCardPreview(descriptor: t)
+                                        .frame(height: 120)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.08)))
+                                    Text(t.name)
+                                        .font(.footnote)
+                                        .multilineTextAlignment(.center)
                                 }
                                 .padding(10)
                                 .background(
@@ -94,5 +95,80 @@ struct TemplatePickerView: View {
             Spacer()
         }
         .padding(.horizontal)
+    }
+}
+// Новая мини-карточка превью
+struct TemplateCardPreview: View {
+    let descriptor: InvoiceTemplateDescriptor
+    var body: some View {
+        let theme = descriptor.theme
+        let primary = Color(theme.primary)
+        ZStack {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.secondarySystemBackground).opacity(0.6))
+
+            VStack(spacing: 8) {
+                // top bar
+                HStack {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(primary.opacity(0.9))
+                        .frame(width: 60, height: 14)
+                    Spacer()
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(primary.opacity(0.5))
+                        .frame(width: 34, height: 14)
+                }
+                .padding(.horizontal, 10)
+                .padding(.top, 8)
+
+                // bill to / meta
+                HStack(spacing: 8) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Rect(.label, w: 80, h: 10)
+                        Rect(.secondaryLabel, w: 60, h: 8)
+                    }
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Rect(.secondaryLabel, w: 70, h: 8)
+                        Rect(.secondaryLabel, w: 70, h: 8)
+                        Rect(.secondaryLabel, w: 70, h: 8)
+                    }
+                }
+                .padding(.horizontal, 10)
+
+                // table
+                VStack(spacing: 4) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(primary.opacity(0.12))
+                        .frame(height: 14)
+                        .padding(.horizontal, 8)
+                    ForEach(0..<3) { _ in
+                        HStack {
+                            Rect(.label, w: 90, h: 8)
+                            Spacer()
+                            Rect(.label, w: 28, h: 8)
+                            Rect(.label, w: 40, h: 8)
+                            Rect(.label, w: 40, h: 8)
+                        }
+                        .padding(.horizontal, 8)
+                    }
+                }
+
+                // total
+                HStack {
+                    Spacer()
+                    Rect(.label, w: 60, h: 10)
+                }
+                .padding(.horizontal, 10)
+
+                Spacer(minLength: 2)
+            }
+        }
+    }
+
+    private func Rect(_ uiColor: UIColor, w: CGFloat, h: CGFloat) -> some View {
+        RoundedRectangle(cornerRadius: 3)
+            .fill(Color(uiColor).opacity(0.85))
+            .frame(width: w, height: h)
     }
 }
