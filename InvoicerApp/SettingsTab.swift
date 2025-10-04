@@ -265,7 +265,7 @@ private struct MyInfoCard: View {
                     
                     Text("Company details and logo")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .foregroundColor(.primary.opacity(0.7))
                 }
                 
                 Spacer()
@@ -300,25 +300,25 @@ private struct MyInfoCard: View {
                     if let c = app.company, !c.name.isEmpty {
                         Text(c.name)
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.primary)
+                            .foregroundColor(.primary.opacity(0.9))
                             .lineLimit(1)
                             .truncationMode(.tail)
                         
                         if !c.email.isEmpty {
                             Text(c.email)
                                 .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(.secondary)
+                                .foregroundColor(.primary.opacity(0.6))
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                         }
                     } else {
                         Text("Set up your company")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.primary)
+                            .foregroundColor(.primary.opacity(0.9))
                         
                         Text("Name, email, address, logo")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(.secondary)
+                            .foregroundColor(.primary.opacity(0.6))
                     }
                 }
                 
