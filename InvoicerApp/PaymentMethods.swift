@@ -118,6 +118,17 @@ enum PaymentMethodType: Codable, Equatable, Hashable {
             return details
         }
     }
+    
+    var iconName: String {
+        switch self {
+        case .bankIBAN: return "building.columns"
+        case .bankUS: return "building.columns"
+        case .paypal: return "p.circle"
+        case .cardLink: return "link"
+        case .crypto: return "bitcoinsign.circle"
+        case .other: return "ellipsis.circle"
+        }
+    }
 
     var isValid: Bool {
         switch self {

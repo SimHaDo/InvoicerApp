@@ -175,14 +175,27 @@ struct AnalyticsScreen: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
 
-                Button("Upgrade to Premium") {
+                Button {
                     // TODO: paywall
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Upgrade to Premium")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.primary)
+                            .shadow(color: Color.black.opacity(0.2), radius: 12, y: 6)
+                    )
+                    .foregroundColor(scheme == .light ? .white : .black)
                 }
-                .bold()
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color.black))
-                .foregroundStyle(.white)
+                .scaleEffect(showContent ? 1.0 : 0.9)
+                .opacity(showContent ? 1 : 0)
+                .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.7), value: showContent)
 
                 VStack(alignment: .leading, spacing: 6) {
                     Label("Revenue trends and projections", systemImage: "checkmark")

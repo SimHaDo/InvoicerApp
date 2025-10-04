@@ -137,22 +137,50 @@ struct ProductsScreen: View {
                             Spacer()
                         }
 
-                    // Actions
-                    HStack(spacing: 12) {
+                    // Actions с новым дизайном кнопок
+                    HStack(spacing: 16) {
                         Button { showAddProduct = true } label: {
-                            Label("Add Product", systemImage: "plus")
-                                .frame(maxWidth: .infinity)
+                            HStack(spacing: 8) {
+                                Image(systemName: "plus.circle")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Text("Add Product")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(scheme == .light ? Color.black.opacity(0.05) : Color.white.opacity(0.1))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .stroke(Color.primary.opacity(0.2), lineWidth: 1)
+                                    )
+                            )
+                            .foregroundColor(.primary)
                         }
-                        .padding(.vertical, 12)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.1)))
+                        .scaleEffect(showContent ? 1.0 : 0.9)
+                        .opacity(showContent ? 1 : 0)
+                        .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.3), value: showContent)
 
                         Button { onCreateInvoice() } label: {
-                            Label("Create Invoice", systemImage: "doc.badge.plus")
-                                .frame(maxWidth: .infinity)
+                            HStack(spacing: 8) {
+                                Image(systemName: "doc.badge.plus")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Text("Create Invoice")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.primary)
+                                    .shadow(color: Color.black.opacity(0.2), radius: 12, y: 6)
+                            )
+                            .foregroundColor(scheme == .light ? .white : .black)
                         }
-                        .padding(.vertical, 12)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.black))
-                        .foregroundStyle(.white)
+                        .scaleEffect(showContent ? 1.0 : 0.9)
+                        .opacity(showContent ? 1 : 0)
+                        .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.4), value: showContent)
                     }
 
                     // Search + Category
@@ -235,13 +263,24 @@ struct ProductsScreen: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             Button { showAddProduct = true } label: {
-                Text("Add Product")
-                    .bold()
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.black))
-                    .foregroundStyle(.white)
+                HStack(spacing: 8) {
+                    Image(systemName: "plus.circle")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("Add Product")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.primary)
+                        .shadow(color: Color.black.opacity(0.2), radius: 12, y: 6)
+                )
+                .foregroundColor(scheme == .light ? .white : .black)
             }
+            .scaleEffect(showContent ? 1.0 : 0.9)
+            .opacity(showContent ? 1 : 0)
+            .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.8), value: showContent)
         }
         .frame(maxWidth: .infinity)
         .padding(16)

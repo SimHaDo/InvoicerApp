@@ -257,26 +257,48 @@ struct InvoicesScreen: View {
             }
             .frame(maxWidth: .infinity, minHeight: 150)
 
-            // CTA снизу
+            // CTA снизу с новым дизайном
             if !app.isPremium {
                 if app.remainingFreeInvoices == 0 {
                     Button(action: { showEmptyPaywall = true }) {
-                        Text("Upgrade to Create Invoice")
-                            .bold()
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(RoundedRectangle(cornerRadius: 12).fill(Color.black))
-                            .foregroundStyle(.white)
+                        HStack(spacing: 8) {
+                            Image(systemName: "crown.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("Upgrade to Create Invoice")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.primary)
+                                .shadow(color: Color.black.opacity(0.2), radius: 12, y: 6)
+                        )
+                        .foregroundColor(scheme == .light ? .white : .black)
                     }
+                    .scaleEffect(showContent ? 1.0 : 0.9)
+                    .opacity(showContent ? 1 : 0)
+                    .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.7), value: showContent)
                 } else {
                     Button(action: onNewInvoice) {
-                        Text("Create Free Invoice (\(app.remainingFreeInvoices) left)")
-                            .bold()
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(RoundedRectangle(cornerRadius: 12).fill(Color.black))
-                            .foregroundStyle(.white)
+                        HStack(spacing: 8) {
+                            Image(systemName: "doc.badge.plus")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("Create Free Invoice (\(app.remainingFreeInvoices) left)")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.primary)
+                                .shadow(color: Color.black.opacity(0.2), radius: 12, y: 6)
+                        )
+                        .foregroundColor(scheme == .light ? .white : .black)
                     }
+                    .scaleEffect(showContent ? 1.0 : 0.9)
+                    .opacity(showContent ? 1 : 0)
+                    .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.7), value: showContent)
                 }
             }
         }
@@ -408,6 +430,7 @@ struct InvoicesScreen: View {
 // MARK: - Small UI pieces used here
 
 struct FreePlanCardCompact: View {
+    @Environment(\.colorScheme) private var scheme
     let remaining: Int
     var onUpgrade: () -> Void
     var onCreate: () -> Void
@@ -424,27 +447,61 @@ struct FreePlanCardCompact: View {
             }
 
             if remaining > 0 {
-                HStack(spacing: 10) {
+                HStack(spacing: 16) {
                     Button(action: onCreate) {
-                        Text("Create Free Invoice").bold().frame(maxWidth: .infinity)
+                        HStack(spacing: 8) {
+                            Image(systemName: "doc.badge.plus")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("Create Free Invoice")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.primary)
+                                .shadow(color: Color.black.opacity(0.2), radius: 12, y: 6)
+                        )
+                        .foregroundColor(scheme == .light ? .white : .black)
                     }
-                    .padding()
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.black))
-                    .foregroundStyle(.white)
 
                     Button(action: onUpgrade) {
-                        Text("Upgrade").bold().frame(maxWidth: .infinity)
+                        HStack(spacing: 8) {
+                            Image(systemName: "crown")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("Upgrade")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(scheme == .light ? Color.black.opacity(0.05) : Color.white.opacity(0.1))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(Color.primary.opacity(0.2), lineWidth: 1)
+                                )
+                        )
+                        .foregroundColor(.primary)
                     }
-                    .padding()
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.1)))
                 }
             } else {
                 Button(action: onUpgrade) {
-                    Text("Upgrade to Create Invoice").bold().frame(maxWidth: .infinity)
+                    HStack(spacing: 8) {
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Upgrade to Create Invoice")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.primary)
+                            .shadow(color: Color.black.opacity(0.2), radius: 12, y: 6)
+                    )
+                    .foregroundColor(scheme == .light ? .white : .black)
                 }
-                .padding()
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color.black))
-                .foregroundStyle(.white)
             }
 
             HStack(spacing: 20) {

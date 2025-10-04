@@ -371,63 +371,90 @@ private struct CustomerRow: View {
     let customer: Customer
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 16) {
-                // Аватар с анимацией
-                ZStack {
-                    Circle()
-                        .fill(scheme == .light ? Color.black.opacity(0.08) : Color.white.opacity(0.15))
-                        .frame(width: 48, height: 48)
+        HStack(alignment: .center, spacing: 16) {
+            // Аватар с анимацией - центрирован по высоте
+            ZStack {
+                Circle()
+                    .fill(scheme == .light ? Color.black.opacity(0.08) : Color.white.opacity(0.15))
+                    .frame(width: 56, height: 56)
+                
+                Text(initials(from: customer.name))
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.primary)
+            }
+
+            // Основная информация
+            VStack(alignment: .leading, spacing: 10) {
+                // Имя и статус
+                HStack(alignment: .top) {
+                    Text(customer.name)
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                     
-                    Text(initials(from: customer.name))
+                    Spacer()
+                    
+                    CustomerStatusChip(status: customer.status)
+                }
+
+                // Контактная информация
+                VStack(alignment: .leading, spacing: 6) {
+                    if !customer.email.isEmpty { 
+                        HStack(spacing: 8) {
+                            Image(systemName: "envelope")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 16)
+                            
+                            Text(customer.email)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                        }
+                    }
+                    
+                    if !customer.phone.isEmpty { 
+                        HStack(spacing: 8) {
+                            Image(systemName: "phone")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 16)
+                            
+                            Text(customer.phone)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                        }
+                    }
+                }
+
+                // Статистика
+                HStack {
+                    Text("\(invoicesCount) invoices")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    
+                    Spacer()
+                    
+                    Text(Money.fmt(totalSpent, code: Locale.current.currency?.identifier ?? "USD"))
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.primary)
                 }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text(customer.name)
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(.primary)
-                        Spacer()
-                        CustomerStatusChip(status: customer.status)
-                    }
-
-                    HStack(spacing: 16) {
-                        if !customer.email.isEmpty { 
-                            Label(customer.email, systemImage: "envelope")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(.secondary)
-                        }
-                        if !customer.phone.isEmpty { 
-                            Label(customer.phone, systemImage: "phone")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    HStack {
-                        Text("\(invoicesCount) invoices")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Text(Money.fmt(totalSpent, code: Locale.current.currency?.identifier ?? "USD"))
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.primary)
-                    }
-                }
             }
-            .padding(18)
-            .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(scheme == .light ? Color.black.opacity(0.02) : Color.white.opacity(0.05))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(Color.primary.opacity(0.1), lineWidth: 1)
-                    )
-                    .shadow(color: Color.black.opacity(scheme == .light ? 0.05 : 0.2), radius: 8, y: 4)
-            )
         }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(scheme == .light ? Color.black.opacity(0.02) : Color.white.opacity(0.05))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                )
+                .shadow(color: Color.black.opacity(scheme == .light ? 0.05 : 0.2), radius: 8, y: 4)
+        )
     }
 
     private var invoicesCount: Int {
