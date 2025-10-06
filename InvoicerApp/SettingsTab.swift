@@ -248,13 +248,13 @@ private struct MyInfoCard: View {
     @Environment(\.colorScheme) private var scheme
     
     var body: some View {
-        NavigationLink {
+                    NavigationLink {
             MyInfoView()
-                .environmentObject(app)
-        } label: {
+                            .environmentObject(app)
+                    } label: {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 12) {
-                Image(systemName: "building.2.circle.fill")
+                Image(systemName: "building.2")
                     .font(.system(size: 24, weight: .medium))
                     .foregroundColor(.primary)
                 
@@ -276,16 +276,16 @@ private struct MyInfoCard: View {
             }
             
             // Company preview
-            HStack(spacing: 12) {
+                        HStack(spacing: 12) {
                 // Logo preview
-                if let img = app.logoImage {
-                    Image(uiImage: img)
+                            if let img = app.logoImage {
+                                Image(uiImage: img)
                         .resizable()
                         .scaledToFit()
                         .frame(width: 48, height: 48)
-                        .background(Color.secondary.opacity(0.08))
+                                    .background(Color.secondary.opacity(0.08))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
-                } else {
+                            } else {
                     RoundedRectangle(cornerRadius: 12)
                         .fill(scheme == .light ? Color.black.opacity(0.05) : Color.white.opacity(0.1))
                         .frame(width: 48, height: 48)
@@ -297,14 +297,14 @@ private struct MyInfoCard: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    if let c = app.company, !c.name.isEmpty {
+                                if let c = app.company, !c.name.isEmpty {
                         Text(c.name)
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.primary.opacity(0.9))
                             .lineLimit(1)
                             .truncationMode(.tail)
                         
-                        if !c.email.isEmpty {
+                                    if !c.email.isEmpty {
                             Text(c.email)
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(.primary.opacity(0.6))
@@ -364,12 +364,12 @@ private struct AccountCard: View {
             }
             
             VStack(spacing: 12) {
-                HStack {
-                    Text("Pro Status")
+                    HStack {
+                        Text("Pro Status")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.primary)
                     
-                    Spacer()
+                        Spacer()
                     
                     HStack(spacing: 6) {
                         Circle()
@@ -380,10 +380,10 @@ private struct AccountCard: View {
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(app.isPremium ? .green : .orange)
                     }
-                }
-                
+                    }
+
                 Button {
-                    Task { try? await SubscriptionManager.shared.restore() }
+                        Task { try? await SubscriptionManager.shared.restore() }
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "arrow.clockwise")
@@ -420,6 +420,8 @@ private struct AccountCard: View {
 
 private struct DataCard: View {
     @Environment(\.colorScheme) private var scheme
+    @State private var showingExportSheet = false
+    @State private var showingResetSheet = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -443,8 +445,7 @@ private struct DataCard: View {
             
             VStack(spacing: 12) {
                 Button {
-                    // TODO: Export data
-                    print("Export tapped")
+                    showingExportSheet = true
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "square.and.arrow.up")
@@ -466,8 +467,7 @@ private struct DataCard: View {
                 }
                 
                 Button {
-                    // TODO: Reset data
-                    print("Reset tapped")
+                    showingResetSheet = true
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "trash")
@@ -499,6 +499,12 @@ private struct DataCard: View {
                 )
                 .shadow(color: Color.black.opacity(scheme == .light ? 0.05 : 0.2), radius: 8, y: 4)
         )
+        .navigationDestination(isPresented: $showingExportSheet) {
+            ExportConfirmationView()
+        }
+        .sheet(isPresented: $showingResetSheet) {
+            ResetConfirmationSheet()
+        }
     }
 }
 
@@ -528,9 +534,9 @@ private struct SupportCard: View {
             
             VStack(spacing: 12) {
                 Button {
-                    if let url = URL(string: "mailto:dd925648@gmail.com") {
-                        openURL(url)
-                    }
+                        if let url = URL(string: "mailto:dd925648@gmail.com") {
+                            openURL(url)
+                        }
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "envelope")
@@ -552,9 +558,9 @@ private struct SupportCard: View {
                 }
                 
                 Button {
-                    if let url = URL(string: "itms-apps://itunes.apple.com/app/idYOUR_APP_ID?action=write-review") {
-                        openURL(url)
-                    }
+                        if let url = URL(string: "itms-apps://itunes.apple.com/app/idYOUR_APP_ID?action=write-review") {
+                            openURL(url)
+                        }
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "star")
@@ -615,7 +621,7 @@ private struct LegalCard: View {
             
             VStack(spacing: 12) {
                 Button {
-                    openURL(URL(string: "https://simhado.github.io/invoice-maker-pro-site/privacy.html")!)
+                        openURL(URL(string: "https://simhado.github.io/invoice-maker-pro-site/privacy.html")!)
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "hand.raised")
@@ -637,7 +643,7 @@ private struct LegalCard: View {
                 }
                 
                 Button {
-                    openURL(URL(string: "https://simhado.github.io/invoice-maker-pro-site/terms.html")!)
+                        openURL(URL(string: "https://simhado.github.io/invoice-maker-pro-site/terms.html")!)
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "doc.plaintext")
@@ -695,12 +701,12 @@ private struct AboutCard: View {
                 Spacer()
             }
             
-            HStack {
-                Text("App Version")
+                    HStack {
+                        Text("App Version")
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.primary)
                 
-                Spacer()
+                        Spacer()
                 
                 Text(Bundle.main.appVersion)
                     .font(.system(size: 14, weight: .semibold))

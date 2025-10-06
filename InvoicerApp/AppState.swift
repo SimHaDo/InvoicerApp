@@ -31,10 +31,12 @@ final class AppState: ObservableObject {
 
     // MARK: Business data
 
-    @Published var selectedTemplate: InvoiceTemplateDescriptor =
-        TemplateCatalog.all.first!
+    @Published var selectedTemplate: CompleteInvoiceTemplate = 
+        CompleteInvoiceTemplate(template: TemplateCatalog.all.first!, theme: TemplateCatalog.themes.first!)
 
-    @Published var logoData: Data? = nil
+    @Published var logoData: Data? = Storage.loadLogo() {
+        didSet { Storage.saveLogo(logoData) }
+    }
     var logoImage: UIImage? {
         get { logoData.flatMap(UIImage.init(data:)) }
         set { logoData = newValue?.pngData() }
@@ -52,12 +54,18 @@ final class AppState: ObservableObject {
 
     @Published var customers: [Customer] =
         Storage.load([Customer].self, key: .customers, fallback: Mock.customers) {
-        didSet { Storage.save(customers, key: .customers) }
+        didSet { 
+            print("AppState: Saving \(customers.count) customers")
+            Storage.save(customers, key: .customers) 
+        }
     }
 
     @Published var products: [Product] =
         Storage.load([Product].self, key: .products, fallback: Mock.products) {
-        didSet { Storage.save(products, key: .products) }
+        didSet { 
+            print("AppState: Saving \(products.count) products")
+            Storage.save(products, key: .products) 
+        }
     }
 
     @Published var invoices: [Invoice] =
@@ -83,6 +91,15 @@ final class AppState: ObservableObject {
         set { settings.paymentMethods = newValue; saveSettings() }
     }
     func savePaymentMethods() { saveSettings() }
+    
+    // MARK: - Debug Functions
+    
+    func loadTestData() {
+        print("AppState: Loading test data...")
+        customers = Mock.customers
+        products = Mock.products
+        print("AppState: Loaded \(customers.count) customers, \(products.count) products")
+    }
 
     // MARK: UI state
 
@@ -103,13 +120,15 @@ final class AppState: ObservableObject {
     // MARK: Init
 
     init() {
+        print("AppState: Initializing...")
         self.company = Storage.load(Company?.self, key: .company, fallback: nil)
+        print("AppState: Loaded \(customers.count) customers, \(products.count) products")
 
         // выбранный шаблон — сначала iCloud, затем локаль
         if let id = CloudSync.shared.string(.selectedTemplateID)
             ?? UserDefaults.standard.string(forKey: PrefKey.selectedTemplateID),
            let found = TemplateCatalog.all.first(where: { $0.id == id }) {
-            selectedTemplate = found
+            selectedTemplate = CompleteInvoiceTemplate(template: found, theme: TemplateCatalog.themes.first!)
         }
 
         // про-флаг — iCloud / локаль
@@ -128,16 +147,17 @@ final class AppState: ObservableObject {
             .store(in: &cancellables)
 
         // слушаем внешние изменения iCloud KVS
-        NotificationCenter.default.addObserver(
-            forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
-            object: NSUbiquitousKeyValueStore.default,
-            queue: .main
-        ) { [weak self] _ in
-            // Класс @MainActor, поэтому вызываем на мейне безопасно
-            Task { @MainActor in self?.pullFromCloud() }
-        }
+        // Temporarily disabled CloudSync to avoid entitlement errors
+        // NotificationCenter.default.addObserver(
+        //     forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
+        //     object: NSUbiquitousKeyValueStore.default,
+        //     queue: .main
+        // ) { [weak self] _ in
+        //     // Класс @MainActor, поэтому вызываем на мейне безопасно
+        //     Task { @MainActor in self?.pullFromCloud() }
+        // }
 
-        CloudSync.shared.synchronize()
+        // CloudSync.shared.synchronize()
     }
 
     // MARK: Cloud sync (KVS)
@@ -154,7 +174,7 @@ final class AppState: ObservableObject {
         if let tmplID = CloudSync.shared.string(.selectedTemplateID),
            let found = TemplateCatalog.all.first(where: { $0.id == tmplID }) {
             if selectedTemplate.id != found.id {
-                selectedTemplate = found
+                selectedTemplate = CompleteInvoiceTemplate(template: found, theme: selectedTemplate.theme)
                 UserDefaults.standard.set(tmplID, forKey: PrefKey.selectedTemplateID)
             }
         }

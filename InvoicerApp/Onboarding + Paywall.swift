@@ -90,7 +90,6 @@ struct OnboardingView: View {
                         .tag(3)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.spring(response: 0.6, dampingFraction: 0.85), value: page)
 
                 // Dots + Footer с улучшенными анимациями
                 VStack(spacing: 28) {
@@ -115,10 +114,8 @@ struct OnboardingView: View {
                     let h = UIImpactFeedbackGenerator(style: .medium)
                     h.impactOccurred()
                     
-                    // Анимация перехода между страницами
-                    withAnimation(.spring(response: 0.55, dampingFraction: 0.86)) {
-                        page += 1
-                    }
+                    // Переход между страницами
+                    page += 1
                     createParticles()
                 }
             }
@@ -415,7 +412,6 @@ private struct FancyDots: View {
                             }
                         }
                     )
-                    .animation(.spring(response: 0.45, dampingFraction: 0.7), value: index)
             }
         }
     }

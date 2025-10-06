@@ -379,7 +379,7 @@ private struct CompanySection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 12) {
-                Image(systemName: "building.2.circle.fill")
+                Image(systemName: "building.2")
                     .font(.system(size: 24, weight: .medium))
                     .foregroundColor(.primary)
                 

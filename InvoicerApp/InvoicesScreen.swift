@@ -284,7 +284,7 @@ struct InvoicesScreen: View {
                         HStack(spacing: 8) {
                             Image(systemName: "doc.badge.plus")
                                 .font(.system(size: 16, weight: .semibold))
-                            Text("Create Free Invoice (\(app.remainingFreeInvoices) left)")
+                            Text("Create Invoice (\(app.remainingFreeInvoices) left)")
                                 .font(.system(size: 16, weight: .semibold))
                         }
                         .frame(maxWidth: .infinity)
@@ -452,7 +452,7 @@ struct FreePlanCardCompact: View {
                         HStack(spacing: 8) {
                             Image(systemName: "doc.badge.plus")
                                 .font(.system(size: 16, weight: .semibold))
-                            Text("Create Free Invoice")
+                            Text("Create Invoice")
                                 .font(.system(size: 16, weight: .semibold))
                         }
                         .frame(maxWidth: .infinity)

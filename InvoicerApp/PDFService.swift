@@ -16,7 +16,7 @@ final class PDFService {
                      company: Company,
                      customer: Customer,
                      currencyCode: String,
-                     template: InvoiceTemplateDescriptor,
+                     template: CompleteInvoiceTemplate,
                      logo: UIImage?) throws -> URL {
 
         let fmt = UIGraphicsPDFRendererFormat()
@@ -30,40 +30,20 @@ final class PDFService {
 
         let data = renderer.pdfData { ctx in
             ctx.beginPage()
-            switch template.style {
-            case .modern:
-                ModernTemplate(theme: template.theme)
-                    .draw(in: ctx.cgContext,
-                          page: pageRect,
-                          invoice: invoice,
-                          company: company,
-                          customer: customer,
-                          currency: currencyCode,
-                          logo: logo)
-            case .minimal:
-                MinimalTemplate(theme: template.theme)
-                    .draw(in: ctx.cgContext,
-                          page: pageRect,
-                          invoice: invoice,
-                          company: company,
-                          customer: customer,
-                          currency: currencyCode,
-                          logo: logo)
-            case .classic:
-                ClassicTemplate(theme: template.theme)
-                    .draw(in: ctx.cgContext,
-                          page: pageRect,
-                          invoice: invoice,
-                          company: company,
-                          customer: customer,
-                          currency: currencyCode,
-                          logo: logo)
-            }
+            // Use the appropriate template renderer for the selected design
+        let templateRenderer = FixedTemplateFactory.createTemplate(for: template.design, theme: template.theme)
+        templateRenderer.draw(in: ctx.cgContext,
+                             page: pageRect,
+                             invoice: invoice,
+                             company: company,
+                             customer: customer,
+                             currency: currencyCode,
+                             logo: logo)
         }
 
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("Invoice-\(invoice.number).pdf")
-        try data.write(to: url, options: .atomic)
+        try data.write(to: url, options: Data.WritingOptions.atomic)
         return url
     }
 }
