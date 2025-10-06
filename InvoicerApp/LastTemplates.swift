@@ -1,839 +1,443 @@
 import Foundation
 import UIKit
 
-// MARK: - Design Studio Template
-
-struct DesignStudioTemplate: SimpleTemplateRenderer {
-    let theme: TemplateTheme
-    
-    func draw(in context: CGContext, page: CGRect, invoice: Invoice, company: Company, customer: Customer, currency: String, logo: UIImage?) {
-        let primary = theme.primary
-        let secondary = theme.secondary
-        let accent = theme.accent
-        
-        // Set white background
-        context.setFillColor(UIColor.white.cgColor)
-        context.fill(page)
-        
-        // Studio header
-        drawStudioHeader(context: context, page: page, company: company, logo: logo, primary: primary, secondary: secondary, accent: accent)
-        
-        // Design invoice section
-        drawDesignInvoiceSection(context: context, page: page, invoice: invoice, primary: primary, accent: accent)
-        
-        // Studio bill to section
-        drawStudioBillTo(context: context, page: page, customer: customer, primary: primary, accent: accent)
-        
-        // Design table
-        drawDesignTable(context: context, page: page, invoice: invoice, currency: currency, primary: primary, secondary: secondary, accent: accent)
-        
-        // Studio total
-        drawStudioTotal(context: context, page: page, invoice: invoice, currency: currency, primary: primary, accent: accent)
-        
-        // Design footer
-        drawDesignFooter(context: context, page: page, company: company, primary: primary)
-    }
-    
-    private func drawStudioHeader(context: CGContext, page: CGRect, company: Company, logo: UIImage?, primary: UIColor, secondary: UIColor, accent: UIColor) {
-        // Studio background with design pattern
-        let headerRect = CGRect(x: 0, y: 0, width: page.width, height: 120)
-        
-        // Studio background
-        context.setFillColor(primary.withAlphaComponent(0.1).cgColor)
-        context.fill(headerRect)
-        
-        // Design studio elements
-        context.setFillColor(accent.withAlphaComponent(0.2).cgColor)
-        for i in 0..<8 {
-            let triangle = CGRect(x: CGFloat(i * 80), y: 15, width: 20, height: 20)
-            context.fillEllipse(in: triangle)
-        }
-        
-        // Logo with studio frame
-        if let logo = logo {
-            let logoRect = CGRect(x: 35, y: 30, width: 70, height: 70)
-            // Studio frame
-            context.setStrokeColor(accent.cgColor)
-            context.setLineWidth(3)
-            context.stroke(logoRect)
-            logo.draw(in: logoRect)
-        }
-        
-        // Company name with studio styling
-        let companyFont = UIFont.systemFont(ofSize: 26, weight: .semibold)
-        let companyAttributes: [NSAttributedString.Key: Any] = [
-            .font: companyFont,
-            .foregroundColor: primary
-        ]
-        let companyText = NSAttributedString(string: company.name, attributes: companyAttributes)
-        let companyRect = CGRect(x: 120, y: 40, width: page.width - 150, height: 35)
-        companyText.draw(in: companyRect)
-        
-        // Studio tagline
-        let taglineFont = UIFont.systemFont(ofSize: 13, weight: .medium)
-        let taglineAttributes: [NSAttributedString.Key: Any] = [
-            .font: taglineFont,
-            .foregroundColor: accent
-        ]
-        let taglineText = NSAttributedString(string: "DESIGN STUDIO", attributes: taglineAttributes)
-        let taglineRect = CGRect(x: 120, y: 75, width: page.width - 150, height: 20)
-        taglineText.draw(in: taglineRect)
-    }
-    
-    private func drawDesignInvoiceSection(context: CGContext, page: CGRect, invoice: Invoice, primary: UIColor, accent: UIColor) {
-        // Design invoice box
-        let invoiceRect = CGRect(x: page.width - 190, y: 35, width: 145, height: 75)
-        
-        // Design background
-        context.setFillColor(accent.withAlphaComponent(0.12).cgColor)
-        context.fill(invoiceRect)
-        
-        // Design border
-        context.setStrokeColor(accent.cgColor)
-        context.setLineWidth(3)
-        context.stroke(invoiceRect)
-        
-        // Invoice title with design styling
-        let titleFont = UIFont.systemFont(ofSize: 18, weight: .semibold)
-        let titleAttributes: [NSAttributedString.Key: Any] = [
-            .font: titleFont,
-            .foregroundColor: accent
-        ]
-        let titleText = NSAttributedString(string: "INVOICE", attributes: titleAttributes)
-        let titleRect = CGRect(x: page.width - 180, y: 45, width: 125, height: 25)
-        titleText.draw(in: titleRect)
-        
-        // Invoice number with design styling
-        let numberFont = UIFont.systemFont(ofSize: 14, weight: .medium)
-        let numberAttributes: [NSAttributedString.Key: Any] = [
-            .font: numberFont,
-            .foregroundColor: primary
-        ]
-        let numberText = NSAttributedString(string: "#\(invoice.number)", attributes: numberAttributes)
-        let numberRect = CGRect(x: page.width - 180, y: 75, width: 125, height: 20)
-        numberText.draw(in: numberRect)
-        
-        // Date with design styling
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "MMM dd, yyyy"
-        let dateText = NSAttributedString(string: dateFormatter.string(from: invoice.issueDate), attributes: numberAttributes)
-        let dateRect = CGRect(x: page.width - 180, y: 100, width: 125, height: 20)
-        dateText.draw(in: dateRect)
-    }
-    
-    private func drawStudioBillTo(context: CGContext, page: CGRect, customer: Customer, primary: UIColor, accent: UIColor) {
-        // Studio bill to section
-        let billToRect = CGRect(x: 35, y: 150, width: 350, height: 95)
-        
-        // Studio background
-        context.setFillColor(primary.withAlphaComponent(0.06).cgColor)
-        context.fill(billToRect)
-        
-        // Studio border
-        context.setStrokeColor(primary.cgColor)
-        context.setLineWidth(2)
-        context.stroke(billToRect)
-        
-        // Bill to title with studio styling
-        let billToFont = UIFont.systemFont(ofSize: 15, weight: .semibold)
-        let billToAttributes: [NSAttributedString.Key: Any] = [
-            .font: billToFont,
-            .foregroundColor: primary
-        ]
-        let billToText = NSAttributedString(string: "BILL TO:", attributes: billToAttributes)
-        let billToTextRect = CGRect(x: 45, y: 160, width: 100, height: 25)
-        billToText.draw(in: billToTextRect)
-        
-        // Customer details with studio styling
-        let customerFont = UIFont.systemFont(ofSize: 13, weight: .regular)
-        let customerAttributes: [NSAttributedString.Key: Any] = [
-            .font: customerFont,
-            .foregroundColor: UIColor.black
-        ]
-        
-        var yOffset: CGFloat = 190
-        let customerNameText = NSAttributedString(string: customer.name, attributes: customerAttributes)
-        let customerNameRect = CGRect(x: 45, y: yOffset, width: 330, height: 20)
-        customerNameText.draw(in: customerNameRect)
-        yOffset += 20
-        
-        if !customer.address.oneLine.isEmpty {
-            let addressText = NSAttributedString(string: customer.address.oneLine, attributes: customerAttributes)
-            let addressRect = CGRect(x: 45, y: yOffset, width: 330, height: 20)
-            addressText.draw(in: addressRect)
-            yOffset += 20
-        }
-        
-        if !customer.email.isEmpty {
-            let emailText = NSAttributedString(string: customer.email, attributes: customerAttributes)
-            let emailRect = CGRect(x: 45, y: yOffset, width: 330, height: 20)
-            emailText.draw(in: emailRect)
-        }
-    }
-    
-    private func drawDesignTable(context: CGContext, page: CGRect, invoice: Invoice, currency: String, primary: UIColor, secondary: UIColor, accent: UIColor) {
-        let startY: CGFloat = 275
-        
-        // Design table header
-        let headerRect = CGRect(x: 35, y: startY, width: page.width - 70, height: 35)
-        
-        // Design header background
-        context.setFillColor(primary.cgColor)
-        context.fill(headerRect)
-        
-        // Header text
-        let headerFont = UIFont.systemFont(ofSize: 12, weight: .semibold)
-        let headerAttributes: [NSAttributedString.Key: Any] = [
-            .font: headerFont,
-            .foregroundColor: UIColor.white
-        ]
-        
-        let headers = ["Description", "Quantity", "Unit Price", "Total"]
-        let columnWidths: [CGFloat] = [320, 80, 100, 100]
-        var xOffset: CGFloat = 45
-        
-        for (index, header) in headers.enumerated() {
-            let headerText = NSAttributedString(string: header, attributes: headerAttributes)
-            let headerTextRect = CGRect(x: xOffset, y: startY + 10, width: columnWidths[index], height: 20)
-            headerText.draw(in: headerTextRect)
-            xOffset += columnWidths[index]
-        }
-        
-        // Design table rows
-        let rowFont = UIFont.systemFont(ofSize: 11, weight: .regular)
-        let rowAttributes: [NSAttributedString.Key: Any] = [
-            .font: rowFont,
-            .foregroundColor: UIColor.black
-        ]
-        
-        var yOffset = startY + 35
-        for (index, item) in invoice.items.enumerated() {
-            // Studio alternating rows
-            if index % 2 == 0 {
-                let rowRect = CGRect(x: 35, y: yOffset, width: page.width - 70, height: 30)
-                context.setFillColor(accent.withAlphaComponent(0.07).cgColor)
-                context.fill(rowRect)
-            }
-            
-            // Row content
-            xOffset = 45
-            
-            let itemText = NSAttributedString(string: item.description, attributes: rowAttributes)
-            let itemRect = CGRect(x: xOffset, y: yOffset + 8, width: columnWidths[0], height: 20)
-            itemText.draw(in: itemRect)
-            xOffset += columnWidths[0]
-            
-            let qtyText = NSAttributedString(string: "\(item.quantity)", attributes: rowAttributes)
-            let qtyRect = CGRect(x: xOffset, y: yOffset + 8, width: columnWidths[1], height: 20)
-            qtyText.draw(in: qtyRect)
-            xOffset += columnWidths[1]
-            
-            let rateText = NSAttributedString(string: "\(currency)\(String(format: "%.2f", Double(truncating: item.rate as NSDecimalNumber)))", attributes: rowAttributes)
-            let rateRect = CGRect(x: xOffset, y: yOffset + 8, width: columnWidths[2], height: 20)
-            rateText.draw(in: rateRect)
-            xOffset += columnWidths[2]
-            
-            let amountText = NSAttributedString(string: "\(currency)\(String(format: "%.2f", Double(truncating: item.total as NSDecimalNumber)))", attributes: rowAttributes)
-            let amountRect = CGRect(x: xOffset, y: yOffset + 8, width: columnWidths[3], height: 20)
-            amountText.draw(in: amountRect)
-            
-            yOffset += 30
-        }
-    }
-    
-    private func drawStudioTotal(context: CGContext, page: CGRect, invoice: Invoice, currency: String, primary: UIColor, accent: UIColor) {
-        let totalY: CGFloat = 440
-        
-        // Studio total box
-        let totalRect = CGRect(x: page.width - 200, y: totalY, width: 150, height: 50)
-        
-        // Studio background
-        context.setFillColor(accent.cgColor)
-        context.fill(totalRect)
-        
-        // Studio border
-        context.setStrokeColor(accent.cgColor)
-        context.setLineWidth(3)
-        context.stroke(totalRect)
-        
-        // Total text with studio styling
-        let totalFont = UIFont.systemFont(ofSize: 16, weight: .semibold)
-        let totalAttributes: [NSAttributedString.Key: Any] = [
-            .font: totalFont,
-            .foregroundColor: UIColor.white
-        ]
-        let totalText = NSAttributedString(string: "TOTAL: \(currency)\(String(format: "%.2f", Double(truncating: invoice.subtotal as NSDecimalNumber)))", attributes: totalAttributes)
-        let totalTextRect = CGRect(x: page.width - 190, y: totalY + 15, width: 130, height: 20)
-        totalText.draw(in: totalTextRect)
-    }
-    
-    private func drawDesignFooter(context: CGContext, page: CGRect, company: Company, primary: UIColor) {
-        let footerFont = UIFont.systemFont(ofSize: 10, weight: .regular)
-        let footerAttributes: [NSAttributedString.Key: Any] = [
-            .font: footerFont,
-            .foregroundColor: UIColor.gray
-        ]
-        
-        let footerText = NSAttributedString(string: "Design studio services. Creative solutions delivered.", attributes: footerAttributes)
-        let footerRect = CGRect(x: 35, y: page.height - 50, width: page.width - 70, height: 20)
-        footerText.draw(in: footerRect)
-    }
+// Общие утилиты форматирования
+private func money(_ dec: Decimal, code: String) -> String {
+    let n = NSDecimalNumber(decimal: dec)
+    let f = NumberFormatter()
+    f.numberStyle = .currency
+    f.currencyCode = code
+    // если у вас уже передаётся символ, можно заменить на currencySymbol
+    if f.currencySymbol == code { f.currencySymbol = code + " " }
+    return f.string(from: n) ?? "\(code) \(n.doubleValue)"
 }
 
-// MARK: - Fashion Elegant Template
-
-struct FashionElegantTemplate: SimpleTemplateRenderer {
-    let theme: TemplateTheme
-    
-    func draw(in context: CGContext, page: CGRect, invoice: Invoice, company: Company, customer: Customer, currency: String, logo: UIImage?) {
-        let primary = theme.primary
-        let secondary = theme.secondary
-        let accent = theme.accent
-        
-        // Set white background
-        context.setFillColor(UIColor.white.cgColor)
-        context.fill(page)
-        
-        // Elegant header
-        drawElegantHeader(context: context, page: page, company: company, logo: logo, primary: primary, secondary: secondary, accent: accent)
-        
-        // Fashion invoice section
-        drawFashionInvoiceSection(context: context, page: page, invoice: invoice, primary: primary, accent: accent)
-        
-        // Elegant bill to section
-        drawElegantBillTo(context: context, page: page, customer: customer, primary: primary, accent: accent)
-        
-        // Fashion table
-        drawFashionTable(context: context, page: page, invoice: invoice, currency: currency, primary: primary, secondary: secondary, accent: accent)
-        
-        // Elegant total
-        drawElegantTotal(context: context, page: page, invoice: invoice, currency: currency, primary: primary, accent: accent)
-        
-        // Fashion footer
-        drawFashionFooter(context: context, page: page, company: company, primary: primary)
-    }
-    
-    private func drawElegantHeader(context: CGContext, page: CGRect, company: Company, logo: UIImage?, primary: UIColor, secondary: UIColor, accent: UIColor) {
-        // Elegant background with fashion pattern
-        let headerRect = CGRect(x: 0, y: 0, width: page.width, height: 130)
-        
-        // Elegant background
-        context.setFillColor(primary.withAlphaComponent(0.08).cgColor)
-        context.fill(headerRect)
-        
-        // Fashion elegant elements
-        context.setFillColor(accent.withAlphaComponent(0.15).cgColor)
-        for i in 0..<6 {
-            let circle = CGRect(x: CGFloat(i * 100 + 30), y: 20, width: 15, height: 15)
-            context.fillEllipse(in: circle)
-        }
-        
-        // Logo with elegant frame
-        if let logo = logo {
-            let logoRect = CGRect(x: 40, y: 35, width: 75, height: 75)
-            // Elegant frame
-            context.setStrokeColor(accent.cgColor)
-            context.setLineWidth(2)
-            context.stroke(logoRect)
-            logo.draw(in: logoRect)
-        }
-        
-        // Company name with elegant styling
-        let companyFont = UIFont.systemFont(ofSize: 28, weight: .light)
-        let companyAttributes: [NSAttributedString.Key: Any] = [
-            .font: companyFont,
-            .foregroundColor: primary
-        ]
-        let companyText = NSAttributedString(string: company.name, attributes: companyAttributes)
-        let companyRect = CGRect(x: 130, y: 45, width: page.width - 160, height: 35)
-        companyText.draw(in: companyRect)
-        
-        // Elegant tagline
-        let taglineFont = UIFont.systemFont(ofSize: 14, weight: .medium)
-        let taglineAttributes: [NSAttributedString.Key: Any] = [
-            .font: taglineFont,
-            .foregroundColor: accent
-        ]
-        let taglineText = NSAttributedString(string: "FASHION SERVICES", attributes: taglineAttributes)
-        let taglineRect = CGRect(x: 130, y: 80, width: page.width - 160, height: 20)
-        taglineText.draw(in: taglineRect)
-    }
-    
-    private func drawFashionInvoiceSection(context: CGContext, page: CGRect, invoice: Invoice, primary: UIColor, accent: UIColor) {
-        // Fashion invoice box
-        let invoiceRect = CGRect(x: page.width - 200, y: 40, width: 150, height: 80)
-        
-        // Fashion background
-        context.setFillColor(accent.withAlphaComponent(0.1).cgColor)
-        context.fill(invoiceRect)
-        
-        // Fashion border
-        context.setStrokeColor(accent.cgColor)
-        context.setLineWidth(2)
-        context.stroke(invoiceRect)
-        
-        // Invoice title with fashion styling
-        let titleFont = UIFont.systemFont(ofSize: 19, weight: .light)
-        let titleAttributes: [NSAttributedString.Key: Any] = [
-            .font: titleFont,
-            .foregroundColor: accent
-        ]
-        let titleText = NSAttributedString(string: "INVOICE", attributes: titleAttributes)
-        let titleRect = CGRect(x: page.width - 190, y: 50, width: 130, height: 25)
-        titleText.draw(in: titleRect)
-        
-        // Invoice number with fashion styling
-        let numberFont = UIFont.systemFont(ofSize: 15, weight: .medium)
-        let numberAttributes: [NSAttributedString.Key: Any] = [
-            .font: numberFont,
-            .foregroundColor: primary
-        ]
-        let numberText = NSAttributedString(string: "#\(invoice.number)", attributes: numberAttributes)
-        let numberRect = CGRect(x: page.width - 190, y: 80, width: 130, height: 20)
-        numberText.draw(in: numberRect)
-        
-        // Date with fashion styling
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "MMM dd, yyyy"
-        let dateText = NSAttributedString(string: dateFormatter.string(from: invoice.issueDate), attributes: numberAttributes)
-        let dateRect = CGRect(x: page.width - 190, y: 105, width: 130, height: 20)
-        dateText.draw(in: dateRect)
-    }
-    
-    private func drawElegantBillTo(context: CGContext, page: CGRect, customer: Customer, primary: UIColor, accent: UIColor) {
-        // Elegant bill to section
-        let billToRect = CGRect(x: 40, y: 160, width: 350, height: 100)
-        
-        // Elegant background
-        context.setFillColor(primary.withAlphaComponent(0.04).cgColor)
-        context.fill(billToRect)
-        
-        // Elegant border
-        context.setStrokeColor(primary.cgColor)
-        context.setLineWidth(1)
-        context.stroke(billToRect)
-        
-        // Bill to title with elegant styling
-        let billToFont = UIFont.systemFont(ofSize: 16, weight: .light)
-        let billToAttributes: [NSAttributedString.Key: Any] = [
-            .font: billToFont,
-            .foregroundColor: primary
-        ]
-        let billToText = NSAttributedString(string: "Bill To:", attributes: billToAttributes)
-        let billToTextRect = CGRect(x: 50, y: 170, width: 100, height: 25)
-        billToText.draw(in: billToTextRect)
-        
-        // Customer details with elegant styling
-        let customerFont = UIFont.systemFont(ofSize: 14, weight: .regular)
-        let customerAttributes: [NSAttributedString.Key: Any] = [
-            .font: customerFont,
-            .foregroundColor: UIColor.black
-        ]
-        
-        var yOffset: CGFloat = 200
-        let customerNameText = NSAttributedString(string: customer.name, attributes: customerAttributes)
-        let customerNameRect = CGRect(x: 50, y: yOffset, width: 330, height: 20)
-        customerNameText.draw(in: customerNameRect)
-        yOffset += 20
-        
-        if !customer.address.oneLine.isEmpty {
-            let addressText = NSAttributedString(string: customer.address.oneLine, attributes: customerAttributes)
-            let addressRect = CGRect(x: 50, y: yOffset, width: 330, height: 20)
-            addressText.draw(in: addressRect)
-            yOffset += 20
-        }
-        
-        if !customer.email.isEmpty {
-            let emailText = NSAttributedString(string: customer.email, attributes: customerAttributes)
-            let emailRect = CGRect(x: 50, y: yOffset, width: 330, height: 20)
-            emailText.draw(in: emailRect)
-        }
-    }
-    
-    private func drawFashionTable(context: CGContext, page: CGRect, invoice: Invoice, currency: String, primary: UIColor, secondary: UIColor, accent: UIColor) {
-        let startY: CGFloat = 290
-        
-        // Fashion table header
-        let headerRect = CGRect(x: 40, y: startY, width: page.width - 80, height: 35)
-        
-        // Fashion header background
-        context.setFillColor(primary.cgColor)
-        context.fill(headerRect)
-        
-        // Header text
-        let headerFont = UIFont.systemFont(ofSize: 13, weight: .light)
-        let headerAttributes: [NSAttributedString.Key: Any] = [
-            .font: headerFont,
-            .foregroundColor: UIColor.white
-        ]
-        
-        let headers = ["Description", "Quantity", "Unit Price", "Total"]
-        let columnWidths: [CGFloat] = [320, 80, 100, 100]
-        var xOffset: CGFloat = 50
-        
-        for (index, header) in headers.enumerated() {
-            let headerText = NSAttributedString(string: header, attributes: headerAttributes)
-            let headerTextRect = CGRect(x: xOffset, y: startY + 10, width: columnWidths[index], height: 20)
-            headerText.draw(in: headerTextRect)
-            xOffset += columnWidths[index]
-        }
-        
-        // Fashion table rows
-        let rowFont = UIFont.systemFont(ofSize: 12, weight: .regular)
-        let rowAttributes: [NSAttributedString.Key: Any] = [
-            .font: rowFont,
-            .foregroundColor: UIColor.black
-        ]
-        
-        var yOffset = startY + 35
-        for (index, item) in invoice.items.enumerated() {
-            // Elegant alternating rows
-            if index % 2 == 0 {
-                let rowRect = CGRect(x: 40, y: yOffset, width: page.width - 80, height: 30)
-                context.setFillColor(accent.withAlphaComponent(0.05).cgColor)
-                context.fill(rowRect)
-            }
-            
-            // Row content
-            xOffset = 50
-            
-            let itemText = NSAttributedString(string: item.description, attributes: rowAttributes)
-            let itemRect = CGRect(x: xOffset, y: yOffset + 8, width: columnWidths[0], height: 20)
-            itemText.draw(in: itemRect)
-            xOffset += columnWidths[0]
-            
-            let qtyText = NSAttributedString(string: "\(item.quantity)", attributes: rowAttributes)
-            let qtyRect = CGRect(x: xOffset, y: yOffset + 8, width: columnWidths[1], height: 20)
-            qtyText.draw(in: qtyRect)
-            xOffset += columnWidths[1]
-            
-            let rateText = NSAttributedString(string: "\(currency)\(String(format: "%.2f", Double(truncating: item.rate as NSDecimalNumber)))", attributes: rowAttributes)
-            let rateRect = CGRect(x: xOffset, y: yOffset + 8, width: columnWidths[2], height: 20)
-            rateText.draw(in: rateRect)
-            xOffset += columnWidths[2]
-            
-            let amountText = NSAttributedString(string: "\(currency)\(String(format: "%.2f", Double(truncating: item.total as NSDecimalNumber)))", attributes: rowAttributes)
-            let amountRect = CGRect(x: xOffset, y: yOffset + 8, width: columnWidths[3], height: 20)
-            amountText.draw(in: amountRect)
-            
-            yOffset += 30
-        }
-    }
-    
-    private func drawElegantTotal(context: CGContext, page: CGRect, invoice: Invoice, currency: String, primary: UIColor, accent: UIColor) {
-        let totalY: CGFloat = 460
-        
-        // Elegant total box
-        let totalRect = CGRect(x: page.width - 220, y: totalY, width: 170, height: 50)
-        
-        // Elegant background
-        context.setFillColor(accent.cgColor)
-        context.fill(totalRect)
-        
-        // Elegant border
-        context.setStrokeColor(accent.cgColor)
-        context.setLineWidth(2)
-        context.stroke(totalRect)
-        
-        // Total text with elegant styling
-        let totalFont = UIFont.systemFont(ofSize: 17, weight: .light)
-        let totalAttributes: [NSAttributedString.Key: Any] = [
-            .font: totalFont,
-            .foregroundColor: UIColor.white
-        ]
-        let totalText = NSAttributedString(string: "TOTAL: \(currency)\(String(format: "%.2f", Double(truncating: invoice.subtotal as NSDecimalNumber)))", attributes: totalAttributes)
-        let totalTextRect = CGRect(x: page.width - 210, y: totalY + 15, width: 150, height: 20)
-        totalText.draw(in: totalTextRect)
-    }
-    
-    private func drawFashionFooter(context: CGContext, page: CGRect, company: Company, primary: UIColor) {
-        let footerFont = UIFont.systemFont(ofSize: 11, weight: .regular)
-        let footerAttributes: [NSAttributedString.Key: Any] = [
-            .font: footerFont,
-            .foregroundColor: UIColor.gray
-        ]
-        
-        let footerText = NSAttributedString(string: "Elegant fashion services. Style and sophistication delivered.", attributes: footerAttributes)
-        let footerRect = CGRect(x: 40, y: page.height - 50, width: page.width - 80, height: 20)
-        footerText.draw(in: footerRect)
-    }
+private func line(_ ctx: CGContext, from a: CGPoint, to b: CGPoint, width: CGFloat = 1, color: UIColor = .lightGray) {
+    ctx.setStrokeColor(color.cgColor)
+    ctx.setLineWidth(width)
+    ctx.move(to: a)
+    ctx.addLine(to: b)
+    ctx.strokePath()
 }
 
-// MARK: - Photography Clean Template
+private func drawText(_ text: String, _ rect: CGRect, font: UIFont, color: UIColor, align: NSTextAlignment = .left) {
+    let style = NSMutableParagraphStyle()
+    style.alignment = align
+    let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: color, .paragraphStyle: style]
+    NSAttributedString(string: text, attributes: attrs).draw(in: rect)
+}
+
+// MARK: - PHOTOGRAPHY CLEAN (референс #1 — волнистая левая лента)
 
 struct PhotographyCleanTemplate: SimpleTemplateRenderer {
     let theme: TemplateTheme
-    
+
     func draw(in context: CGContext, page: CGRect, invoice: Invoice, company: Company, customer: Customer, currency: String, logo: UIImage?) {
+
         let primary = theme.primary
-        let secondary = theme.secondary
         let accent = theme.accent
-        
-        // Set white background
+        let left: CGFloat = 36
+        let right: CGFloat = page.width - 36
+
+        // Фон — белый
         context.setFillColor(UIColor.white.cgColor)
         context.fill(page)
-        
-        // Clean header
-        drawCleanHeader(context: context, page: page, company: company, logo: logo, primary: primary, secondary: secondary, accent: accent)
-        
-        // Photography invoice section
-        drawPhotographyInvoiceSection(context: context, page: page, invoice: invoice, primary: primary, accent: accent)
-        
-        // Clean bill to section
-        drawCleanBillTo(context: context, page: page, customer: customer, primary: primary, accent: accent)
-        
-        // Photography table
-        drawPhotographyTable(context: context, page: page, invoice: invoice, currency: currency, primary: primary, secondary: secondary, accent: accent)
-        
-        // Clean total
-        drawCleanTotal(context: context, page: page, invoice: invoice, currency: currency, primary: primary, accent: accent)
-        
-        // Photography footer
-        drawPhotographyFooter(context: context, page: page, company: company, primary: primary)
-    }
-    
-    private func drawCleanHeader(context: CGContext, page: CGRect, company: Company, logo: UIImage?, primary: UIColor, secondary: UIColor, accent: UIColor) {
-        // Clean background with photography pattern
-        let headerRect = CGRect(x: 0, y: 0, width: page.width, height: 115)
-        
-        // Clean background
-        context.setFillColor(primary.withAlphaComponent(0.06).cgColor)
-        context.fill(headerRect)
-        
-        // Photography clean elements
-        context.setFillColor(accent.withAlphaComponent(0.12).cgColor)
-        for i in 0..<5 {
-            let rect = CGRect(x: CGFloat(i * 120), y: 20, width: 60, height: 60)
-            context.fillEllipse(in: rect)
+
+        // Левая «волнистая» полоса (3 слоя, мягкие прозрачности)
+        func wave(_ color: UIColor, x: CGFloat, w: CGFloat, alpha: CGFloat) {
+            let path = UIBezierPath()
+            path.move(to: CGPoint(x: x, y: 0))
+            path.addCurve(to: CGPoint(x: x + w, y: 0),
+                          controlPoint1: CGPoint(x: x + w * 0.25, y: 60),
+                          controlPoint2: CGPoint(x: x + w * 0.75, y: -60))
+            path.addLine(to: CGPoint(x: x + w, y: page.height))
+            path.addCurve(to: CGPoint(x: x, y: page.height),
+                          controlPoint1: CGPoint(x: x + w * 0.75, y: page.height - 80),
+                          controlPoint2: CGPoint(x: x + w * 0.25, y: page.height + 80))
+            path.close()
+            color.withAlphaComponent(alpha).setFill()
+            path.fill()
         }
-        
-        // Logo with clean frame
-        if let logo = logo {
-            let logoRect = CGRect(x: 30, y: 25, width: 65, height: 65)
-            // Clean frame
+        wave(primary, x: -40, w: 160, alpha: 0.12)
+        wave(accent,  x:  10, w: 120, alpha: 0.10)
+        wave(primary.withAlphaComponent(0.6), x: 70, w: 90, alpha: 0.08)
+
+        // Крупный заголовок INVOICE
+        drawText("INVOICE",
+                 CGRect(x: left, y: 24, width: 300, height: 44),
+                 font: .systemFont(ofSize: 40, weight: .heavy),
+                 color: primary)
+
+        // Лого
+        if let logo {
+            let r = CGRect(x: right - 80, y: 24, width: 64, height: 64)
             context.setStrokeColor(primary.cgColor)
             context.setLineWidth(2)
-            context.stroke(logoRect)
-            logo.draw(in: logoRect)
+            context.stroke(r)
+            logo.draw(in: r)
         }
-        
-        // Company name with clean styling
-        let companyFont = UIFont.systemFont(ofSize: 25, weight: .semibold)
-        let companyAttributes: [NSAttributedString.Key: Any] = [
-            .font: companyFont,
-            .foregroundColor: primary
-        ]
-        let companyText = NSAttributedString(string: company.name, attributes: companyAttributes)
-        let companyRect = CGRect(x: 110, y: 35, width: page.width - 140, height: 35)
-        companyText.draw(in: companyRect)
-        
-        // Clean tagline
-        let taglineFont = UIFont.systemFont(ofSize: 12, weight: .medium)
-        let taglineAttributes: [NSAttributedString.Key: Any] = [
-            .font: taglineFont,
-            .foregroundColor: accent
-        ]
-        let taglineText = NSAttributedString(string: "PHOTOGRAPHY SERVICES", attributes: taglineAttributes)
-        let taglineRect = CGRect(x: 110, y: 70, width: page.width - 140, height: 20)
-        taglineText.draw(in: taglineRect)
+
+        // Информация о компании (слева)
+        let infoY: CGFloat = 84
+        drawText(company.name, CGRect(x: left, y: infoY, width: 260, height: 22), font: .systemFont(ofSize: 14, weight: .semibold), color: .black)
+        let addr = [company.address.oneLine, company.phone, company.email].compactMap{$0}.filter{!$0.isEmpty}.joined(separator: "\n")
+        drawText(addr, CGRect(x: left, y: infoY + 22, width: 260, height: 60), font: .systemFont(ofSize: 11, weight: .regular), color: .black)
+
+        // Блок BILL TO / Реквизиты инвойса (две колонки)
+        let colW = (right - left) / 2 - 8
+        let blockTop: CGFloat = 170
+
+        drawText("BILL TO", CGRect(x: left, y: blockTop, width: colW, height: 16), font: .systemFont(ofSize: 12, weight: .bold), color: primary)
+        let billLines = [customer.name, customer.address.oneLine, customer.email].filter{ !$0.isEmpty }.joined(separator: "\n")
+        drawText(billLines, CGRect(x: left, y: blockTop + 18, width: colW, height: 60), font: .systemFont(ofSize: 12), color: .black)
+
+        drawText("INVOICE #", CGRect(x: left + colW + 16, y: blockTop, width: colW/2, height: 16), font: .systemFont(ofSize: 12, weight: .bold), color: primary)
+        drawText(invoice.number, CGRect(x: left + colW + 16 + 90, y: blockTop, width: colW - 90, height: 16), font: .systemFont(ofSize: 12, weight: .regular), color: .black)
+        drawText("INVOICE DATE", CGRect(x: left + colW + 16, y: blockTop + 18, width: colW/2, height: 16), font: .systemFont(ofSize: 12, weight: .bold), color: primary)
+        let df = DateFormatter(); df.dateStyle = .short
+        drawText(df.string(from: invoice.issueDate), CGRect(x: left + colW + 16 + 90, y: blockTop + 18, width: colW - 90, height: 16), font: .systemFont(ofSize: 12), color: .black)
+
+        // Горизонтальная линия перед таблицей
+        line(context, from: CGPoint(x: left, y: blockTop + 92), to: CGPoint(x: right, y: blockTop + 92), width: 1, color: primary.withAlphaComponent(0.4))
+
+        // Таблица
+        let tTop = blockTop + 100
+        let cols: [CGFloat] = [0.12, 0.58, 0.15, 0.15] // QTY / DESC / UNIT / AMOUNT
+        let widths = cols.map { (right - left) * $0 }
+        let titles = ["QTY", "DESCRIPTION", "UNIT PRICE", "AMOUNT"]
+
+        // Шапка
+        var x = left
+        for (i, t) in titles.enumerated() {
+            drawText(t, CGRect(x: x + 6, y: tTop, width: widths[i] - 12, height: 18), font: .systemFont(ofSize: 11, weight: .semibold), color: primary)
+            x += widths[i]
+        }
+        line(context, from: CGPoint(x: left, y: tTop + 20), to: CGPoint(x: right, y: tTop + 20), width: 1, color: primary.withAlphaComponent(0.4))
+
+        // Строки
+        var rowY = tTop + 22
+        for (i, it) in invoice.items.enumerated() {
+            if i % 2 == 0 {
+                context.setFillColor(accent.withAlphaComponent(0.06).cgColor)
+                context.fill(CGRect(x: left, y: rowY - 2, width: right - left, height: 24))
+            }
+            x = left
+            drawText("\(it.quantity)", CGRect(x: x + 6, y: rowY, width: widths[0]-12, height: 18), font: .systemFont(ofSize: 11), color: .black)
+            x += widths[0]
+            drawText(it.description, CGRect(x: x + 6, y: rowY, width: widths[1]-12, height: 18), font: .systemFont(ofSize: 11), color: .black)
+            x += widths[1]
+            drawText(money(it.rate, code: currency), CGRect(x: x + 6, y: rowY, width: widths[2]-12, height: 18), font: .systemFont(ofSize: 11), color: .black, align: .right)
+            x += widths[2]
+            drawText(money(it.total, code: currency), CGRect(x: x + 6, y: rowY, width: widths[3]-12, height: 18), font: .systemFont(ofSize: 11, weight: .semibold), color: .black, align: .right)
+            rowY += 24
+        }
+
+        line(context, from: CGPoint(x: left, y: rowY + 4), to: CGPoint(x: right, y: rowY + 4), width: 1, color: primary.withAlphaComponent(0.4))
+
+        // Итоги справа
+        let subtotal = invoice.items.map{$0.total}.reduce(0, +)
+        drawText("Subtotal", CGRect(x: right - 180, y: rowY + 12, width: 100, height: 18), font: .systemFont(ofSize: 11), color: .darkGray, align: .right)
+        drawText(money(subtotal, code: currency), CGRect(x: right - 80, y: rowY + 12, width: 80, height: 18), font: .systemFont(ofSize: 11), color: .black, align: .right)
+
+        drawText("TOTAL", CGRect(x: right - 180, y: rowY + 36, width: 100, height: 22), font: .systemFont(ofSize: 14, weight: .bold), color: primary, align: .right)
+        drawText(money(subtotal, code: currency), CGRect(x: right - 80, y: rowY + 36, width: 80, height: 22), font: .systemFont(ofSize: 14, weight: .bold), color: primary, align: .right)
+
+        // Terms & Conditions (снизу слева)
+        drawText("TERMS & CONDITIONS", CGRect(x: left, y: page.height - 120, width: right - left, height: 16), font: .systemFont(ofSize: 12, weight: .semibold), color: primary)
+        let terms = "Payment is due within 15 days.\nPlease make checks payable to: \(company.name)."
+        drawText(terms, CGRect(x: left, y: page.height - 100, width: right - left, height: 60), font: .systemFont(ofSize: 11), color: .darkGray)
     }
-    
-    private func drawPhotographyInvoiceSection(context: CGContext, page: CGRect, invoice: Invoice, primary: UIColor, accent: UIColor) {
-        // Photography invoice box
-        let invoiceRect = CGRect(x: page.width - 185, y: 30, width: 140, height: 70)
-        
-        // Photography background
-        context.setFillColor(accent.withAlphaComponent(0.08).cgColor)
-        context.fill(invoiceRect)
-        
-        // Photography border
-        context.setStrokeColor(accent.cgColor)
-        context.setLineWidth(2)
-        context.stroke(invoiceRect)
-        
-        // Invoice title with photography styling
-        let titleFont = UIFont.systemFont(ofSize: 17, weight: .semibold)
-        let titleAttributes: [NSAttributedString.Key: Any] = [
-            .font: titleFont,
-            .foregroundColor: accent
-        ]
-        let titleText = NSAttributedString(string: "INVOICE", attributes: titleAttributes)
-        let titleRect = CGRect(x: page.width - 175, y: 40, width: 120, height: 25)
-        titleText.draw(in: titleRect)
-        
-        // Invoice number with photography styling
-        let numberFont = UIFont.systemFont(ofSize: 13, weight: .medium)
-        let numberAttributes: [NSAttributedString.Key: Any] = [
-            .font: numberFont,
-            .foregroundColor: primary
-        ]
-        let numberText = NSAttributedString(string: "#\(invoice.number)", attributes: numberAttributes)
-        let numberRect = CGRect(x: page.width - 175, y: 70, width: 120, height: 20)
-        numberText.draw(in: numberRect)
-        
-        // Date with photography styling
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "MMM dd, yyyy"
-        let dateText = NSAttributedString(string: dateFormatter.string(from: invoice.issueDate), attributes: numberAttributes)
-        let dateRect = CGRect(x: page.width - 175, y: 95, width: 120, height: 20)
-        dateText.draw(in: dateRect)
+}
+
+// MARK: - FASHION ELEGANT (референс #2 — минимализм, синяя шапка таблицы)
+
+struct FashionElegantTemplate: SimpleTemplateRenderer {
+    let theme: TemplateTheme
+
+    func draw(in context: CGContext, page: CGRect, invoice: Invoice, company: Company, customer: Customer, currency: String, logo: UIImage?) {
+        let primary = theme.primary
+        let accent = theme.accent
+        let left: CGFloat = 40
+        let right: CGFloat = page.width - 40
+
+        context.setFillColor(UIColor.white.cgColor)
+        context.fill(page)
+
+        // Заголовок по центру
+        drawText("INVOICE", CGRect(x: 0, y: 28, width: page.width, height: 36), font: .systemFont(ofSize: 28, weight: .bold), color: .black, align: .center)
+
+        // Компания (слева) + Лого (справа)
+        drawText(company.name, CGRect(x: left, y: 80, width: right - left - 120, height: 20), font: .systemFont(ofSize: 16, weight: .semibold), color: .black)
+        let details = [company.address.oneLine, company.phone, company.email].compactMap{$0}.filter{!$0.isEmpty}.joined(separator: "\n")
+        drawText(details, CGRect(x: left, y: 104, width: right - left - 120, height: 60), font: .systemFont(ofSize: 12), color: .black)
+
+        if let logo {
+            let r = CGRect(x: right - 64, y: 84, width: 48, height: 48)
+            logo.draw(in: r)
+        }
+
+        // Bill To / Invoice meta
+        let top: CGFloat = 170
+        let mid = (left + right) / 2 + 10
+        drawText("Bill To", CGRect(x: left, y: top, width: 200, height: 16), font: .systemFont(ofSize: 12, weight: .semibold), color: .black)
+        let bill = [customer.name, customer.address.oneLine, customer.email].filter{!$0.isEmpty}.joined(separator: "\n")
+        drawText(bill, CGRect(x: left, y: top + 18, width: 260, height: 56), font: .systemFont(ofSize: 12), color: .black)
+
+        drawText("Invoice No :", CGRect(x: mid, y: top, width: 120, height: 16), font: .systemFont(ofSize: 12, weight: .semibold), color: .black)
+        drawText(invoice.number, CGRect(x: mid + 120, y: top, width: 160, height: 16), font: .systemFont(ofSize: 12), color: .black)
+        let df = DateFormatter(); df.dateStyle = .medium
+        drawText("Invoice Date :", CGRect(x: mid, y: top + 20, width: 120, height: 16), font: .systemFont(ofSize: 12, weight: .semibold), color: .black)
+        drawText(df.string(from: invoice.issueDate), CGRect(x: mid + 120, y: top + 20, width: 160, height: 16), font: .systemFont(ofSize: 12), color: .black)
+
+        // Разделительная линия
+        line(context, from: CGPoint(x: left, y: top + 86), to: CGPoint(x: right, y: top + 86), width: 1, color: .lightGray)
+
+        // Таблица — яркая синяя шапка
+        let tableTop = top + 98
+        let headers = ["Sl.", "Description", "Qty", "Rate", "Amount"]
+        let widths: [CGFloat] = [50, (right-left) - 50 - 80 - 120 - 120, 80, 120, 120]
+        context.setFillColor(primary.cgColor)
+        context.fill(CGRect(x: left, y: tableTop, width: right - left, height: 28))
+        var x = left
+        for (i, h) in headers.enumerated() {
+            drawText(h, CGRect(x: x + 8, y: tableTop + 6, width: widths[i] - 16, height: 16), font: .systemFont(ofSize: 12, weight: .semibold), color: .white)
+            x += widths[i]
+        }
+
+        // Ряды
+        var rowY = tableTop + 28
+        for (index, it) in invoice.items.enumerated() {
+            // тонкие разделители
+            line(context, from: CGPoint(x: left, y: rowY), to: CGPoint(x: right, y: rowY), width: 0.6, color: UIColor(white: 0.9, alpha: 1))
+            x = left
+            drawText("\(index+1)", CGRect(x: x + 8, y: rowY + 6, width: widths[0]-16, height: 16), font: .systemFont(ofSize: 12), color: .black)
+            x += widths[0]
+            drawText(it.description, CGRect(x: x + 8, y: rowY + 6, width: widths[1]-16, height: 16), font: .systemFont(ofSize: 12), color: .black)
+            x += widths[1]
+            drawText("\(it.quantity)", CGRect(x: x + 8, y: rowY + 6, width: widths[2]-16, height: 16), font: .systemFont(ofSize: 12), color: .black)
+            x += widths[2]
+            drawText(money(it.rate, code: currency), CGRect(x: x, y: rowY + 6, width: widths[3]-8, height: 16), font: .systemFont(ofSize: 12), color: .black, align: .right)
+            x += widths[3]
+            drawText(money(it.total, code: currency), CGRect(x: x, y: rowY + 6, width: widths[4]-8, height: 16), font: .systemFont(ofSize: 12, weight: .semibold), color: .black, align: .right)
+            rowY += 28
+        }
+        line(context, from: CGPoint(x: left, y: rowY), to: CGPoint(x: right, y: rowY), width: 1, color: .lightGray)
+
+        // Сводка справа (Subtotal / Total / Balance Due)
+        let subtotal = invoice.items.map{$0.total}.reduce(0, +)
+        let boxX = right - 260
+        drawText("Subtotal", CGRect(x: boxX, y: rowY + 12, width: 120, height: 18), font: .systemFont(ofSize: 12), color: .black)
+        drawText(money(subtotal, code: currency), CGRect(x: right - 120, y: rowY + 12, width: 120, height: 18), font: .systemFont(ofSize: 12), color: .black, align: .right)
+
+        drawText("Total", CGRect(x: boxX, y: rowY + 36, width: 120, height: 20), font: .systemFont(ofSize: 14, weight: .semibold), color: .black)
+        drawText(money(subtotal, code: currency), CGRect(x: right - 120, y: rowY + 36, width: 120, height: 20), font: .systemFont(ofSize: 14, weight: .semibold), color: .black, align: .right)
+
+        line(context,
+             from: CGPoint(x: boxX, y: rowY + 62),
+             to:   CGPoint(x: right, y: rowY + 62),
+             width: 1,
+             color: .lightGray)
+
+        drawText("Payment Instructions", CGRect(x: left, y: rowY + 20, width: 300, height: 18), font: .systemFont(ofSize: 12, weight: .semibold), color: .black)
+        drawText("Pay Cheque to\n\(company.name)", CGRect(x: left, y: rowY + 40, width: 300, height: 50), font: .systemFont(ofSize: 12), color: .darkGray)
     }
-    
-    private func drawCleanBillTo(context: CGContext, page: CGRect, customer: Customer, primary: UIColor, accent: UIColor) {
-        // Clean bill to section
-        let billToRect = CGRect(x: 30, y: 145, width: 340, height: 90)
-        
-        // Clean background
-        context.setFillColor(primary.withAlphaComponent(0.04).cgColor)
-        context.fill(billToRect)
-        
-        // Clean border
+}
+
+// MARK: - DESIGN STUDIO (референс #3 — оранжевые карточки)
+
+struct DesignStudioTemplate: SimpleTemplateRenderer {
+    let theme: TemplateTheme
+
+    func draw(in context: CGContext, page: CGRect, invoice: Invoice, company: Company, customer: Customer, currency: String, logo: UIImage?) {
+
+        let primary = theme.primary
+        let accent = theme.accent
+        let left: CGFloat = 36
+        let right: CGFloat = page.width - 36
+
+        context.setFillColor(UIColor.white.cgColor)
+        context.fill(page)
+
+        // Верхняя панель с логотипом и номером инвойса справа
+        if let logo {
+            logo.draw(in: CGRect(x: left, y: 24, width: 72, height: 72))
+        }
+        drawText(company.name, CGRect(x: left + 88, y: 36, width: right - left - 200, height: 28), font: .systemFont(ofSize: 24, weight: .semibold), color: primary)
+        drawText("Invoice \(invoice.number)", CGRect(x: right - 180, y: 36, width: 180, height: 20), font: .systemFont(ofSize: 16, weight: .bold), color: .black, align: .right)
+        drawText("Tax invoice", CGRect(x: right - 180, y: 58, width: 180, height: 16), font: .systemFont(ofSize: 11, weight: .regular), color: .darkGray, align: .right)
+
+        // Карточки (оранжевые) — Invoice No / Issue / Due / Total Due
+        let cardH: CGFloat = 48
+        let labels = ["Invoice No.", "Issue date", "Due date", "Total due (\(currency))"]
+        let values = [
+            invoice.number,
+            DateFormatter.localizedString(from: invoice.issueDate, dateStyle: .short, timeStyle: .none),
+            DateFormatter.localizedString(from: invoice.dueDate ?? invoice.issueDate, dateStyle: .short, timeStyle: .none),
+            money(invoice.items.map{$0.total}.reduce(0,+), code: currency)
+        ]
+        let cardW = (right - left) / 4 - 6
+        for i in 0..<4 {
+            let x = left + CGFloat(i) * (cardW + 8)
+            let r = CGRect(x: x, y: 120, width: cardW, height: cardH)
+            context.setFillColor(UIColor.systemOrange.withAlphaComponent(i == 3 ? 0.9 : 0.75).cgColor)
+            context.fill(r)
+            drawText(labels[i], CGRect(x: r.minX + 10, y: r.minY + 6, width: r.width - 20, height: 16), font: .systemFont(ofSize: 11, weight: .semibold), color: .white)
+            drawText(values[i], CGRect(x: r.minX + 10, y: r.minY + 22, width: r.width - 20, height: 20), font: .systemFont(ofSize: 14, weight: .bold), color: .white)
+        }
+
+        // BILL TO (слева) + даты (справа, тонким текстом)
+        drawText("BILL TO", CGRect(x: left, y: 190, width: 200, height: 16), font: .systemFont(ofSize: 12, weight: .semibold), color: primary)
+        let bill = [customer.name, customer.address.oneLine, customer.email].filter{!$0.isEmpty}.joined(separator: "\n")
+        drawText(bill, CGRect(x: left, y: 210, width: right-left-220, height: 54), font: .systemFont(ofSize: 12), color: .black)
+
+        drawText("Issue date:", CGRect(x: right - 220, y: 190, width: 90, height: 16), font: .systemFont(ofSize: 11, weight: .regular), color: .darkGray)
+        drawText(DateFormatter.localizedString(from: invoice.issueDate, dateStyle: .short, timeStyle: .none),
+                 CGRect(x: right - 120, y: 190, width: 120, height: 16), font: .systemFont(ofSize: 11), color: .black, align: .right)
+        if let due = invoice.dueDate {
+            drawText("Due date:", CGRect(x: right - 220, y: 208, width: 90, height: 16), font: .systemFont(ofSize: 11, weight: .regular), color: .darkGray)
+            drawText(DateFormatter.localizedString(from: due, dateStyle: .short, timeStyle: .none),
+                     CGRect(x: right - 120, y: 208, width: 120, height: 16), font: .systemFont(ofSize: 11), color: .black, align: .right)
+        }
+
+        // Таблица (тонкие серые линии)
+        let tTop: CGFloat = 260
+        line(context, from: CGPoint(x: left, y: tTop), to: CGPoint(x: right, y: tTop), width: 1, color: .lightGray)
+        let headers = ["Description", "Quantity", "Unit price (\(currency))", "Amount (\(currency))"]
+        let widths: [CGFloat] = [0.56, 0.14, 0.15, 0.15].map{ (right-left)*$0 }
+
+        var x = left
+        for (i, h) in headers.enumerated() {
+            drawText(h, CGRect(x: x + 8, y: tTop + 6, width: widths[i] - 16, height: 18), font: .systemFont(ofSize: 12, weight: .semibold), color: .darkGray)
+            x += widths[i]
+        }
+        line(context, from: CGPoint(x: left, y: tTop + 28), to: CGPoint(x: right, y: tTop + 28), width: 1, color: .lightGray)
+
+        var rowY = tTop + 32
+        for (i, it) in invoice.items.enumerated() {
+            if i % 2 == 1 {
+                context.setFillColor(UIColor(white: 0.97, alpha: 1).cgColor)
+                context.fill(CGRect(x: left, y: rowY - 2, width: right-left, height: 24))
+            }
+            x = left
+            drawText(it.description, CGRect(x: x + 8, y: rowY, width: widths[0]-16, height: 18), font: .systemFont(ofSize: 12), color: .black)
+            x += widths[0]
+            drawText("\(it.quantity)", CGRect(x: x, y: rowY, width: widths[1]-8, height: 18), font: .systemFont(ofSize: 12), color: .black, align: .right)
+            x += widths[1]
+            drawText(money(it.rate, code: currency), CGRect(x: x, y: rowY, width: widths[2]-8, height: 18), font: .systemFont(ofSize: 12), color: .black, align: .right)
+            x += widths[2]
+            drawText(money(it.total, code: currency), CGRect(x: x, y: rowY, width: widths[3]-8, height: 18), font: .systemFont(ofSize: 12, weight: .semibold), color: .black, align: .right)
+            rowY += 24
+        }
+        line(context, from: CGPoint(x: left, y: rowY + 4), to: CGPoint(x: right, y: rowY + 4), width: 1, color: .lightGray)
+
+        // Итоговая тёмная плашка TOTAL (как на референсе справа)
+        let totalBox = CGRect(x: right - 260, y: rowY + 16, width: 260, height: 46)
+        context.setFillColor(UIColor(white: 0.2, alpha: 1).cgColor)
+        context.fill(totalBox)
+        drawText("TOTAL DUE (\(currency))", CGRect(x: totalBox.minX + 12, y: totalBox.minY + 8, width: 150, height: 14), font: .systemFont(ofSize: 11, weight: .semibold), color: .white)
+        let total = invoice.items.map{$0.total}.reduce(0,+)
+        drawText(money(total, code: currency), CGRect(x: totalBox.minX + 12, y: totalBox.minY + 22, width: totalBox.width - 24, height: 18), font: .systemFont(ofSize: 16, weight: .bold), color: .white, align: .right)
+    }
+}
+
+// MARK: - ARTISTIC BOLD (контрастный тёмный хедер, диагональная полоса)
+
+struct ArtisticBoldTemplate: SimpleTemplateRenderer {
+    let theme: TemplateTheme
+
+    func draw(in context: CGContext, page: CGRect, invoice: Invoice, company: Company, customer: Customer, currency: String, logo: UIImage?) {
+
+        let primary = theme.primary
+        let accent = theme.accent
+        let left: CGFloat = 34
+        let right: CGFloat = page.width - 34
+
+        // Фон
+        context.setFillColor(UIColor.white.cgColor)
+        context.fill(page)
+
+        // Тёмный хедер с диагональным акцентом
+        let header = CGRect(x: 0, y: 0, width: page.width, height: 120)
+        context.setFillColor(UIColor(white: 0.12, alpha: 1).cgColor)
+        context.fill(header)
+
+        let stripe = UIBezierPath()
+        stripe.move(to: CGPoint(x: page.width * 0.55, y: 0))
+        stripe.addLine(to: CGPoint(x: page.width, y: 0))
+        stripe.addLine(to: CGPoint(x: page.width, y: 120))
+        stripe.addLine(to: CGPoint(x: page.width * 0.45, y: 120))
+        stripe.close()
+        accent.withAlphaComponent(0.6).setFill()
+        stripe.fill()
+
+        drawText("INVOICE", CGRect(x: left, y: 36, width: 240, height: 32), font: .systemFont(ofSize: 28, weight: .black), color: .white)
+        drawText(company.name, CGRect(x: left, y: 72, width: right-left-160, height: 18), font: .systemFont(ofSize: 13, weight: .medium), color: UIColor(white: 0.9, alpha: 1))
+
+        if let logo {
+            logo.draw(in: CGRect(x: right - 70, y: 25, width: 45, height: 45))
+        }
+
+        // Метаданные справа под хедером
+        let top: CGFloat = 136
+        drawText("Invoice #", CGRect(x: right - 220, y: top, width: 90, height: 16), font: .systemFont(ofSize: 12, weight: .semibold), color: .darkGray, align: .right)
+        drawText(invoice.number, CGRect(x: right - 120, y: top, width: 120, height: 16), font: .systemFont(ofSize: 12), color: .black, align: .right)
+        drawText("Date", CGRect(x: right - 220, y: top + 18, width: 90, height: 16), font: .systemFont(ofSize: 12, weight: .semibold), color: .darkGray, align: .right)
+        drawText(DateFormatter.localizedString(from: invoice.issueDate, dateStyle: .medium, timeStyle: .none), CGRect(x: right - 120, y: top + 18, width: 120, height: 16), font: .systemFont(ofSize: 12), color: .black, align: .right)
+
+        // Bill To (карточка)
+        let billBox = CGRect(x: left, y: top, width: 300, height: 90)
+        context.setFillColor(primary.withAlphaComponent(0.06).cgColor)
+        context.fill(billBox)
         context.setStrokeColor(primary.cgColor)
         context.setLineWidth(1)
-        context.stroke(billToRect)
-        
-        // Bill to title with clean styling
-        let billToFont = UIFont.systemFont(ofSize: 14, weight: .semibold)
-        let billToAttributes: [NSAttributedString.Key: Any] = [
-            .font: billToFont,
-            .foregroundColor: primary
-        ]
-        let billToText = NSAttributedString(string: "BILL TO:", attributes: billToAttributes)
-        let billToTextRect = CGRect(x: 40, y: 155, width: 100, height: 25)
-        billToText.draw(in: billToTextRect)
-        
-        // Customer details with clean styling
-        let customerFont = UIFont.systemFont(ofSize: 12, weight: .regular)
-        let customerAttributes: [NSAttributedString.Key: Any] = [
-            .font: customerFont,
-            .foregroundColor: UIColor.black
-        ]
-        
-        var yOffset: CGFloat = 185
-        let customerNameText = NSAttributedString(string: customer.name, attributes: customerAttributes)
-        let customerNameRect = CGRect(x: 40, y: yOffset, width: 320, height: 20)
-        customerNameText.draw(in: customerNameRect)
-        yOffset += 20
-        
-        if !customer.address.oneLine.isEmpty {
-            let addressText = NSAttributedString(string: customer.address.oneLine, attributes: customerAttributes)
-            let addressRect = CGRect(x: 40, y: yOffset, width: 320, height: 20)
-            addressText.draw(in: addressRect)
-            yOffset += 20
+        context.stroke(billBox)
+        drawText("BILL TO", CGRect(x: billBox.minX + 10, y: billBox.minY + 8, width: billBox.width - 20, height: 16), font: .systemFont(ofSize: 12, weight: .bold), color: primary)
+        let bill = [customer.name, customer.address.oneLine, customer.email].filter{!$0.isEmpty}.joined(separator: "\n")
+        drawText(bill, CGRect(x: billBox.minX + 10, y: billBox.minY + 28, width: billBox.width - 20, height: 54), font: .systemFont(ofSize: 12), color: .black)
+
+        // Таблица — зебра
+        let tTop = billBox.maxY + 20
+        let headers = ["Description", "Qty", "Rate", "Amount"]
+        let widths: [CGFloat] = [0.58, 0.12, 0.15, 0.15].map{ (right-left)*$0 }
+
+        context.setFillColor(UIColor(white: 0.96, alpha: 1).cgColor)
+        context.fill(CGRect(x: left, y: tTop, width: right-left, height: 32))
+        var x = left
+        for (i,h) in headers.enumerated() {
+            drawText(h, CGRect(x: x + 8, y: tTop + 8, width: widths[i]-16, height: 16), font: .systemFont(ofSize: 12, weight: .bold), color: .black)
+            x += widths[i]
         }
-        
-        if !customer.email.isEmpty {
-            let emailText = NSAttributedString(string: customer.email, attributes: customerAttributes)
-            let emailRect = CGRect(x: 40, y: yOffset, width: 320, height: 20)
-            emailText.draw(in: emailRect)
-        }
-    }
-    
-    private func drawPhotographyTable(context: CGContext, page: CGRect, invoice: Invoice, currency: String, primary: UIColor, secondary: UIColor, accent: UIColor) {
-        let startY: CGFloat = 265
-        
-        // Photography table header
-        let headerRect = CGRect(x: 30, y: startY, width: page.width - 60, height: 32)
-        
-        // Photography header background
-        context.setFillColor(primary.cgColor)
-        context.fill(headerRect)
-        
-        // Header text
-        let headerFont = UIFont.systemFont(ofSize: 11, weight: .semibold)
-        let headerAttributes: [NSAttributedString.Key: Any] = [
-            .font: headerFont,
-            .foregroundColor: UIColor.white
-        ]
-        
-        let headers = ["Description", "Quantity", "Unit Price", "Total"]
-        let columnWidths: [CGFloat] = [310, 70, 90, 90]
-        var xOffset: CGFloat = 40
-        
-        for (index, header) in headers.enumerated() {
-            let headerText = NSAttributedString(string: header, attributes: headerAttributes)
-            let headerTextRect = CGRect(x: xOffset, y: startY + 8, width: columnWidths[index], height: 20)
-            headerText.draw(in: headerTextRect)
-            xOffset += columnWidths[index]
-        }
-        
-        // Photography table rows
-        let rowFont = UIFont.systemFont(ofSize: 10, weight: .regular)
-        let rowAttributes: [NSAttributedString.Key: Any] = [
-            .font: rowFont,
-            .foregroundColor: UIColor.black
-        ]
-        
-        var yOffset = startY + 32
-        for (index, item) in invoice.items.enumerated() {
-            // Clean alternating rows
-            if index % 2 == 0 {
-                let rowRect = CGRect(x: 30, y: yOffset, width: page.width - 60, height: 28)
-                context.setFillColor(accent.withAlphaComponent(0.06).cgColor)
-                context.fill(rowRect)
+
+        var rowY = tTop + 32
+        for (i, it) in invoice.items.enumerated() {
+            if i % 2 == 0 {
+                context.setFillColor(UIColor(white: 0.985, alpha: 1).cgColor)
+                context.fill(CGRect(x: left, y: rowY, width: right-left, height: 26))
             }
-            
-            // Row content
-            xOffset = 40
-            
-            let itemText = NSAttributedString(string: item.description, attributes: rowAttributes)
-            let itemRect = CGRect(x: xOffset, y: yOffset + 6, width: columnWidths[0], height: 20)
-            itemText.draw(in: itemRect)
-            xOffset += columnWidths[0]
-            
-            let qtyText = NSAttributedString(string: "\(item.quantity)", attributes: rowAttributes)
-            let qtyRect = CGRect(x: xOffset, y: yOffset + 6, width: columnWidths[1], height: 20)
-            qtyText.draw(in: qtyRect)
-            xOffset += columnWidths[1]
-            
-            let rateText = NSAttributedString(string: "\(currency)\(String(format: "%.2f", Double(truncating: item.rate as NSDecimalNumber)))", attributes: rowAttributes)
-            let rateRect = CGRect(x: xOffset, y: yOffset + 6, width: columnWidths[2], height: 20)
-            rateText.draw(in: rateRect)
-            xOffset += columnWidths[2]
-            
-            let amountText = NSAttributedString(string: "\(currency)\(String(format: "%.2f", Double(truncating: item.total as NSDecimalNumber)))", attributes: rowAttributes)
-            let amountRect = CGRect(x: xOffset, y: yOffset + 6, width: columnWidths[3], height: 20)
-            amountText.draw(in: amountRect)
-            
-            yOffset += 28
+            x = left
+            drawText(it.description, CGRect(x: x + 8, y: rowY + 5, width: widths[0]-16, height: 16), font: .systemFont(ofSize: 11), color: .black)
+            x += widths[0]
+            drawText("\(it.quantity)", CGRect(x: x, y: rowY + 5, width: widths[1]-8, height: 16), font: .systemFont(ofSize: 11, weight: .medium), color: .black, align: .right)
+            x += widths[1]
+            drawText(money(it.rate, code: currency), CGRect(x: x, y: rowY + 5, width: widths[2]-8, height: 16), font: .systemFont(ofSize: 11), color: .black, align: .right)
+            x += widths[2]
+            drawText(money(it.total, code: currency), CGRect(x: x, y: rowY + 5, width: widths[3]-8, height: 16), font: .systemFont(ofSize: 11, weight: .semibold), color: primary, align: .right)
+            rowY += 26
         }
-    }
-    
-    private func drawCleanTotal(context: CGContext, page: CGRect, invoice: Invoice, currency: String, primary: UIColor, accent: UIColor) {
-        let totalY: CGFloat = 420
-        
-        // Clean total box
-        let totalRect = CGRect(x: page.width - 190, y: totalY, width: 150, height: 45)
-        
-        // Clean background
-        context.setFillColor(accent.cgColor)
-        context.fill(totalRect)
-        
-        // Clean border
-        context.setStrokeColor(accent.cgColor)
-        context.setLineWidth(2)
-        context.stroke(totalRect)
-        
-        // Total text with clean styling
-        let totalFont = UIFont.systemFont(ofSize: 15, weight: .semibold)
-        let totalAttributes: [NSAttributedString.Key: Any] = [
-            .font: totalFont,
-            .foregroundColor: UIColor.white
-        ]
-        let totalText = NSAttributedString(string: "TOTAL: \(currency)\(String(format: "%.2f", Double(truncating: invoice.subtotal as NSDecimalNumber)))", attributes: totalAttributes)
-        let totalTextRect = CGRect(x: page.width - 180, y: totalY + 12, width: 130, height: 20)
-        totalText.draw(in: totalTextRect)
-    }
-    
-    private func drawPhotographyFooter(context: CGContext, page: CGRect, company: Company, primary: UIColor) {
-        let footerFont = UIFont.systemFont(ofSize: 9, weight: .regular)
-        let footerAttributes: [NSAttributedString.Key: Any] = [
-            .font: footerFont,
-            .foregroundColor: UIColor.gray
-        ]
-        
-        let footerText = NSAttributedString(string: "Clean photography services. Capturing moments with precision.", attributes: footerAttributes)
-        let footerRect = CGRect(x: 30, y: page.height - 50, width: page.width - 60, height: 20)
-        footerText.draw(in: footerRect)
+        line(context, from: CGPoint(x: left, y: rowY + 2), to: CGPoint(x: right, y: rowY + 2), width: 1, color: .lightGray)
+
+        // Карточка TOTAL справа
+        let total = invoice.items.map{$0.total}.reduce(0,+)
+        let totalCard = CGRect(x: right - 240, y: rowY + 14, width: 240, height: 60)
+        context.setFillColor(primary.cgColor)
+        context.fill(totalCard)
+        drawText("TOTAL", CGRect(x: totalCard.minX + 12, y: totalCard.minY + 12, width: 100, height: 18), font: .systemFont(ofSize: 13, weight: .bold), color: .white)
+        drawText(money(total, code: currency), CGRect(x: totalCard.minX + 12, y: totalCard.minY + 30, width: totalCard.width - 24, height: 22), font: .systemFont(ofSize: 17, weight: .black), color: .white, align: .right)
+
+        // Низ страницы — контактная полоса
+        let footerY = page.height - 40
+        line(context, from: CGPoint(x: left, y: footerY - 8), to: CGPoint(x: right, y: footerY - 8), width: 1, color: UIColor(white: 0.9, alpha: 1))
+        let footer = [company.phone, company.website, company.email].compactMap{$0}.filter{!$0.isEmpty}.joined(separator: "   •   ")
+        drawText(footer, CGRect(x: left, y: footerY, width: right-left, height: 16), font: .systemFont(ofSize: 10), color: .gray, align: .center)
     }
 }
