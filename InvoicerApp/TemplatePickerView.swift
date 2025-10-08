@@ -27,7 +27,7 @@ struct TemplatePickerView: View {
     @State private var shimmerOffset: CGFloat = -1
     @State private var floatingElements: [FloatingElement] = []
     @State private var showPaywall = false
-    @State private var showColorPicker = false
+    @State private var navigationPath = NavigationPath()
     @State private var selectedTemplateForColor: InvoiceTemplateDescriptor?
     
     private let templates = TemplateCatalog.all
@@ -55,7 +55,7 @@ struct TemplatePickerView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 // Анимированный фон
                 backgroundView
@@ -99,12 +99,7 @@ struct TemplatePickerView: View {
                     Button("Done") { dismiss() } 
                 }
             }
-        }
-        .sheet(isPresented: $showPaywall) {
-            // PaywallScreen would go here
-        }
-        .sheet(isPresented: $showColorPicker) {
-            if let template = selectedTemplateForColor {
+            .navigationDestination(for: InvoiceTemplateDescriptor.self) { template in
                 ColorSchemePickerView(selectedTemplate: template) { selectedTheme in
                     // Create a complete template with design and theme
                     let completeTemplate = CompleteInvoiceTemplate(template: template, theme: selectedTheme)
@@ -115,6 +110,9 @@ struct TemplatePickerView: View {
                     dismiss()
                 }
             }
+        }
+        .sheet(isPresented: $showPaywall) {
+            // PaywallScreen would go here
         }
         .onAppear {
             showContent = true
@@ -321,8 +319,7 @@ struct TemplatePickerView: View {
                         if template.isPremium && !app.isPremium {
                             showPaywall = true
                         } else {
-                            selectedTemplateForColor = template
-                            showColorPicker = true
+                            navigationPath.append(template)
                         }
                     }
                 }
@@ -472,26 +469,26 @@ struct TemplateCardPreview: View {
         let primary = Color.blue
         let secondary = Color.blue.opacity(0.7)
         
-        ZStack {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.secondarySystemBackground).opacity(0.6))
-
-            VStack(spacing: 8) {
-                // Header with gradient based on style
-                headerSection(primary: primary, secondary: secondary)
-                
-                // Company info section
-                companyInfoSection
-                
-                // Items table with style-specific design
-                itemsTableSection(primary: primary)
-                
-                // Total section
-                totalSection
-                
-                Spacer(minLength: 2)
-            }
-        }
+        RoundedRectangle(cornerRadius: 12)
+            .fill(Color(.secondarySystemBackground).opacity(0.6))
+            .overlay(
+                VStack(spacing: 8) {
+                    // Header with gradient based on style
+                    headerSection(primary: primary, secondary: secondary)
+                    
+                    // Company info section
+                    companyInfoSection
+                    
+                    // Items table with style-specific design
+                    itemsTableSection(primary: primary)
+                    
+                    // Total section
+                    totalSection
+                    
+                    Spacer(minLength: 2)
+                }
+                .padding(8)
+            )
     }
     
     @ViewBuilder

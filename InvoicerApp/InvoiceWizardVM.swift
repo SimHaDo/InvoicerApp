@@ -47,6 +47,7 @@ struct InvoiceWizardView: View {
 
     // Template picker
     @State private var showTemplatePicker = false
+    @State private var navigationPath = NavigationPath()
 
     // PDF share
     @State private var shareURL: URL?
@@ -54,7 +55,7 @@ struct InvoiceWizardView: View {
     @State private var shouldDismissAfterShare = false
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             VStack(spacing: 0) {
                 StepHeader(step: vm.step)
                 content

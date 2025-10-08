@@ -23,58 +23,56 @@ struct ColorSchemePickerView: View {
     private let themes = TemplateCatalog.themes
     
     var body: some View {
-        NavigationStack {
-            ZStack {
-                // Анимированный фон
-                backgroundView
-                
-                // Плавающие элементы
-                ForEach(floatingElements) { element in
-                    Circle()
-                        .fill(Color.primary.opacity(0.05))
-                        .frame(width: 40, height: 40)
-                        .scaleEffect(element.scale)
-                        .opacity(element.opacity)
-                        .rotationEffect(.degrees(element.rotation))
-                        .position(x: element.x, y: element.y)
-                        .animation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true), value: element.scale)
-                }
-                
-                VStack(spacing: 0) {
-                    // Header с информацией о темплейте
-                    templateHeader
-                        .offset(y: showContent ? 0 : -20)
-                        .opacity(showContent ? 1 : 0)
-                        .animation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.1), value: showContent)
-                    
-                    // Preview секция
-                    previewSection
-                        .offset(y: showContent ? 0 : -15)
-                        .opacity(showContent ? 1 : 0)
-                        .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2), value: showContent)
-                    
-                    // Color schemes grid
-                    colorSchemesGrid
-                        .offset(y: showContent ? 0 : 20)
-                        .opacity(showContent ? 1 : 0)
-                        .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.3), value: showContent)
-                }
+        ZStack {
+            // Анимированный фон
+            backgroundView
+            
+            // Плавающие элементы
+            ForEach(floatingElements) { element in
+                Circle()
+                    .fill(Color.primary.opacity(0.05))
+                    .frame(width: 40, height: 40)
+                    .scaleEffect(element.scale)
+                    .opacity(element.opacity)
+                    .rotationEffect(.degrees(element.rotation))
+                    .position(x: element.x, y: element.y)
+                    .animation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true), value: element.scale)
             }
-            .navigationTitle("Choose Color Scheme")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Back") { dismiss() }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
-                        if let theme = selectedTheme {
-                            onColorSelected(theme)
-                            dismiss()
-                        }
+            
+            VStack(spacing: 0) {
+                // Header с информацией о темплейте
+                templateHeader
+                    .offset(y: showContent ? 0 : -20)
+                    .opacity(showContent ? 1 : 0)
+                    .animation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.1), value: showContent)
+                
+                // Preview секция
+                previewSection
+                    .offset(y: showContent ? 0 : -15)
+                    .opacity(showContent ? 1 : 0)
+                    .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2), value: showContent)
+                
+                // Color schemes grid
+                colorSchemesGrid
+                    .offset(y: showContent ? 0 : 20)
+                    .opacity(showContent ? 1 : 0)
+                    .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.3), value: showContent)
+            }
+        }
+        .navigationTitle("Choose Color Scheme")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Back") { dismiss() }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Done") {
+                    if let theme = selectedTheme {
+                        onColorSelected(theme)
+                        dismiss()
                     }
-                    .disabled(selectedTheme == nil)
                 }
+                .disabled(selectedTheme == nil)
             }
         }
         .onAppear {
