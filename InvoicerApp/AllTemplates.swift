@@ -2658,3 +2658,450 @@ struct FixedTechModernTemplate: SimpleTemplateRenderer {
                in: CGRect(x: left, y: fy - 14, width: right - left, height: 14))
     }
 }
+// MARK: - RealEstate Warm (refactored to ConsultingElegant-style)
+
+struct RealEstateWarmTemplate: SimpleTemplateRenderer {
+    let theme: TemplateTheme
+    private let R = BaseRenderer()
+
+    func draw(in context: CGContext, page: CGRect, invoice: Invoice, company: Company, customer: Customer, currency: String, logo: UIImage?) {
+
+        let P = R.insets
+        let left = P.left
+        let right = page.width - P.right
+        let primary = theme.primary
+        let accent = theme.accent
+        let dateFmt = BaseRenderer.date
+        let dueDate = extractDueDate(from: invoice) ?? invoice.issueDate
+
+        R.fillRect(context: context, rect: page, color: .white)
+
+        // Cozy header
+        let header = CGRect(x: 0, y: 0, width: page.width, height: 125)
+        R.fillRect(context: context, rect: header, color: primary.withAlphaComponent(0.10))
+        context.setFillColor(accent.withAlphaComponent(0.18).cgColor)
+        for i in 0..<6 {
+            let d: CGFloat = 12
+            context.fillEllipse(in: CGRect(x: CGFloat(i * 100 + 20), y: 16, width: d, height: d))
+        }
+
+        // Logo
+        R.drawLogo(logo, in: CGRect(x: left + 6, y: 34, width: 70, height: 70), context: context, corner: 10, stroke: accent)
+
+        // Company lines
+        let compX = left + 90
+        let compW = (right - compX) - 180
+        var cy = CGFloat(40)
+        for (i, line) in companyLines(company).enumerated() {
+            let f: UIFont = (i == 0) ? .systemFont(ofSize: 26, weight: .semibold) : .systemFont(ofSize: 12, weight: .regular)
+            let col: UIColor = (i == 0) ? primary : .black
+            R.draw(R.text(line, font: f, color: col),
+                   in: CGRect(x: compX, y: cy, width: compW, height: i == 0 ? 28 : 16))
+            cy += (i == 0 ? 28 : 16)
+            if cy > header.maxY - 8 { break }
+        }
+        R.draw(R.text("REAL ESTATE SERVICES", font: .systemFont(ofSize: 12, weight: .medium), color: accent),
+               in: CGRect(x: compX, y: min(cy, header.maxY - 22), width: compW, height: 18))
+
+        // Invoice box
+        let inv = CGRect(x: right - 180, y: 40, width: 170, height: 78)
+        R.fillRect(context: context, rect: inv, color: accent.withAlphaComponent(0.10))
+        R.strokeRect(context: context, rect: inv, color: accent, width: 1)
+        R.draw(R.text("INVOICE", font: .systemFont(ofSize: 18, weight: .semibold), color: accent),
+               in: CGRect(x: inv.minX + 10, y: inv.minY + 6, width: inv.width - 20, height: 22))
+        R.draw(R.text("#\(invoice.number)", font: .systemFont(ofSize: 14, weight: .medium), color: primary),
+               in: CGRect(x: inv.minX + 10, y: inv.minY + 26, width: inv.width - 20, height: 16))
+        R.draw(R.text("Issue: \(dateFmt.string(from: invoice.issueDate))", font: .systemFont(ofSize: 11, weight: .regular), color: .black),
+               in: CGRect(x: inv.minX + 10, y: inv.minY + 44, width: inv.width - 20, height: 14))
+        R.draw(R.text("Due:   \(dateFmt.string(from: dueDate))", font: .systemFont(ofSize: 11, weight: .regular), color: .black),
+               in: CGRect(x: inv.minX + 10, y: inv.minY + 60, width: inv.width - 20, height: 14))
+
+        // BILL TO block
+        let bill = CGRect(x: left, y: header.maxY + 16, width: min(380, right - left), height: 102)
+        R.fillRect(context: context, rect: bill, color: primary.withAlphaComponent(0.06))
+        R.strokeRect(context: context, rect: bill, color: primary, width: 1)
+        R.draw(R.text("BILL TO:", font: .systemFont(ofSize: 14, weight: .semibold), color: primary),
+               in: CGRect(x: bill.minX + 10, y: bill.minY + 8, width: bill.width - 20, height: 16))
+
+        var by = bill.minY + 28
+        for s in [customer.name, customer.address.oneLine, customer.email].filter({ !$0.isEmpty }) {
+            R.draw(R.text(s, font: .systemFont(ofSize: 12, weight: .regular), color: .black),
+                   in: CGRect(x: bill.minX + 10, y: by, width: bill.width - 20, height: 18))
+            by += 18
+        }
+
+        // Table (paged)
+        let tableTop = bill.maxY + 14
+        let headers = ["Description", "Quantity", "Unit Price", "Amount"]
+        let specs: [CGFloat] = [0.58, 0.12, 0.14, 0.16]
+
+        let res = R.drawTablePaged(
+            context: context, page: page,
+            left: left, right: right, top: tableTop, safeBottom: P.bottom,
+            headers: headers, colSpecs: specs, items: invoice.items,
+            currencyCode: currency,
+            headerBg: { rect in self.R.fillRect(context: context, rect: rect, color: primary) },
+            headerCell: { _, t, x, w, top, _ in
+                self.R.draw(self.R.text(t, font: .systemFont(ofSize: 12, weight: .semibold), color: .white),
+                            in: CGRect(x: x + 10, y: top + 9, width: w - 14, height: 18))
+            },
+            rowBg: { i, rect in if i % 2 == 0 { self.R.fillRect(context: context, rect: rect, color: accent.withAlphaComponent(0.08)) } },
+            rowCell: { _, v, x, w, y, _ in
+                self.R.draw(self.R.text(v, font: .systemFont(ofSize: 12, weight: .regular), color: .black),
+                            in: CGRect(x: x + 10, y: y + 6, width: w - 16, height: 18))
+            },
+            rowH: 28, headerH: 34,
+            continuationNoteColor: accent
+        )
+
+        guard res.hasMore == false else { return }
+
+        // Totals (safe placement)
+        let subtotal = R.subtotal(invoice.items)
+        let totalsW: CGFloat = 210
+        let tx = right - totalsW
+        var ty = R.placeBlock(below: res.lastY + 10, desiredHeight: 70, page: page, safeBottom: P.bottom)
+
+        R.draw(R.text("Subtotal", font: .systemFont(ofSize: 11, weight: .regular), color: .black),
+               in: CGRect(x: tx, y: ty, width: 105, height: 16))
+        R.draw(R.text(R.cur(subtotal, code: currency), font: .systemFont(ofSize: 11, weight: .semibold), color: .black),
+               in: CGRect(x: tx + 105, y: ty, width: 105, height: 16))
+        ty += 18
+
+        R.strokeLine(context: context, from: CGPoint(x: tx, y: ty + 4), to: CGPoint(x: right, y: ty + 4), color: accent, width: 1)
+        ty += 8
+
+        let bar = CGRect(x: tx, y: ty, width: totalsW, height: 44)
+        R.fillRect(context: context, rect: bar, color: accent)
+        let total = subtotal
+        R.draw(R.text("TOTAL", font: .systemFont(ofSize: 16, weight: .semibold), color: .white),
+               in: CGRect(x: bar.minX + 10, y: bar.minY + 10, width: 90, height: 22))
+        R.draw(R.text(R.cur(total, code: currency), font: .systemFont(ofSize: 16, weight: .semibold), color: .white),
+               in: CGRect(x: bar.minX + 100, y: bar.minY + 10, width: 100, height: 22))
+
+        // Payment / Notes (left column)
+        var infoTop = res.lastY + 10
+        let infoWidth = (tx - left) - 16
+        if let pi = extractPaymentInfo(from: invoice) {
+            let box = CGRect(x: left, y: infoTop, width: infoWidth, height: 74)
+            R.strokeRect(context: context, rect: box, color: primary.withAlphaComponent(0.3), width: 1)
+            R.draw(R.text("PAYMENT INSTRUCTIONS", font: .systemFont(ofSize: 11, weight: .semibold), color: primary),
+                   in: CGRect(x: box.minX + 8, y: box.minY + 6, width: box.width - 16, height: 14))
+            R.draw(R.text(pi, font: .systemFont(ofSize: 11, weight: .regular), color: .black),
+                   in: CGRect(x: box.minX + 8, y: box.minY + 22, width: box.width - 16, height: 50))
+            infoTop = box.maxY + 8
+        }
+        if let notes = invoice.paymentNotes, !notes.isEmpty {
+            let box = CGRect(x: left, y: infoTop, width: infoWidth, height: 74)
+            R.strokeRect(context: context, rect: box, color: primary.withAlphaComponent(0.3), width: 1)
+            R.draw(R.text("NOTES", font: .systemFont(ofSize: 11, weight: .semibold), color: primary),
+                   in: CGRect(x: box.minX + 8, y: box.minY + 6, width: box.width - 16, height: 14))
+            R.draw(R.text(notes, font: .systemFont(ofSize: 11, weight: .regular), color: .black),
+                   in: CGRect(x: box.minX + 8, y: box.minY + 22, width: box.width - 16, height: 50))
+        }
+
+        // Footer
+        let fy = page.height - P.bottom
+        R.draw(R.text("Warm real estate services. Your home is our priority.", font: .systemFont(ofSize: 10, weight: .regular), color: .gray),
+               in: CGRect(x: left, y: fy - 14, width: right - left, height: 14))
+    }
+}
+
+// MARK: - Insurance Trust (refactored)
+
+struct InsuranceTrustTemplate: SimpleTemplateRenderer {
+    let theme: TemplateTheme
+    private let R = BaseRenderer()
+
+    func draw(in context: CGContext, page: CGRect, invoice: Invoice, company: Company, customer: Customer, currency: String, logo: UIImage?) {
+
+        let P = R.insets
+        let left = P.left
+        let right = page.width - P.right
+        let primary = theme.primary
+        let accent = theme.accent
+        let dateFmt = BaseRenderer.date
+        let dueDate = extractDueDate(from: invoice) ?? invoice.issueDate
+
+        R.fillRect(context: context, rect: page, color: .white)
+
+        // Trust header
+        let header = CGRect(x: 0, y: 0, width: page.width, height: 135)
+        R.fillRect(context: context, rect: header, color: primary.withAlphaComponent(0.09))
+        context.setFillColor(accent.withAlphaComponent(0.18).cgColor)
+        for i in 0..<5 {
+            context.fillEllipse(in: CGRect(x: CGFloat(i * 120 + 30), y: 24, width: 22, height: 22))
+        }
+
+        // Logo + company
+        R.drawLogo(logo, in: CGRect(x: left + 6, y: 40, width: 75, height: 75), context: context, corner: 10, stroke: primary)
+        let compX = left + 95
+        let compW = (right - compX) - 180
+        var cy = CGFloat(50)
+        for (i, line) in companyLines(company).enumerated() {
+            let f: UIFont = (i == 0) ? .systemFont(ofSize: 28, weight: .bold) : .systemFont(ofSize: 12, weight: .regular)
+            let col: UIColor = (i == 0) ? primary : .black
+            R.draw(R.text(line, font: f, color: col),
+                   in: CGRect(x: compX, y: cy, width: compW, height: i == 0 ? 30 : 16))
+            cy += (i == 0 ? 30 : 16)
+            if cy > header.maxY - 8 { break }
+        }
+        R.draw(R.text("INSURANCE SERVICES", font: .systemFont(ofSize: 12, weight: .medium), color: accent),
+               in: CGRect(x: compX, y: min(cy, header.maxY - 22), width: compW, height: 18))
+
+        // Invoice box
+        let inv = CGRect(x: right - 180, y: 50, width: 170, height: 78)
+        R.fillRect(context: context, rect: inv, color: accent.withAlphaComponent(0.12))
+        R.strokeRect(context: context, rect: inv, color: accent, width: 1)
+        R.draw(R.text("INVOICE", font: .systemFont(ofSize: 18, weight: .bold), color: accent),
+               in: CGRect(x: inv.minX + 10, y: inv.minY + 6, width: inv.width - 20, height: 22))
+        R.draw(R.text("#\(invoice.number)", font: .systemFont(ofSize: 14, weight: .semibold), color: primary),
+               in: CGRect(x: inv.minX + 10, y: inv.minY + 26, width: inv.width - 20, height: 16))
+        R.draw(R.text("Issue: \(dateFmt.string(from: invoice.issueDate))", font: .systemFont(ofSize: 11, weight: .regular), color: .black),
+               in: CGRect(x: inv.minX + 10, y: inv.minY + 44, width: inv.width - 20, height: 14))
+        R.draw(R.text("Due:   \(dateFmt.string(from: dueDate))", font: .systemFont(ofSize: 11, weight: .regular), color: .black),
+               in: CGRect(x: inv.minX + 10, y: inv.minY + 60, width: inv.width - 20, height: 14))
+
+        // BILL TO
+        let bill = CGRect(x: left, y: header.maxY + 16, width: min(390, right - left), height: 106)
+        R.fillRect(context: context, rect: bill, color: primary.withAlphaComponent(0.06))
+        R.strokeRect(context: context, rect: bill, color: primary, width: 1)
+        R.draw(R.text("BILL TO:", font: .systemFont(ofSize: 14, weight: .bold), color: primary),
+               in: CGRect(x: bill.minX + 10, y: bill.minY + 8, width: bill.width - 20, height: 18))
+
+        var by = bill.minY + 30
+        for s in [customer.name, customer.address.oneLine, customer.email].filter({ !$0.isEmpty }) {
+            R.draw(R.text(s, font: .systemFont(ofSize: 12, weight: .regular), color: .black),
+                   in: CGRect(x: bill.minX + 10, y: by, width: bill.width - 20, height: 18))
+            by += 18
+        }
+
+        // Table
+        let tableTop = bill.maxY + 14
+        let headers = ["Description", "Quantity", "Unit Price", "Amount"]
+        let specs: [CGFloat] = [0.58, 0.12, 0.14, 0.16]
+
+        let res = R.drawTablePaged(
+            context: context, page: page,
+            left: left, right: right, top: tableTop, safeBottom: P.bottom,
+            headers: headers, colSpecs: specs, items: invoice.items,
+            currencyCode: currency,
+            headerBg: { rect in self.R.fillRect(context: context, rect: rect, color: primary) },
+            headerCell: { _, t, x, w, top, _ in
+                self.R.draw(self.R.text(t, font: .systemFont(ofSize: 12, weight: .bold), color: .white),
+                            in: CGRect(x: x + 10, y: top + 9, width: w - 14, height: 18))
+            },
+            rowBg: { i, rect in if i % 2 == 0 { self.R.fillRect(context: context, rect: rect, color: accent.withAlphaComponent(0.08)) } },
+            rowCell: { _, v, x, w, y, _ in
+                self.R.draw(self.R.text(v, font: .systemFont(ofSize: 12, weight: .regular), color: .black),
+                            in: CGRect(x: x + 10, y: y + 6, width: w - 16, height: 18))
+            },
+            rowH: 29, headerH: 36,
+            continuationNoteColor: accent
+        )
+
+        guard res.hasMore == false else { return }
+
+        // Totals
+        let subtotal = R.subtotal(invoice.items)
+        let totalsW: CGFloat = 220
+        let tx = right - totalsW
+        var ty = R.placeBlock(below: res.lastY + 10, desiredHeight: 74, page: page, safeBottom: P.bottom)
+
+        R.draw(R.text("Subtotal", font: .systemFont(ofSize: 11, weight: .regular), color: .black),
+               in: CGRect(x: tx, y: ty, width: 110, height: 16))
+        R.draw(R.text(R.cur(subtotal, code: currency), font: .systemFont(ofSize: 11, weight: .semibold), color: .black),
+               in: CGRect(x: tx + 110, y: ty, width: 110, height: 16))
+        ty += 18
+
+        R.strokeLine(context: context, from: CGPoint(x: tx, y: ty + 4), to: CGPoint(x: right, y: ty + 4), color: accent, width: 1)
+        ty += 8
+
+        let bar = CGRect(x: tx, y: ty, width: totalsW, height: 46)
+        R.fillRect(context: context, rect: bar, color: accent)
+        let total = subtotal
+        R.draw(R.text("TOTAL", font: .systemFont(ofSize: 16, weight: .bold), color: .white),
+               in: CGRect(x: bar.minX + 10, y: bar.minY + 10, width: 90, height: 20))
+        R.draw(R.text(R.cur(total, code: currency), font: .systemFont(ofSize: 16, weight: .bold), color: .white),
+               in: CGRect(x: bar.minX + 102, y: bar.minY + 10, width: 108, height: 20))
+
+        // Payment / Notes
+        var infoTop = res.lastY + 10
+        let infoWidth = (tx - left) - 16
+        if let pi = extractPaymentInfo(from: invoice) {
+            let box = CGRect(x: left, y: infoTop, width: infoWidth, height: 76)
+            R.strokeRect(context: context, rect: box, color: primary.withAlphaComponent(0.3), width: 1)
+            R.draw(R.text("PAYMENT INSTRUCTIONS", font: .systemFont(ofSize: 11, weight: .semibold), color: primary),
+                   in: CGRect(x: box.minX + 8, y: box.minY + 6, width: box.width - 16, height: 14))
+            R.draw(R.text(pi, font: .systemFont(ofSize: 11, weight: .regular), color: .black),
+                   in: CGRect(x: box.minX + 8, y: box.minY + 22, width: box.width - 16, height: 52))
+            infoTop = box.maxY + 8
+        }
+        if let notes = invoice.paymentNotes, !notes.isEmpty {
+            let box = CGRect(x: left, y: infoTop, width: infoWidth, height: 76)
+            R.strokeRect(context: context, rect: box, color: primary.withAlphaComponent(0.3), width: 1)
+            R.draw(R.text("NOTES", font: .systemFont(ofSize: 11, weight: .semibold), color: primary),
+                   in: CGRect(x: box.minX + 8, y: box.minY + 6, width: box.width - 16, height: 14))
+            R.draw(R.text(notes, font: .systemFont(ofSize: 11, weight: .regular), color: .black),
+                   in: CGRect(x: box.minX + 8, y: box.minY + 22, width: box.width - 16, height: 52))
+        }
+
+        // Footer
+        let fy = page.height - P.bottom
+        R.draw(R.text("Trusted insurance services. Your protection is our commitment.", font: .systemFont(ofSize: 10, weight: .regular), color: .gray),
+               in: CGRect(x: left, y: fy - 14, width: right - left, height: 14))
+    }
+}
+
+// MARK: - Banking Secure (refactored)
+
+struct BankingSecureTemplate: SimpleTemplateRenderer {
+    let theme: TemplateTheme
+    private let R = BaseRenderer()
+
+    func draw(in context: CGContext, page: CGRect, invoice: Invoice, company: Company, customer: Customer, currency: String, logo: UIImage?) {
+
+        let P = R.insets
+        let left = P.left
+        let right = page.width - P.right
+        let primary = theme.primary
+        let accent = theme.accent
+        let dateFmt = BaseRenderer.date
+        let dueDate = extractDueDate(from: invoice) ?? invoice.issueDate
+
+        R.fillRect(context: context, rect: page, color: .white)
+
+        // Secure grid header
+        let header = CGRect(x: 0, y: 0, width: page.width, height: 140)
+        R.fillRect(context: context, rect: header, color: primary.withAlphaComponent(0.08))
+        context.setStrokeColor(accent.withAlphaComponent(0.25).cgColor)
+        context.setLineWidth(1)
+        for i in 0..<15 {
+            let x = CGFloat(i * 40)
+            context.move(to: CGPoint(x: x, y: 0)); context.addLine(to: CGPoint(x: x, y: header.height))
+        }
+        for i in 0..<10 {
+            let y = CGFloat(i * 14)
+            context.move(to: CGPoint(x: 0, y: y)); context.addLine(to: CGPoint(x: page.width, y: y))
+        }
+        context.strokePath()
+
+        // Logo + company
+        R.drawLogo(logo, in: CGRect(x: left + 6, y: 44, width: 80, height: 80), context: context, corner: 10, stroke: primary)
+        let compX = left + 100
+        let compW = (right - compX) - 190
+        var cy = CGFloat(52)
+        for (i, line) in companyLines(company).enumerated() {
+            let f: UIFont = (i == 0) ? .systemFont(ofSize: 30, weight: .bold) : .systemFont(ofSize: 12, weight: .regular)
+            let col: UIColor = (i == 0) ? primary : .black
+            R.draw(R.text(line, font: f, color: col),
+                   in: CGRect(x: compX, y: cy, width: compW, height: i == 0 ? 34 : 16))
+            cy += (i == 0 ? 34 : 16)
+            if cy > header.maxY - 8 { break }
+        }
+        R.draw(R.text("BANKING SERVICES", font: .systemFont(ofSize: 12, weight: .medium), color: accent),
+               in: CGRect(x: compX, y: min(cy, header.maxY - 22), width: compW, height: 18))
+
+        // Invoice box
+        let inv = CGRect(x: right - 190, y: 55, width: 180, height: 80)
+        R.fillRect(context: context, rect: inv, color: accent.withAlphaComponent(0.10))
+        R.strokeRect(context: context, rect: inv, color: accent, width: 1.2)
+        R.draw(R.text("INVOICE", font: .systemFont(ofSize: 20, weight: .bold), color: accent),
+               in: CGRect(x: inv.minX + 10, y: inv.minY + 8, width: inv.width - 20, height: 22))
+        R.draw(R.text("#\(invoice.number)", font: .systemFont(ofSize: 14, weight: .semibold), color: primary),
+               in: CGRect(x: inv.minX + 10, y: inv.minY + 28, width: inv.width - 20, height: 16))
+        R.draw(R.text("Issue: \(dateFmt.string(from: invoice.issueDate))", font: .systemFont(ofSize: 11, weight: .regular), color: .black),
+               in: CGRect(x: inv.minX + 10, y: inv.minY + 46, width: inv.width - 20, height: 14))
+        R.draw(R.text("Due:   \(dateFmt.string(from: dueDate))", font: .systemFont(ofSize: 11, weight: .regular), color: .black),
+               in: CGRect(x: inv.minX + 10, y: inv.minY + 62, width: inv.width - 20, height: 14))
+
+        // BILL TO
+        let bill = CGRect(x: left, y: header.maxY + 18, width: min(400, right - left), height: 110)
+        R.fillRect(context: context, rect: bill, color: primary.withAlphaComponent(0.05))
+        R.strokeRect(context: context, rect: bill, color: primary, width: 1)
+        R.draw(R.text("BILL TO:", font: .systemFont(ofSize: 15, weight: .bold), color: primary),
+               in: CGRect(x: bill.minX + 12, y: bill.minY + 10, width: bill.width - 24, height: 18))
+
+        var by = bill.minY + 32
+        for s in [customer.name, customer.address.oneLine, customer.email].filter({ !$0.isEmpty }) {
+            R.draw(R.text(s, font: .systemFont(ofSize: 13, weight: .regular), color: .black),
+                   in: CGRect(x: bill.minX + 12, y: by, width: bill.width - 24, height: 18))
+            by += 20
+        }
+
+        // Table
+        let tableTop = bill.maxY + 16
+        let headers = ["Description", "Quantity", "Unit Price", "Amount"]
+        let specs: [CGFloat] = [0.58, 0.12, 0.14, 0.16]
+
+        let res = R.drawTablePaged(
+            context: context, page: page,
+            left: left, right: right, top: tableTop, safeBottom: P.bottom,
+            headers: headers, colSpecs: specs, items: invoice.items,
+            currencyCode: currency,
+            headerBg: { rect in self.R.fillRect(context: context, rect: rect, color: primary) },
+            headerCell: { _, t, x, w, top, _ in
+                self.R.draw(self.R.text(t, font: .systemFont(ofSize: 12, weight: .bold), color: .white),
+                            in: CGRect(x: x + 10, y: top + 10, width: w - 14, height: 18))
+            },
+            rowBg: { i, rect in if i % 2 == 0 { self.R.fillRect(context: context, rect: rect, color: accent.withAlphaComponent(0.07)) } },
+            rowCell: { _, v, x, w, y, _ in
+                self.R.draw(self.R.text(v, font: .systemFont(ofSize: 12, weight: .regular), color: .black),
+                            in: CGRect(x: x + 10, y: y + 7, width: w - 16, height: 18))
+            },
+            rowH: 30, headerH: 38,
+            continuationNoteColor: accent
+        )
+
+        guard res.hasMore == false else { return }
+
+        // Totals
+        let subtotal = R.subtotal(invoice.items)
+        let totalsW: CGFloat = 230
+        let tx = right - totalsW
+        var ty = R.placeBlock(below: res.lastY + 12, desiredHeight: 78, page: page, safeBottom: P.bottom)
+
+        R.draw(R.text("Subtotal", font: .systemFont(ofSize: 11, weight: .regular), color: .black),
+               in: CGRect(x: tx, y: ty, width: 115, height: 16))
+        R.draw(R.text(R.cur(subtotal, code: currency), font: .systemFont(ofSize: 11, weight: .semibold), color: .black),
+               in: CGRect(x: tx + 115, y: ty, width: 115, height: 16))
+        ty += 18
+
+        R.strokeLine(context: context, from: CGPoint(x: tx, y: ty + 4), to: CGPoint(x: right, y: ty + 4), color: accent, width: 1)
+        ty += 10
+
+        let bar = CGRect(x: tx, y: ty, width: totalsW, height: 48)
+        R.fillRect(context: context, rect: bar, color: accent)
+        let total = subtotal
+        R.draw(R.text("TOTAL", font: .systemFont(ofSize: 16, weight: .bold), color: .white),
+               in: CGRect(x: bar.minX + 10, y: bar.minY + 12, width: 90, height: 22))
+        R.draw(R.text(R.cur(total, code: currency), font: .systemFont(ofSize: 16, weight: .bold), color: .white),
+               in: CGRect(x: bar.minX + 110, y: bar.minY + 12, width: 110, height: 22))
+
+        // Payment / Notes
+        var infoTop = res.lastY + 12
+        let infoWidth = (tx - left) - 16
+        if let pi = extractPaymentInfo(from: invoice) {
+            let box = CGRect(x: left, y: infoTop, width: infoWidth, height: 80)
+            R.strokeRect(context: context, rect: box, color: primary.withAlphaComponent(0.35), width: 1)
+            R.draw(R.text("PAYMENT INSTRUCTIONS", font: .systemFont(ofSize: 11, weight: .semibold), color: primary),
+                   in: CGRect(x: box.minX + 8, y: box.minY + 6, width: box.width - 16, height: 14))
+            R.draw(R.text(pi, font: .systemFont(ofSize: 11, weight: .regular), color: .black),
+                   in: CGRect(x: box.minX + 8, y: box.minY + 22, width: box.width - 16, height: 56))
+            infoTop = box.maxY + 10
+        }
+        if let notes = invoice.paymentNotes, !notes.isEmpty {
+            let box = CGRect(x: left, y: infoTop, width: infoWidth, height: 80)
+            R.strokeRect(context: context, rect: box, color: primary.withAlphaComponent(0.35), width: 1)
+            R.draw(R.text("NOTES", font: .systemFont(ofSize: 11, weight: .semibold), color: primary),
+                   in: CGRect(x: box.minX + 8, y: box.minY + 6, width: box.width - 16, height: 14))
+            R.draw(R.text(notes, font: .systemFont(ofSize: 11, weight: .regular), color: .black),
+                   in: CGRect(x: box.minX + 8, y: box.minY + 22, width: box.width - 16, height: 56))
+        }
+
+        // Footer
+        let fy = page.height - P.bottom
+        R.draw(R.text("Secure banking services. Your financial security is our priority.", font: .systemFont(ofSize: 10, weight: .regular), color: .gray),
+               in: CGRect(x: left, y: fy - 14, width: right - left, height: 14))
+    }
+}
