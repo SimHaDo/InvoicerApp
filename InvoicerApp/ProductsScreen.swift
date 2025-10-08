@@ -114,7 +114,7 @@ struct ProductsScreen: View {
                 }
                 
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: UI.largeSpacing) {
 
                         // Header с анимациями
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -220,7 +220,7 @@ struct ProductsScreen: View {
                         .padding(.top, 4)
                     }
                 }
-                .padding(.horizontal)
+                .adaptiveContent()
                 .padding(.top, 6)
             }
             // Sheets

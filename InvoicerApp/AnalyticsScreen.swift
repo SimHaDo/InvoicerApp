@@ -245,7 +245,7 @@ struct AnalyticsScreen: View {
                 }
                 
             ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: UI.largeSpacing) {
                         // Header с анимациями
                         headerView
                         
@@ -264,7 +264,7 @@ struct AnalyticsScreen: View {
                             premiumUpgradeSection
                         }
                     }
-                    .padding(.horizontal, 20)
+                    .adaptiveContent()
                     .padding(.top, 16)
                 }
             }

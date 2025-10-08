@@ -13,6 +13,10 @@ enum UI {
     static let spacing: CGFloat = 12
     static let corner: CGFloat  = 14
     static let hairline: CGFloat = 0.75
+    
+    // iPad-specific spacing
+    static let largeSpacing: CGFloat = 16
+    static let maxContentWidth: CGFloat = .infinity
 
     static let bgCard   = Color(.secondarySystemBackground)
     static let stroke   = Color.secondary.opacity(0.12)
@@ -52,6 +56,15 @@ struct SecondaryButton: ViewModifier {
     }
 }
 extension View { func secondaryButton() -> some View { modifier(SecondaryButton()) } }
+
+struct AdaptiveContent: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 800 : .infinity)
+            .padding(.horizontal, UIDevice.current.userInterfaceIdiom == .pad ? 24 : 20)
+    }
+}
+extension View { func adaptiveContent() -> some View { modifier(AdaptiveContent()) } }
 
 struct Chip: View {
     let text: String

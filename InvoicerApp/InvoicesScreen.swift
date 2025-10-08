@@ -75,7 +75,7 @@ struct InvoicesScreen: View {
                 }
                 
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: UI.largeSpacing) {
                         screenHeader
                         headerCard
                         statsRow
@@ -87,7 +87,7 @@ struct InvoicesScreen: View {
                         invoiceList
                     }
                 }
-                .padding(.horizontal, 20)
+                .adaptiveContent()
                 .padding(.top, 16)
             }
             .navigationBarTitleDisplayMode(.inline)

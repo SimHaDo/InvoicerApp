@@ -47,7 +47,7 @@ struct SettingsTab: View {
                 }
                 
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: UI.largeSpacing) {
                         // Header с анимациями
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             VStack(alignment: .leading, spacing: 6) {
@@ -105,7 +105,7 @@ struct SettingsTab: View {
                             .opacity(showContent ? 1 : 0)
                             .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.8), value: showContent)
                     }
-                    .padding(.horizontal, 20)
+                    .adaptiveContent()
                     .padding(.top, 16)
                 }
             }
