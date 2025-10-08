@@ -138,6 +138,8 @@ struct InvoicesScreen: View {
                 InvoiceWizardView()
                     .environmentObject(app) // Явно передаем AppState
             }
+            .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [.large] : [.medium, .large])
+            .presentationDragIndicator(UIDevice.current.userInterfaceIdiom == .pad ? .visible : .automatic)
             // Paywall-заглушка
             .sheet(isPresented: $showEmptyPaywall) {
                 EmptyScreen()

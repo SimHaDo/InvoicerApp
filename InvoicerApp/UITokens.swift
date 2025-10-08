@@ -80,9 +80,9 @@ struct AdaptiveContent: ViewModifier {
             .padding(.horizontal, isLargeScreen ? 24 : 20)
     }
     
-    private var isLargeScreen: Bool {
-        UIDevice.current.userInterfaceIdiom == .pad || ProcessInfo.processInfo.isiOSAppOnMac
-    }
+        private var isLargeScreen: Bool {
+            UIDevice.current.userInterfaceIdiom == .pad
+        }
 }
 extension View { func adaptiveContent() -> some View { modifier(AdaptiveContent()) } }
 

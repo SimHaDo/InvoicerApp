@@ -7,6 +7,7 @@
 
 import SwiftUI
 import PhotosUI
+import UniformTypeIdentifiers
 
 struct TemplatePickerView: View {
     @EnvironmentObject private var app: AppState
@@ -21,6 +22,7 @@ struct TemplatePickerView: View {
     @State private var photoItem: PhotosPickerItem?
     @State private var showLogoEditAlert = false
     @State private var showPhotosPicker = false
+    @State private var showFilePicker = false
     @State private var selectedCategories: Set<TemplateCategory> = []
     @State private var selectedDesigns: Set<TemplateDesign> = []
     @State private var searchText = ""
@@ -112,6 +114,24 @@ struct TemplatePickerView: View {
             // PaywallScreen would go here
         }
         .photosPicker(isPresented: $showPhotosPicker, selection: $photoItem, matching: .images)
+        .fileImporter(
+            isPresented: $showFilePicker,
+            allowedContentTypes: [.image, .jpeg, .png, .gif, .bmp, .tiff],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                do {
+                    let data = try Data(contentsOf: url)
+                    app.logoData = data // Это автоматически сохранит только один логотип
+                } catch {
+                    print("Error loading file: \(error)")
+                }
+            case .failure(let error):
+                print("File picker error: \(error)")
+            }
+        }
         .onChange(of: photoItem) { new in
             guard let new else { return }
             Task {
@@ -135,6 +155,13 @@ struct TemplatePickerView: View {
                             // Trigger PhotosPicker
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                                 showPhotosPicker = true
+                            }
+                        },
+                        onFileSelect: {
+                            showLogoEditAlert = false
+                            // Trigger FilePicker
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                showFilePicker = true
                             }
                         }
                     )
@@ -937,6 +964,7 @@ struct CustomLogoEditAlert: View {
     @Binding var isPresented: Bool
     let onRemove: () -> Void
     let onChange: () -> Void
+    let onFileSelect: () -> Void
     
     @State private var dragOffset = CGSize.zero
     @State private var scale: CGFloat = 0.8
@@ -980,7 +1008,7 @@ struct CustomLogoEditAlert: View {
                 
                 // Action buttons
                 VStack(spacing: 0) {
-                    // Change Logo button
+                    // Change Logo button (Photos)
                     Button(action: {
                         onChange()
                     }) {
@@ -989,7 +1017,32 @@ struct CustomLogoEditAlert: View {
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(.blue)
                             
-                            Text("Change Logo")
+                            Text("Choose from Photos")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 16)
+                    }
+                    
+                    // Divider
+                    Rectangle()
+                        .fill(Color.secondary.opacity(0.2))
+                        .frame(height: 1)
+                        .padding(.horizontal, 24)
+                    
+                    // Choose from Files button
+                    Button(action: {
+                        onFileSelect()
+                    }) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "folder")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.green)
+                            
+                            Text("Choose from Files")
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(.primary)
                             
