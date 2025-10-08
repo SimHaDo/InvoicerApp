@@ -65,7 +65,11 @@ struct InvoicesScreen: View {
                 // Плавающие элементы
                 ForEach(floatingElements) { element in
                     Circle()
-                        .fill(Color.primary.opacity(0.05))
+                        .fill(
+                            scheme == .dark ? 
+                            UI.darkAccent.opacity(0.1) : 
+                            Color.primary.opacity(0.05)
+                        )
                         .frame(width: 40, height: 40)
                         .scaleEffect(element.scale)
                         .opacity(element.opacity)
@@ -101,7 +105,10 @@ struct InvoicesScreen: View {
             }
         }
         .onAppear {
-            showContent = true
+            // Устанавливаем showContent только один раз при первом появлении
+            if !showContent {
+                showContent = true
+            }
             pulseAnimation = true
             startShimmerAnimation()
             createFloatingElements()
@@ -112,6 +119,7 @@ struct InvoicesScreen: View {
                     showCompanySetup = false
                     showTemplatePicker = true
                 })
+                .environmentObject(app) // Явно передаем AppState
             }
             // 2) Template picker -> после выбора открываем визард
             .sheet(isPresented: $showTemplatePicker) {
@@ -123,10 +131,12 @@ struct InvoicesScreen: View {
                         showWizard = true
                     }
                 }
+                .environmentObject(app) // Явно передаем AppState
             }
             // 3) Визард создания инвойса
             .sheet(isPresented: $showWizard) {
                 InvoiceWizardView()
+                    .environmentObject(app) // Явно передаем AppState
             }
             // Paywall-заглушка
             .sheet(isPresented: $showEmptyPaywall) {
@@ -158,18 +168,22 @@ struct InvoicesScreen: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Invoices")
                     .font(.system(size: 32, weight: .black))
-                    .foregroundColor(.primary)
-                    .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: scheme == .dark ? [UI.darkText, UI.darkAccent] : [.primary, .accentColor],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .shadow(color: scheme == .dark ? UI.darkAccent.opacity(0.3) : .black.opacity(0.1), radius: 2, y: 1)
                     .offset(y: showContent ? 0 : -20)
                     .opacity(showContent ? 1 : 0)
-                    .animation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.1), value: showContent)
                 
                 Text("Manage all your invoices")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(scheme == .dark ? UI.darkSecondaryText : .secondary)
                     .offset(y: showContent ? 0 : -15)
                     .opacity(showContent ? 1 : 0)
-                    .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2), value: showContent)
             }
             Spacer()
             
@@ -179,16 +193,28 @@ struct InvoicesScreen: View {
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 160, height: 80)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
-                .shadow(color: .black.opacity(0.2), radius: 8, y: 4)
+                .if(scheme == .dark) { view in
+                    view.colorInvert()
+                }
+                .shadow(
+                    color: scheme == .dark ? UI.darkAccent.opacity(0.4) : .black.opacity(0.2), 
+                    radius: 8, 
+                    y: 4
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(
+                            scheme == .dark ? UI.darkAccent.opacity(0.3) : Color.clear,
+                            lineWidth: 1
+                        )
+                )
                 .offset(y: showContent ? 0 : -20)
                 .opacity(showContent ? 1 : 0)
-                .animation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.05), value: showContent)
             
             if app.isPremium { 
                 ProBadge()
                     .scaleEffect(showContent ? 1.0 : 0.9)
                     .opacity(showContent ? 1 : 0)
-                    .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.3), value: showContent)
             }
         }
     }
@@ -290,7 +316,6 @@ struct InvoicesScreen: View {
                     }
                     .scaleEffect(showContent ? 1.0 : 0.9)
                     .opacity(showContent ? 1 : 0)
-                    .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.7), value: showContent)
                 } else {
                     Button(action: onNewInvoice) {
                         HStack(spacing: 8) {
@@ -310,7 +335,6 @@ struct InvoicesScreen: View {
                     }
                     .scaleEffect(showContent ? 1.0 : 0.9)
                     .opacity(showContent ? 1 : 0)
-                    .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.7), value: showContent)
                 }
             }
         }
@@ -371,14 +395,14 @@ struct InvoicesScreen: View {
                 ZStack {
                     // Основной градиент для темной темы
                     LinearGradient(
-                        colors: [Color.black, Color.black.opacity(0.92)],
+                        colors: [UI.darkBackground, UI.darkGradientStart, UI.darkGradientEnd],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                     
-                    // Радиальный градиент
+                    // Радиальный градиент с акцентным цветом
                     RadialGradient(
-                        colors: [Color.white.opacity(0.08), .clear],
+                        colors: [UI.darkAccent.opacity(0.15), UI.darkAccentSecondary.opacity(0.08), .clear],
                         center: .topLeading,
                         startRadius: 24,
                         endRadius: 520
@@ -387,7 +411,7 @@ struct InvoicesScreen: View {
                     
                     // Анимированный shimmer эффект для темной темы
                     LinearGradient(
-                        colors: [.clear, Color.white.opacity(0.1), .clear],
+                        colors: [.clear, UI.darkAccent.opacity(0.2), .clear],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
@@ -397,7 +421,13 @@ struct InvoicesScreen: View {
                     // Плавающие световые пятна для темной темы
                     ForEach(0..<3, id: \.self) { i in
                         Circle()
-                            .fill(Color.primary.opacity(0.08))
+                            .fill(
+                                LinearGradient(
+                                    colors: [UI.darkAccent.opacity(0.2), UI.darkAccentSecondary.opacity(0.1)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
                             .frame(width: 240, height: 240)
                             .position(
                                 x: CGFloat(120 + i * 180),

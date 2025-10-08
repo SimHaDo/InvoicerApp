@@ -30,8 +30,8 @@ struct RootTabView: View {
     }
 
     var body: some View {
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            // iPad layout with NavigationSplitView
+        if UIDevice.current.userInterfaceIdiom == .pad || ProcessInfo.processInfo.isiOSAppOnMac {
+            // iPad and macOS layout with NavigationSplitView
             NavigationSplitView {
                 List(Tab.allCases, id: \.self) { tab in
                     Button(action: { selectedTab = tab }) {

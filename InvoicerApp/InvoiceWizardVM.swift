@@ -195,10 +195,11 @@ struct InvoiceWizardView: View {
 
 struct StepHeader: View {
     let step: Int
+    @Environment(\.colorScheme) private var scheme
     
     var body: some View {
         VStack(spacing: 0) {
-            if UIDevice.current.userInterfaceIdiom == .pad {
+            if UIDevice.current.userInterfaceIdiom == .pad || ProcessInfo.processInfo.isiOSAppOnMac {
                 // iPad layout - horizontal
                 VStack(spacing: 8) {
                     // Current step info for iPad
@@ -207,11 +208,11 @@ struct StepHeader: View {
                     // Step indicators
                     HStack(spacing: 8) {
                         stepItem(1, "", "")
-                        divider
+            divider
                         stepItem(2, "", "")
-                        divider
+            divider
                         stepItem(3, "", "")
-                        divider
+            divider
                         stepItem(4, "", "")
                     }
                 }
@@ -276,10 +277,13 @@ struct StepHeader: View {
     private var currentStepInfo: some View {
         HStack(spacing: 12) {
             // Animated step indicator
-            ZStack {
+                ZStack {
                 // Background pulse ring
                 Circle()
-                    .stroke(Color.black.opacity(0.3), lineWidth: 2)
+                    .stroke(
+                        scheme == .dark ? UI.darkAccent.opacity(0.4) : Color.black.opacity(0.3), 
+                        lineWidth: 2
+                    )
                     .frame(width: 40, height: 40)
                     .scaleEffect(1.0 + sin(Date().timeIntervalSince1970 * 2) * 0.1)
                     .opacity(0.6)
@@ -287,16 +291,21 @@ struct StepHeader: View {
                 
                 // Main circle
                 Circle()
-                    .fill(Color.black)
+                    .fill(mainCircleFill)
                     .frame(width: 36, height: 36)
-                    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
+                    .shadow(
+                        color: scheme == .dark ? UI.darkAccent.opacity(0.3) : .black.opacity(0.2), 
+                        radius: 8, 
+                        x: 0, 
+                        y: 4
+                    )
                     .scaleEffect(step == 1 ? 1.0 : 1.1)
                     .animation(.spring(response: 0.6, dampingFraction: 0.8), value: step)
                 
                 // Step number with bounce animation
                 Text("\(step)")
                     .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
+                    .foregroundColor(scheme == .dark ? UI.darkText : .white)
                     .scaleEffect(step == 1 ? 1.0 : 1.2)
                     .animation(.spring(response: 0.5, dampingFraction: 0.6), value: step)
             }
@@ -305,7 +314,7 @@ struct StepHeader: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(stepTitle)
                     .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
+                    .foregroundColor(scheme == .dark ? UI.darkText : .primary)
                     .transition(.asymmetric(
                         insertion: .move(edge: .trailing).combined(with: .opacity),
                         removal: .move(edge: .leading).combined(with: .opacity)
@@ -313,7 +322,7 @@ struct StepHeader: View {
                 
                 Text(stepDescription)
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(scheme == .dark ? UI.darkSecondaryText : .secondary)
                     .transition(.asymmetric(
                         insertion: .move(edge: .trailing).combined(with: .opacity),
                         removal: .move(edge: .leading).combined(with: .opacity)
@@ -366,7 +375,7 @@ struct StepHeader: View {
                         ),
                         lineWidth: 2
                     )
-                    .frame(width: 24, height: 24)
+                .frame(width: 24, height: 24)
                     .scaleEffect(1.0 + sin(Date().timeIntervalSince1970 * 3) * 0.15)
                     .opacity(0.7)
                     .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: step)
@@ -417,6 +426,14 @@ struct StepHeader: View {
         default: return "Complete this step"
         }
     }
+    
+    private var mainCircleFill: AnyShapeStyle {
+        if scheme == .dark {
+            return AnyShapeStyle(LinearGradient(colors: [UI.darkAccent, UI.darkAccentSecondary], startPoint: .topLeading, endPoint: .bottomTrailing))
+        } else {
+            return AnyShapeStyle(Color.black)
+        }
+    }
 }
 
 // MARK: - Step 1: Company
@@ -454,7 +471,7 @@ struct StepCompanyInfoView: View {
             VStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
-                        HStack {
+                    HStack {
                             Image(systemName: "building.2.fill")
                                 .foregroundColor(.blue)
                                 .font(.title3)
@@ -501,7 +518,7 @@ struct StepCompanyInfoView: View {
 
                 HStack(spacing: 16) {
                     Button(action: {}) {
-                        HStack {
+                HStack {
                             Image(systemName: "chevron.left")
                             Text("Previous")
                         }
@@ -513,7 +530,7 @@ struct StepCompanyInfoView: View {
                         )
                         .foregroundColor(.secondary)
                     }
-                    .disabled(true)
+                        .disabled(true)
                     
                     Button(action: {
                         app.company = company
@@ -565,7 +582,7 @@ struct StepClientInfoView: View {
                 // Customer Selection
                 VStack(alignment: .leading, spacing: 20) {
                     VStack(alignment: .leading, spacing: 8) {
-                        HStack {
+                    HStack {
                             Image(systemName: "person.2.fill")
                                 .foregroundColor(.blue)
                                 .font(.title2)
@@ -611,7 +628,7 @@ struct StepClientInfoView: View {
                 // Invoice Details
                 VStack(alignment: .leading, spacing: 20) {
                     VStack(alignment: .leading, spacing: 8) {
-                        HStack {
+                    HStack {
                             Image(systemName: "doc.text.fill")
                                 .foregroundColor(.blue)
                                 .font(.title2)
@@ -637,12 +654,12 @@ struct StepClientInfoView: View {
                                     .font(.system(size: 14, weight: .medium))
                                     .foregroundColor(.primary)
                                 
-                                Picker("Status", selection: $vm.status) {
+                        Picker("Status", selection: $vm.status) {
                                     ForEach(Invoice.Status.allCases) { status in
                                         Text(status.rawValue.capitalized).tag(status)
-                                    }
-                                }
-                                .pickerStyle(.menu)
+                            }
+                        }
+                        .pickerStyle(.menu)
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 14)
                                 .background(
@@ -690,7 +707,7 @@ struct StepClientInfoView: View {
                 // Navigation Buttons
                 HStack(spacing: 16) {
                     Button(action: prev) {
-                        HStack {
+                HStack {
                             Image(systemName: "chevron.left")
                             Text("Previous")
                         }
@@ -723,7 +740,7 @@ struct StepClientInfoView: View {
                         .foregroundColor(.white)
                         .fontWeight(.semibold)
                     }
-                    .disabled(vm.customer == nil)
+                        .disabled(vm.customer == nil)
                 }
             }
             .padding(.horizontal, 20)

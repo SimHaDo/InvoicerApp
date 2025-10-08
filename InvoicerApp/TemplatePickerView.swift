@@ -34,6 +34,10 @@ struct TemplatePickerView: View {
     
     private let templates = TemplateCatalog.all
     
+    private var isLargeScreen: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad || ProcessInfo.processInfo.isiOSAppOnMac
+    }
+    
     // Only show categories that have templates
     private var availableCategories: [TemplateCategory] {
         let categoriesWithTemplates = Set(templates.map { $0.category })
@@ -138,7 +142,10 @@ struct TemplatePickerView: View {
             }
         )
         .onAppear {
-            showContent = true
+            // Устанавливаем showContent только один раз при первом появлении
+            if !showContent {
+                showContent = true
+            }
             pulseAnimation = true
             startShimmerAnimation()
             createFloatingElements()
@@ -165,21 +172,12 @@ struct TemplatePickerView: View {
             VStack(spacing: 0) {
                 // Header с логотипом
                 headerLogo
-                    .offset(y: showContent ? 0 : -20)
-                    .opacity(showContent ? 1 : 0)
-                    .animation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.1), value: showContent)
                 
                 // Search and Filters
                 searchAndFilters
-                    .offset(y: showContent ? 0 : -15)
-                    .opacity(showContent ? 1 : 0)
-                    .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2), value: showContent)
                 
                 // Templates Grid
                 templatesGrid
-                    .offset(y: showContent ? 0 : 20)
-                    .opacity(showContent ? 1 : 0)
-                    .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.3), value: showContent)
             }
         }
     }
@@ -267,23 +265,24 @@ struct TemplatePickerView: View {
                 HStack {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(scheme == .dark ? UI.darkSecondaryText : .secondary)
                     
                     TextField("Search templates...", text: $searchText)
                         .textFieldStyle(PlainTextFieldStyle())
                         .font(.system(size: 16, weight: .regular))
+                        .foregroundColor(scheme == .dark ? UI.darkText : .primary)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.primary.opacity(0.05))
+                        .fill(scheme == .dark ? UI.darkSecondaryBackground : Color.primary.opacity(0.05))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                                .stroke(scheme == .dark ? UI.darkStroke : Color.primary.opacity(0.1), lineWidth: 1)
                         )
                 )
-                .padding(.horizontal, UIDevice.current.userInterfaceIdiom == .pad ? 40 : 20)
+                .padding(.horizontal, isLargeScreen ? 40 : 20)
             
                 // Reset Button
                 if !selectedCategories.isEmpty || !selectedDesigns.isEmpty {
@@ -305,7 +304,7 @@ struct TemplatePickerView: View {
                         }
                         Spacer()
                     }
-                    .padding(.horizontal, UIDevice.current.userInterfaceIdiom == .pad ? 40 : 20)
+                    .padding(.horizontal, isLargeScreen ? 40 : 20)
                 }
             
                 // Combined Filters
@@ -354,10 +353,10 @@ struct TemplatePickerView: View {
                             )
                         }
                     }
-                    .padding(.horizontal, UIDevice.current.userInterfaceIdiom == .pad ? 20 : 16)
+                    .padding(.horizontal, isLargeScreen ? 20 : 16)
                 }
         }
-        .padding(.horizontal, UIDevice.current.userInterfaceIdiom == .pad ? 20 : 16)
+        .padding(.horizontal, isLargeScreen ? 20 : 16)
         .padding(.vertical, 8)
     }
     
@@ -377,7 +376,7 @@ struct TemplatePickerView: View {
                         }
                     }
                 }
-                .padding(.horizontal, UIDevice.current.userInterfaceIdiom == .pad ? 40 : 20)
+                .padding(.horizontal, isLargeScreen ? 40 : 20)
                 .padding(.bottom, 16)
             }
         }
@@ -523,6 +522,7 @@ private struct ModernFilterChip: View {
     let action: () -> Void
     
     @State private var isPressed = false
+    @Environment(\.colorScheme) private var scheme
     
     var body: some View {
         Button(action: {
@@ -533,11 +533,19 @@ private struct ModernFilterChip: View {
             HStack(spacing: 6) {
                 Image(systemName: icon)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(isSelected ? .white : .secondary)
+                    .foregroundColor(
+                        isSelected ? 
+                        (scheme == .dark ? UI.darkText : .white) : 
+                        (scheme == .dark ? UI.darkSecondaryText : .secondary)
+                    )
                 
                 Text(title)
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(isSelected ? .white : .primary)
+                    .foregroundColor(
+                        isSelected ? 
+                        (scheme == .dark ? UI.darkText : .white) : 
+                        (scheme == .dark ? UI.darkText : .primary)
+                    )
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
@@ -545,10 +553,21 @@ private struct ModernFilterChip: View {
                 ZStack {
                     // Background
                     RoundedRectangle(cornerRadius: 20)
-                        .fill(isSelected ? Color.black : Color.clear)
+                        .fill(
+                            isSelected ? 
+                            (scheme == .dark ? 
+                                AnyShapeStyle(LinearGradient(colors: [UI.darkAccent, UI.darkAccentSecondary], startPoint: .topLeading, endPoint: .bottomTrailing)) :
+                                AnyShapeStyle(Color.black)
+                            ) : 
+                            (scheme == .dark ? AnyShapeStyle(UI.darkSecondaryBackground) : AnyShapeStyle(Color.clear))
+                        )
                         .overlay(
                             RoundedRectangle(cornerRadius: 20)
-                                .stroke(isSelected ? Color.clear : Color.secondary.opacity(0.2), lineWidth: 1.5)
+                                .stroke(
+                                    isSelected ? Color.clear : 
+                                    (scheme == .dark ? UI.darkStroke : Color.secondary.opacity(0.2)), 
+                                    lineWidth: 1.5
+                                )
                         )
                     
                     // Shimmer effect for selected state
@@ -556,7 +575,11 @@ private struct ModernFilterChip: View {
                         RoundedRectangle(cornerRadius: 20)
                             .fill(
                                 LinearGradient(
-                                    colors: [Color.white.opacity(0.1), Color.clear, Color.white.opacity(0.1)],
+                                    colors: [
+                                        scheme == .dark ? UI.darkText.opacity(0.2) : Color.white.opacity(0.1), 
+                                        Color.clear, 
+                                        scheme == .dark ? UI.darkText.opacity(0.2) : Color.white.opacity(0.1)
+                                    ],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
@@ -568,7 +591,9 @@ private struct ModernFilterChip: View {
             )
             .scaleEffect(isSelected ? 1.05 : (isPressed ? 0.95 : 1.0))
             .shadow(
-                color: isSelected ? .black.opacity(0.3) : .clear,
+                color: isSelected ? 
+                (scheme == .dark ? UI.darkAccent.opacity(0.4) : .black.opacity(0.3)) : 
+                .clear,
                 radius: isSelected ? 8 : 0,
                 x: 0,
                 y: isSelected ? 4 : 0

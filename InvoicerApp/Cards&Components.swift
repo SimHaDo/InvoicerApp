@@ -29,8 +29,58 @@ struct StatCard: View {
 
 struct SearchBar: View { @Binding var text: String; var body: some View { HStack{ Image(systemName:"magnifyingglass"); TextField("Search invoices…", text: $text).textInputAutocapitalization(.never).disableAutocorrection(true); if !text.isEmpty { Button{ text = "" } label: { Image(systemName:"xmark.circle.fill") } } }.padding(12).background(RoundedRectangle(cornerRadius:12).fill(Color.secondary.opacity(0.08))) } }
 
-struct StatusChip: View { let status: Invoice.Status; var body: some View { Text(status.rawValue.capitalized).font(.caption2).padding(.horizontal,10).padding(.vertical,6).background(Capsule().stroke(Color.secondary.opacity(0.3))) }
+struct StatusChip: View { 
+    let status: Invoice.Status
+    @Environment(\.colorScheme) private var scheme
+    
+    var body: some View { 
+        Text(status.rawValue.capitalized)
+            .font(.caption2)
+            .padding(.horizontal,10)
+            .padding(.vertical,6)
+            .foregroundColor(scheme == .dark ? UI.darkText : .primary)
+            .background(
+                Capsule()
+                    .stroke(scheme == .dark ? UI.darkStroke : Color.secondary.opacity(0.3))
+            )
+    }
 }
 
-struct InvoiceCard: View { let invoice: Invoice; var body: some View { ZStack { RoundedRectangle(cornerRadius: 16).stroke(Color.secondary.opacity(0.15)) .background(RoundedRectangle(cornerRadius: 16).fill(.white)) ; VStack(alignment:.leading, spacing:8){ HStack{ Text(invoice.number).font(.headline); Spacer(); StatusChip(status: invoice.status) } ; Text(invoice.customer.name).font(.subheadline).foregroundStyle(.secondary) ; HStack{ Text("Due " + (invoice.dueDate.map{ Dates.display.string(from:$0) } ?? "Invalid Date" )).font(.caption).foregroundStyle(.secondary); Spacer(); Text(Money.fmt(invoice.subtotal, code: invoice.currency)).bold() } }.padding(16) } }
+struct InvoiceCard: View { 
+    let invoice: Invoice
+    @Environment(\.colorScheme) private var scheme
+    
+    var body: some View { 
+        ZStack { 
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(scheme == .dark ? UI.darkStroke : Color.secondary.opacity(0.15))
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(scheme == .dark ? UI.darkCardBackground : .white)
+                )
+            
+            VStack(alignment:.leading, spacing:8){ 
+                HStack{ 
+                    Text(invoice.number)
+                        .font(.headline)
+                        .foregroundColor(scheme == .dark ? UI.darkText : .primary)
+                    Spacer()
+                    StatusChip(status: invoice.status) 
+                } 
+                Text(invoice.customer.name)
+                    .font(.subheadline)
+                    .foregroundStyle(scheme == .dark ? UI.darkSecondaryText : .secondary) 
+                HStack{ 
+                    Text("Due " + (invoice.dueDate.map{ Dates.display.string(from:$0) } ?? "Invalid Date" ))
+                        .font(.caption)
+                        .foregroundStyle(scheme == .dark ? UI.darkSecondaryText : .secondary)
+                    Spacer()
+                    Text(Money.fmt(invoice.subtotal, code: invoice.currency))
+                        .bold()
+                        .foregroundColor(scheme == .dark ? UI.darkText : .primary)
+                } 
+            }
+            .padding(16) 
+        } 
+    }
 }

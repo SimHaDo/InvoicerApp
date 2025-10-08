@@ -16,6 +16,7 @@ struct RootContainer: View {
         Group {
             if app.hasCompletedOnboarding {
                 RootTabView()
+                    .environmentObject(app)
             } else {
                 // ✅ Используем объединённый экран онбординга с пейволлом
                 OnboardingView()
