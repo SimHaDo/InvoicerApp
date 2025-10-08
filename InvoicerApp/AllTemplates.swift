@@ -103,7 +103,13 @@ fileprivate func _renderPaymentMethod(_ pm: Any) -> String? {
 /// Universal payment info extractor.
 /// Supports: `paymentInfo`, `paymentInstructions`, `paymentTerms`,
 /// `paymentMethod(s)`, `payments`, etc. (camel/snake case, any Optional).
+/// Returns nil if user selected "do not include" (empty paymentMethods array).
 fileprivate func extractPaymentInfo(from invoice: Invoice) -> String? {
+    // Check if user selected "do not include" - if paymentMethods is empty, don't show payment info
+    if invoice.paymentMethods.isEmpty {
+        return nil
+    }
+    
     // normalized key set (lowercased, '_' removed)
     let keys: Set<String> = [
         "paymentinfo","paymentinfos",

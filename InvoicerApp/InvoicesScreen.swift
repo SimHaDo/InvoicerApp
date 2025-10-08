@@ -154,7 +154,7 @@ struct InvoicesScreen: View {
     // MARK: - Sections
 
     private var screenHeader: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
+        HStack(alignment: .center, spacing: 8) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Invoices")
                     .font(.system(size: 32, weight: .black))
@@ -172,6 +172,18 @@ struct InvoicesScreen: View {
                     .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2), value: showContent)
             }
             Spacer()
+            
+            // App Logo (справа от заголовка, выровнен по центру)
+            Image("AppLogo")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 160, height: 80)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .shadow(color: .black.opacity(0.2), radius: 8, y: 4)
+                .offset(y: showContent ? 0 : -20)
+                .opacity(showContent ? 1 : 0)
+                .animation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.05), value: showContent)
+            
             if app.isPremium { 
                 ProBadge()
                     .scaleEffect(showContent ? 1.0 : 0.9)
