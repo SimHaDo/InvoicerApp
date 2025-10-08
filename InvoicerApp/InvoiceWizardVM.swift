@@ -77,7 +77,7 @@ struct InvoiceWizardView: View {
                     .accessibilityIdentifier("SaveInvoiceButton")
                 }
             }
-            .sheet(isPresented: $showTemplatePicker) {
+            .fullScreenCover(isPresented: $showTemplatePicker) {
                 TemplatePickerView { selected in
                     app.selectedTemplate = selected      // сохраняем выбор
                     showTemplatePicker = false           // закрываем ТОЛЬКО пикер
@@ -195,35 +195,226 @@ struct InvoiceWizardView: View {
 
 struct StepHeader: View {
     let step: Int
+    
     var body: some View {
-        HStack(spacing: 18) {
-            stepItem(1, "Company", "Your business details")
-            divider
-            stepItem(2, "Client", "Client information")
-            divider
-            stepItem(3, "Payment", "What to show on invoice")
-            divider
-            stepItem(4, "Items", "Add invoice items")
-        }
-        .padding()
-        .background(.ultraThinMaterial)
-    }
-    private var divider: some View {
-        Rectangle().fill(Color.secondary.opacity(0.2)).frame(width: 18, height: 2)
-    }
-    private func stepItem(_ n: Int, _ title: String, _ sub: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack {
-                ZStack {
-                    Circle().stroke(Color.secondary.opacity(0.3))
-                    Text("\(n)").bold()
+        VStack(spacing: 0) {
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                // iPad layout - horizontal
+                VStack(spacing: 8) {
+                    // Current step info for iPad
+                    currentStepInfo
+                    
+                    // Step indicators
+                    HStack(spacing: 8) {
+                        stepItem(1, "", "")
+                        divider
+                        stepItem(2, "", "")
+                        divider
+                        stepItem(3, "", "")
+                        divider
+                        stepItem(4, "", "")
+                    }
                 }
-                .frame(width: 24, height: 24)
-                .background(n == step ? Circle().fill(Color.black) : nil)
-                .foregroundStyle(n == step ? .white : .primary)
-                Text(title).bold()
+                .padding(.horizontal, 16)
+                .padding(.vertical, 4)
+            } else {
+                // iPhone layout - vertical with progress bar
+                VStack(spacing: 2) {
+                    // Progress bar
+                    progressBar
+                    
+                    // Current step info
+                    currentStepInfo
+                        .padding(.top, 4)
+                        .padding(.bottom, 8)
+                        .padding(.horizontal, 0)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 2)
             }
-            Text(sub).font(.caption).foregroundStyle(.secondary)
+        }
+    }
+    
+    private var progressBar: some View {
+        VStack(spacing: 6) {
+            HStack {
+                Text("Step \(step) of 4")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundColor(.secondary)
+                Spacer()
+                Text("\(Int((Double(step) / 4.0) * 100))%")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundColor(.black)
+                    .scaleEffect(step == 1 ? 1.0 : 1.1)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.6), value: step)
+            }
+            
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    // Background track
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.secondary.opacity(0.15))
+                        .frame(height: 6)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
+                        )
+                    
+                    // Progress fill
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.black)
+                        .frame(width: geometry.size.width * (Double(step) / 4.0), height: 6)
+                        .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                        .animation(.spring(response: 0.8, dampingFraction: 0.8), value: step)
+                    
+                }
+            }
+            .frame(height: 6)
+        }
+    }
+    
+    private var currentStepInfo: some View {
+        HStack(spacing: 12) {
+            // Animated step indicator
+            ZStack {
+                // Background pulse ring
+                Circle()
+                    .stroke(Color.black.opacity(0.3), lineWidth: 2)
+                    .frame(width: 40, height: 40)
+                    .scaleEffect(1.0 + sin(Date().timeIntervalSince1970 * 2) * 0.1)
+                    .opacity(0.6)
+                    .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: step)
+                
+                // Main circle
+                Circle()
+                    .fill(Color.black)
+                    .frame(width: 36, height: 36)
+                    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
+                    .scaleEffect(step == 1 ? 1.0 : 1.1)
+                    .animation(.spring(response: 0.6, dampingFraction: 0.8), value: step)
+                
+                // Step number with bounce animation
+                Text("\(step)")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                    .scaleEffect(step == 1 ? 1.0 : 1.2)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.6), value: step)
+            }
+            
+            // Step content with slide animation
+            VStack(alignment: .leading, spacing: 4) {
+                Text(stepTitle)
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                        removal: .move(edge: .leading).combined(with: .opacity)
+                    ))
+                
+                Text(stepDescription)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                        removal: .move(edge: .leading).combined(with: .opacity)
+                    ))
+            }
+            .animation(.easeInOut(duration: 0.4), value: step)
+            
+            Spacer()
+            
+            // Progress indicator with animated dots
+            HStack(spacing: 6) {
+                ForEach(1...4, id: \.self) { stepNumber in
+                    Circle()
+                        .fill(stepNumber <= step ? Color.black : Color.secondary.opacity(0.3))
+                        .frame(width: stepNumber == step ? 8 : 6, height: stepNumber == step ? 8 : 6)
+                        .scaleEffect(stepNumber == step ? 1.3 : 1.0)
+                        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: step)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.black.opacity(0.1), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 5)
+        )
+    }
+    
+    private var divider: some View {
+        RoundedRectangle(cornerRadius: 1)
+            .fill(Color.secondary.opacity(0.3))
+            .frame(width: 12, height: 1)
+    }
+    
+    private func stepItem(_ n: Int, _ title: String, _ sub: String) -> some View {
+        ZStack {
+            // Background pulse for current step
+            if n == step {
+                Circle()
+                    .stroke(
+                        LinearGradient(
+                            colors: [.blue.opacity(0.4), .purple.opacity(0.4)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 2
+                    )
+                    .frame(width: 24, height: 24)
+                    .scaleEffect(1.0 + sin(Date().timeIntervalSince1970 * 3) * 0.15)
+                    .opacity(0.7)
+                    .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: step)
+            }
+            
+            // Main circle
+            Circle()
+                .fill(n <= step ? Color.black : Color.secondary.opacity(0.3))
+                .frame(width: 20, height: 20)
+                .shadow(color: n == step ? .black.opacity(0.2) : .clear, radius: 4, x: 0, y: 2)
+                .scaleEffect(n == step ? 1.2 : 1.0)
+                .animation(.spring(response: 0.5, dampingFraction: 0.7), value: step)
+            
+            // Content
+            if n < step {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.white)
+                    .scaleEffect(n < step ? 1.0 : 0.8)
+                    .animation(.spring(response: 0.4, dampingFraction: 0.6), value: step)
+            } else {
+                Text("\(n)")
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundColor(n == step ? .white : .secondary)
+                    .scaleEffect(n == step ? 1.1 : 1.0)
+                    .animation(.spring(response: 0.4, dampingFraction: 0.6), value: step)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+    
+    private var stepTitle: String {
+        switch step {
+        case 1: return "Company Information"
+        case 2: return "Client Details"
+        case 3: return "Payment Methods"
+        case 4: return "Invoice Items"
+        default: return "Unknown Step"
+        }
+    }
+    
+    private var stepDescription: String {
+        switch step {
+        case 1: return "Set up your business details"
+        case 2: return "Add client information"
+        case 3: return "Configure payment options"
+        case 4: return "Add products and services"
+        default: return "Complete this step"
         }
     }
 }
@@ -234,8 +425,22 @@ struct CompanySetupCard: ViewModifier {
     func body(content: Content) -> some View {
         content
             .padding(16)
-            .background(RoundedRectangle(cornerRadius: 16).fill(Color.secondary.opacity(0.06)))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.secondary.opacity(0.12)))
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [.blue.opacity(0.3), .purple.opacity(0.3)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1
+                            )
+                    )
+                    .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+            )
     }
 }
 
@@ -248,39 +453,98 @@ struct StepCompanyInfoView: View {
         ScrollView {
             VStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Company Information").font(.headline)
-                    TextField("Company Name", text: $company.name).fieldStyle()
-                    HStack {
-                        TextField("Company Email", text: $company.email)
-                            .keyboardType(.emailAddress)
-                            .textInputAutocapitalization(.never)
-                            .fieldStyle()
-                        TextField("Company Phone", text: $company.phone)
-                            .keyboardType(.phonePad)
-                            .fieldStyle()
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Image(systemName: "building.2.fill")
+                                .foregroundColor(.blue)
+                                .font(.title3)
+                            Text("Company Information")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                        }
+                        Text("Set up your business details for professional invoices")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
-                    TextField("Company Address", text: $company.address.line1).fieldStyle()
+                    
+                    VStack(spacing: 12) {
+                        ModernTextField(
+                            title: "Company Name",
+                            text: $company.name,
+                            icon: "building.2"
+                        )
+                        
+                        HStack(spacing: 12) {
+                            ModernTextField(
+                                title: "Email",
+                                text: $company.email,
+                                icon: "envelope",
+                                keyboardType: .emailAddress
+                            )
+                            
+                            ModernTextField(
+                                title: "Phone",
+                                text: $company.phone,
+                                icon: "phone",
+                                keyboardType: .phonePad
+                            )
+                        }
+                        
+                        ModernTextField(
+                            title: "Address",
+                            text: $company.address.line1,
+                            icon: "location"
+                        )
+                    }
                 }
                 .modifier(CompanySetupCard())
 
-                HStack {
-                    Button("Previous") {}
-                        .buttonStyle(.bordered)
-                        .disabled(true)
-                    Spacer()
-                    Button("Next") {
-                        // сохраняем в AppState, чтобы следующие шаги и PDF получили актуальные данные
+                HStack(spacing: 16) {
+                    Button(action: {}) {
+                        HStack {
+                            Image(systemName: "chevron.left")
+                            Text("Previous")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.secondary.opacity(0.1))
+                        )
+                        .foregroundColor(.secondary)
+                    }
+                    .disabled(true)
+                    
+                    Button(action: {
                         app.company = company
                         next()
+                    }) {
+                        HStack {
+                            Text("Next")
+                            Image(systemName: "chevron.right")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [.blue, .purple],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                        )
+                        .foregroundColor(.white)
+                        .fontWeight(.semibold)
                     }
-                    .buttonStyle(.borderedProminent)
                     .disabled(company.name.trimmingCharacters(in: .whitespaces).isEmpty ||
                               company.email.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
-            .padding()
+            .padding(.horizontal, 16)
+            .padding(.bottom, 20)
         }
-        // ВАЖНО: автоподстановка сохранённой компании при открытии шага
         .onAppear {
             company = app.company ?? Company()
         }
@@ -297,66 +561,173 @@ struct StepClientInfoView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Label("Select Customer", systemImage: "person.crop.circle")
-                        Spacer()
-                        Button("Add New") { /* later */ }
+            VStack(spacing: 24) {
+                // Customer Selection
+                VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "person.2.fill")
+                                .foregroundColor(.blue)
+                                .font(.title2)
+                            Text("Select Customer")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                        }
+                        Text("Choose a customer for this invoice")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                     }
-                    TextField("Search customers…", text: .constant(""))
-                        .disabled(true)
-                        .fieldStyle()
-
-                    ForEach(app.customers) { c in
-                        Button {
-                            vm.customer = c
-                        } label: {
-                            HStack {
-                                Avatar(initials: initials(for: c.name))
-                                VStack(alignment: .leading) {
-                                    Text(c.name).bold()
-                                    Text(c.email).font(.caption).foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                if vm.customer?.id == c.id {
-                                    Image(systemName: "checkmark").foregroundStyle(.blue)
-                                }
+                    
+                    VStack(spacing: 12) {
+                        ForEach(app.customers) { customer in
+                            CustomerCard(
+                                customer: customer,
+                                isSelected: vm.customer?.id == customer.id,
+                                onTap: { vm.customer = customer }
+                            )
+                        }
+                        
+                        if app.customers.isEmpty {
+                            VStack(spacing: 12) {
+                                Image(systemName: "person.crop.circle.badge.plus")
+                                    .font(.system(size: 48))
+                                    .foregroundColor(.secondary)
+                                
+                                Text("No customers yet")
+                                    .font(.headline)
+                                    .foregroundColor(.secondary)
+                                
+                                Text("Add your first customer to get started")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.center)
                             }
-                            .padding(12)
-                            .background(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.15)))
+                            .padding(.vertical, 32)
                         }
                     }
                 }
                 .modifier(CompanySetupCard())
 
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Invoice Details").font(.headline)
-                    HStack {
-                        TextField("Invoice Number", text: $vm.number).fieldStyle()
-                        Picker("Status", selection: $vm.status) {
-                            ForEach(Invoice.Status.allCases) { s in
-                                Text(s.rawValue.capitalized).tag(s)
+                // Invoice Details
+                VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "doc.text.fill")
+                                .foregroundColor(.blue)
+                                .font(.title2)
+                            Text("Invoice Details")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                        }
+                        Text("Configure invoice number and dates")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    VStack(spacing: 16) {
+                        HStack(spacing: 12) {
+                            ModernTextField(
+                                title: "Invoice Number",
+                                text: $vm.number,
+                                icon: "number"
+                            )
+                            
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Status")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.primary)
+                                
+                                Picker("Status", selection: $vm.status) {
+                                    ForEach(Invoice.Status.allCases) { status in
+                                        Text(status.rawValue.capitalized).tag(status)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.secondary.opacity(0.08))
+                                )
                             }
                         }
-                        .pickerStyle(.menu)
-                    }
-                    HStack {
-                        DatePicker("Invoice Date", selection: $vm.issueDate, displayedComponents: .date)
-                        DatePicker("Due Date", selection: $vm.dueDate, displayedComponents: .date)
+                        
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Issue Date")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.primary)
+                                
+                                DatePicker("", selection: $vm.issueDate, displayedComponents: .date)
+                                    .datePickerStyle(.compact)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 14)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(Color.secondary.opacity(0.08))
+                                    )
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Due Date")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.primary)
+                                
+                                DatePicker("", selection: $vm.dueDate, displayedComponents: .date)
+                                    .datePickerStyle(.compact)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 14)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(Color.secondary.opacity(0.08))
+                                    )
+                            }
+                        }
                     }
                 }
                 .modifier(CompanySetupCard())
 
-                HStack {
-                    Button("Previous", action: prev).buttonStyle(.bordered)
-                    Spacer()
-                    Button("Next", action: next)
-                        .buttonStyle(.borderedProminent)
-                        .disabled(vm.customer == nil)
+                // Navigation Buttons
+                HStack(spacing: 16) {
+                    Button(action: prev) {
+                        HStack {
+                            Image(systemName: "chevron.left")
+                            Text("Previous")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.secondary.opacity(0.1))
+                        )
+                        .foregroundColor(.secondary)
+                    }
+                    
+                    Button(action: next) {
+                        HStack {
+                            Text("Next")
+                            Image(systemName: "chevron.right")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [.blue, .purple],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                        )
+                        .foregroundColor(.white)
+                        .fontWeight(.semibold)
+                    }
+                    .disabled(vm.customer == nil)
                 }
             }
-            .padding()
+            .padding(.horizontal, 20)
+            .padding(.bottom, 32)
         }
     }
 
@@ -708,13 +1079,116 @@ extension View {
     }
 }
 
+struct ModernTextField: View {
+    let title: String
+    @Binding var text: String
+    let icon: String
+    var keyboardType: UIKeyboardType = .default
+    var textInputAutocapitalization: TextInputAutocapitalization = .sentences
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.primary)
+            
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .foregroundColor(.blue)
+                    .frame(width: 20)
+                
+                TextField(title, text: $text)
+                    .keyboardType(keyboardType)
+                    .textInputAutocapitalization(textInputAutocapitalization)
+                    .font(.system(size: 16))
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.secondary.opacity(0.08))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(
+                                text.isEmpty ? Color.clear : Color.blue.opacity(0.3),
+                                lineWidth: 1
+                            )
+                    )
+            )
+        }
+    }
+}
+
+struct CustomerCard: View {
+    let customer: Customer
+    let isSelected: Bool
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 16) {
+                Avatar(initials: initials(for: customer.name))
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(customer.name)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+                    
+                    Text(customer.email)
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.blue)
+                        .font(.title2)
+                } else {
+                    Image(systemName: "circle")
+                        .foregroundColor(.secondary)
+                        .font(.title2)
+                }
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(isSelected ? Color.blue.opacity(0.1) : Color.secondary.opacity(0.05))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(
+                                isSelected ? Color.blue.opacity(0.3) : Color.clear,
+                                lineWidth: 2
+                            )
+                    )
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    private func initials(for name: String) -> String {
+        name.split(separator: " ").compactMap { $0.first }.prefix(2).map(String.init).joined()
+    }
+}
+
 struct Avatar: View {
     let initials: String
     var body: some View {
         Circle()
-            .fill(Color.secondary.opacity(0.15))
-            .frame(width: 36, height: 36)
-            .overlay(Text(initials).font(.caption).bold())
+            .fill(
+                LinearGradient(
+                    colors: [.blue, .purple],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .frame(width: 48, height: 48)
+            .overlay(
+                Text(initials)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.white)
+            )
     }
 }
 

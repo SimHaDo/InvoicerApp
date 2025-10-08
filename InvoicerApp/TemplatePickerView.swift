@@ -55,59 +55,44 @@ struct TemplatePickerView: View {
     }
 
     var body: some View {
-        NavigationStack(path: $navigationPath) {
-            ZStack {
-                // Анимированный фон
-                backgroundView
-                
-                // Плавающие элементы
-                ForEach(floatingElements) { element in
-                    Circle()
-                        .fill(Color.primary.opacity(0.05))
-                        .frame(width: 40, height: 40)
-                        .scaleEffect(element.scale)
-                        .opacity(element.opacity)
-                        .rotationEffect(.degrees(element.rotation))
-                        .position(x: element.x, y: element.y)
-                        .animation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true), value: element.scale)
+        GeometryReader { geometry in
+            if geometry.size.width > 768 {
+                // iPad layout - full screen with NavigationStack
+                NavigationStack(path: $navigationPath) {
+                    contentView
+                        .navigationTitle("Invoice Templates")
+                        .navigationBarTitleDisplayMode(.large)
+                        .toolbar {
+                            ToolbarItem(placement: .topBarTrailing) { 
+                                Button("Done") { dismiss() } 
+                            }
+                        }
+                        .navigationDestination(for: InvoiceTemplateDescriptor.self) { template in
+                            ColorSchemePickerView(selectedTemplate: template) { selectedTheme in
+                                let completeTemplate = CompleteInvoiceTemplate(template: template, theme: selectedTheme)
+                                app.selectedTemplate = completeTemplate
+                                onSelect(completeTemplate)
+                            }
+                        }
                 }
-                
-                VStack(spacing: 0) {
-                    // Header с логотипом
-                headerLogo
-                        .offset(y: showContent ? 0 : -20)
-                        .opacity(showContent ? 1 : 0)
-                        .animation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.1), value: showContent)
-                    
-                    // Search and Filters
-                    searchAndFilters
-                        .offset(y: showContent ? 0 : -15)
-                        .opacity(showContent ? 1 : 0)
-                        .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2), value: showContent)
-                    
-                    // Templates Grid
-                    templatesGrid
-                        .offset(y: showContent ? 0 : 20)
-                        .opacity(showContent ? 1 : 0)
-                        .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.3), value: showContent)
-                }
-            }
-            .navigationTitle("Invoice Templates")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) { 
-                    Button("Done") { dismiss() } 
-                }
-            }
-            .navigationDestination(for: InvoiceTemplateDescriptor.self) { template in
-                ColorSchemePickerView(selectedTemplate: template) { selectedTheme in
-                    // Create a complete template with design and theme
-                    let completeTemplate = CompleteInvoiceTemplate(template: template, theme: selectedTheme)
-                    
-                    // Store the selected template in AppState
-                    app.selectedTemplate = completeTemplate
-                    onSelect(completeTemplate)
-                    dismiss()
+            } else {
+                // iPhone layout - compact with inline title
+                NavigationStack(path: $navigationPath) {
+                    contentView
+                        .navigationTitle("Invoice Templates")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .topBarTrailing) { 
+                                Button("Done") { dismiss() } 
+                            }
+                        }
+                        .navigationDestination(for: InvoiceTemplateDescriptor.self) { template in
+                            ColorSchemePickerView(selectedTemplate: template) { selectedTheme in
+                                let completeTemplate = CompleteInvoiceTemplate(template: template, theme: selectedTheme)
+                                app.selectedTemplate = completeTemplate
+                                onSelect(completeTemplate)
+                            }
+                        }
                 }
             }
         }
@@ -119,6 +104,45 @@ struct TemplatePickerView: View {
             pulseAnimation = true
             startShimmerAnimation()
             createFloatingElements()
+        }
+    }
+    
+    private var contentView: some View {
+        ZStack {
+            // Анимированный фон
+            backgroundView
+            
+            // Плавающие элементы
+            ForEach(floatingElements) { element in
+                Circle()
+                    .fill(Color.primary.opacity(0.05))
+                    .frame(width: 40, height: 40)
+                    .scaleEffect(element.scale)
+                    .opacity(element.opacity)
+                    .rotationEffect(.degrees(element.rotation))
+                    .position(x: element.x, y: element.y)
+                    .animation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true), value: element.scale)
+            }
+            
+            VStack(spacing: 0) {
+                // Header с логотипом
+                headerLogo
+                    .offset(y: showContent ? 0 : -20)
+                    .opacity(showContent ? 1 : 0)
+                    .animation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.1), value: showContent)
+                
+                // Search and Filters
+                searchAndFilters
+                    .offset(y: showContent ? 0 : -15)
+                    .opacity(showContent ? 1 : 0)
+                    .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2), value: showContent)
+                
+                // Templates Grid
+                templatesGrid
+                    .offset(y: showContent ? 0 : 20)
+                    .opacity(showContent ? 1 : 0)
+                    .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.3), value: showContent)
+            }
         }
     }
     
@@ -211,96 +235,98 @@ struct TemplatePickerView: View {
     // MARK: - Search and Filters
     
     private var searchAndFilters: some View {
-        VStack(spacing: 16) {
-            // Search Bar
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.secondary)
-                
-                TextField("Search templates...", text: $searchText)
-                    .textFieldStyle(PlainTextFieldStyle())
-                    .font(.system(size: 16, weight: .regular))
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.primary.opacity(0.05))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.primary.opacity(0.1), lineWidth: 1)
-                    )
-            )
-            .padding(.horizontal, 20)
-            
-            // Reset Button
-            if !selectedCategories.isEmpty || !selectedDesigns.isEmpty {
+        GeometryReader { geometry in
+            VStack(spacing: 16) {
+                // Search Bar
                 HStack {
-                    Button(action: resetFilters) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 12, weight: .medium))
-                            Text("Reset Filters")
-                                .font(.system(size: 12, weight: .medium))
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.secondary.opacity(0.1))
-                        )
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.secondary)
-                    }
-                    Spacer()
-                }
-                .padding(.horizontal, 20)
-            }
-            
-            // Category Filter
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    FilterChip(
-                        title: "All",
-                        isSelected: selectedCategories.isEmpty,
-                        action: { selectedCategories.removeAll() }
-                    )
                     
-                    ForEach(TemplateCategory.allCases, id: \.self) { category in
-                        FilterChip(
-                            title: category.rawValue,
-                            isSelected: selectedCategories.contains(category),
-                            action: { 
-                                if selectedCategories.contains(category) {
-                                    selectedCategories.remove(category)
-                                } else {
-                                    selectedCategories.insert(category)
-                                }
-                            }
-                        )
-                    }
+                    TextField("Search templates...", text: $searchText)
+                        .textFieldStyle(PlainTextFieldStyle())
+                        .font(.system(size: 16, weight: .regular))
                 }
-                .padding(.horizontal, 20)
-            }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.primary.opacity(0.05))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                        )
+                )
+                .padding(.horizontal, geometry.size.width > 768 ? 40 : 20)
             
-            // Design Filter
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(TemplateDesign.allCases, id: \.self) { design in
-                        FilterChip(
-                            title: design.rawValue.capitalized,
-                            isSelected: selectedDesigns.contains(design),
-                            action: { 
-                                if selectedDesigns.contains(design) {
-                                    selectedDesigns.remove(design)
-                                } else {
-                                    selectedDesigns.insert(design)
-                                }
+                // Reset Button
+                if !selectedCategories.isEmpty || !selectedDesigns.isEmpty {
+                    HStack {
+                        Button(action: resetFilters) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.clockwise")
+                                    .font(.system(size: 12, weight: .medium))
+                                Text("Reset Filters")
+                                    .font(.system(size: 12, weight: .medium))
                             }
-                        )
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.secondary.opacity(0.1))
+                            )
+                            .foregroundColor(.secondary)
+                        }
+                        Spacer()
                     }
+                    .padding(.horizontal, geometry.size.width > 768 ? 40 : 20)
                 }
-                .padding(.horizontal, 20)
+            
+                // Category Filter
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        FilterChip(
+                            title: "All",
+                            isSelected: selectedCategories.isEmpty,
+                            action: { selectedCategories.removeAll() }
+                        )
+                        
+                        ForEach(TemplateCategory.allCases, id: \.self) { category in
+                            FilterChip(
+                                title: category.rawValue,
+                                isSelected: selectedCategories.contains(category),
+                                action: { 
+                                    if selectedCategories.contains(category) {
+                                        selectedCategories.remove(category)
+                                    } else {
+                                        selectedCategories.insert(category)
+                                    }
+                                }
+                            )
+                        }
+                    }
+                    .padding(.horizontal, geometry.size.width > 768 ? 40 : 20)
+                }
+            
+                // Design Filter
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(TemplateDesign.allCases, id: \.self) { design in
+                            FilterChip(
+                                title: design.rawValue.capitalized,
+                                isSelected: selectedDesigns.contains(design),
+                                action: { 
+                                    if selectedDesigns.contains(design) {
+                                        selectedDesigns.remove(design)
+                                    } else {
+                                        selectedDesigns.insert(design)
+                                    }
+                                }
+                            )
+                        }
+                    }
+                    .padding(.horizontal, geometry.size.width > 768 ? 40 : 20)
+                }
             }
         }
         .padding(.vertical, 16)
@@ -309,23 +335,47 @@ struct TemplatePickerView: View {
     // MARK: - Templates Grid
     
     private var templatesGrid: some View {
-        ScrollView {
-            LazyVGrid(columns: [
-                GridItem(.flexible(), spacing: 12),
-                GridItem(.flexible(), spacing: 12)
-            ], spacing: 16) {
-                ForEach(filteredTemplates) { template in
-                    TemplateCard(descriptor: template) {
-                        if template.isPremium && !app.isPremium {
-                            showPaywall = true
-                        } else {
-                            navigationPath.append(template)
+        GeometryReader { geometry in
+            ScrollView {
+                LazyVGrid(columns: gridColumns(for: geometry.size.width), spacing: 20) {
+                    ForEach(filteredTemplates) { template in
+                        TemplateCard(descriptor: template) {
+                            if template.isPremium && !app.isPremium {
+                                showPaywall = true
+                            } else {
+                                navigationPath.append(template)
+                            }
                         }
                     }
                 }
+                .padding(.horizontal, geometry.size.width > 768 ? 40 : 20)
+                .padding(.bottom, 32)
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 32)
+        }
+    }
+    
+    private func gridColumns(for width: CGFloat) -> [GridItem] {
+        if width > 1200 {
+            // Large iPad - 4 columns
+            return [
+                GridItem(.flexible(), spacing: 16),
+                GridItem(.flexible(), spacing: 16),
+                GridItem(.flexible(), spacing: 16),
+                GridItem(.flexible(), spacing: 16)
+            ]
+        } else if width > 768 {
+            // iPad - 3 columns
+            return [
+                GridItem(.flexible(), spacing: 16),
+                GridItem(.flexible(), spacing: 16),
+                GridItem(.flexible(), spacing: 16)
+            ]
+        } else {
+            // iPhone - 2 columns
+            return [
+                GridItem(.flexible(), spacing: 12),
+                GridItem(.flexible(), spacing: 12)
+            ]
         }
     }
     
