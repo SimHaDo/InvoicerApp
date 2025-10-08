@@ -68,8 +68,15 @@ public enum TemplateCategory: String, CaseIterable {
     case business = "Business"
     case creative = "Creative"
     case tech = "Technology"
-    case professional = "Professional"
-    case artistic = "Artistic"
+    
+    // Human-readable display names
+    var displayName: String {
+        switch self {
+        case .business: return "Business"
+        case .creative: return "Creative"
+        case .tech: return "Technology"
+        }
+    }
 }
 
 public struct TemplateTheme: Hashable {

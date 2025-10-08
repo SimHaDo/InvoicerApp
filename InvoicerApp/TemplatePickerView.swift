@@ -19,6 +19,8 @@ struct TemplatePickerView: View {
     }
 
     @State private var photoItem: PhotosPickerItem?
+    @State private var showLogoEditAlert = false
+    @State private var showPhotosPicker = false
     @State private var selectedCategories: Set<TemplateCategory> = []
     @State private var selectedDesigns: Set<TemplateDesign> = []
     @State private var searchText = ""
@@ -31,6 +33,12 @@ struct TemplatePickerView: View {
     @State private var selectedTemplateForColor: InvoiceTemplateDescriptor?
     
     private let templates = TemplateCatalog.all
+    
+    // Only show categories that have templates
+    private var availableCategories: [TemplateCategory] {
+        let categoriesWithTemplates = Set(templates.map { $0.category })
+        return TemplateCategory.allCases.filter { categoriesWithTemplates.contains($0) }
+    }
     
     private var filteredTemplates: [InvoiceTemplateDescriptor] {
         var filtered = templates
@@ -99,6 +107,36 @@ struct TemplatePickerView: View {
         .sheet(isPresented: $showPaywall) {
             // PaywallScreen would go here
         }
+        .photosPicker(isPresented: $showPhotosPicker, selection: $photoItem, matching: .images)
+        .onChange(of: photoItem) { new in
+            guard let new else { return }
+            Task {
+                if let data = try? await new.loadTransferable(type: Data.self) {
+                    app.logoData = data
+                }
+            }
+        }
+        .overlay(
+            // Custom Logo Edit Alert
+            Group {
+                if showLogoEditAlert {
+                    CustomLogoEditAlert(
+                        isPresented: $showLogoEditAlert,
+                        onRemove: { 
+                            app.logoData = nil
+                            showLogoEditAlert = false
+                        },
+                        onChange: {
+                            showLogoEditAlert = false
+                            // Trigger PhotosPicker
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                showPhotosPicker = true
+                            }
+                        }
+                    )
+                }
+            }
+        )
         .onAppear {
             showContent = true
             pulseAnimation = true
@@ -149,7 +187,7 @@ struct TemplatePickerView: View {
     // MARK: - Header Logo
     
     @ViewBuilder private var headerLogo: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 8) {
         HStack(spacing: 12) {
             if let img = app.logoImage {
                 Image(uiImage: img).resizable().scaledToFit()
@@ -183,60 +221,48 @@ struct TemplatePickerView: View {
                 
                 Spacer()
                 
-                VStack(spacing: 8) {
-            PhotosPicker(selection: $photoItem, matching: .images) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "photo")
-                                .font(.system(size: 14, weight: .medium))
-                            Text("Add Logo")
-                                .font(.system(size: 14, weight: .medium))
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(Color.primary)
-                        )
-                        .foregroundColor(.white)
-            }
-            .onChange(of: photoItem) { new in
-                guard let new else { return }
-                Task {
-                    if let data = try? await new.loadTransferable(type: Data.self) {
-                        app.logoData = data
+                // Modern Edit Button
+                Button(action: { showLogoEditAlert = true }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("Edit")
+                            .font(.system(size: 14, weight: .semibold))
                     }
-                }
-            }
-
-            if app.logoData != nil {
-                Button(role: .destructive) { app.logoData = nil } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "trash")
-                                    .font(.system(size: 12, weight: .medium))
-                                Text("Remove")
-                                    .font(.system(size: 12, weight: .medium))
-                            }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 6)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.red.opacity(0.1))
-                            )
-                            .foregroundColor(.red)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.black)
+                            
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.white.opacity(0.1), Color.clear, Color.white.opacity(0.1)],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .offset(x: showLogoEditAlert ? 50 : -50)
+                                .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: false), value: showLogoEditAlert)
                         }
-                    }
+                    )
+                    .foregroundColor(.white)
+                    .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
                 }
+                .scaleEffect(showLogoEditAlert ? 1.05 : 1.0)
+                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showLogoEditAlert)
             }
             .padding(.horizontal, 20)
-            .padding(.top, 16)
+            .padding(.top, 4)
         }
     }
     
     // MARK: - Search and Filters
     
     private var searchAndFilters: some View {
-        GeometryReader { geometry in
-            VStack(spacing: 16) {
+        VStack(spacing: 6) {
                 // Search Bar
                 HStack {
                     Image(systemName: "magnifyingglass")
@@ -257,7 +283,7 @@ struct TemplatePickerView: View {
                                 .stroke(Color.primary.opacity(0.1), lineWidth: 1)
                         )
                 )
-                .padding(.horizontal, geometry.size.width > 768 ? 40 : 20)
+                .padding(.horizontal, UIDevice.current.userInterfaceIdiom == .pad ? 40 : 20)
             
                 // Reset Button
                 if !selectedCategories.isEmpty || !selectedDesigns.isEmpty {
@@ -279,21 +305,28 @@ struct TemplatePickerView: View {
                         }
                         Spacer()
                     }
-                    .padding(.horizontal, geometry.size.width > 768 ? 40 : 20)
+                    .padding(.horizontal, UIDevice.current.userInterfaceIdiom == .pad ? 40 : 20)
                 }
             
-                // Category Filter
+                // Combined Filters
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        FilterChip(
+                    HStack(spacing: 8) {
+                        // All Categories Filter
+                        ModernFilterChip(
                             title: "All",
-                            isSelected: selectedCategories.isEmpty,
-                            action: { selectedCategories.removeAll() }
+                            icon: "square.grid.2x2",
+                            isSelected: selectedCategories.isEmpty && selectedDesigns.isEmpty,
+                            action: { 
+                                selectedCategories.removeAll()
+                                selectedDesigns.removeAll()
+                            }
                         )
                         
-                        ForEach(TemplateCategory.allCases, id: \.self) { category in
-                            FilterChip(
-                                title: category.rawValue,
+                        // Category Filters
+                        ForEach(availableCategories, id: \.self) { category in
+                            ModernFilterChip(
+                                title: category.displayName,
+                                icon: categoryIcon(for: category),
                                 isSelected: selectedCategories.contains(category),
                                 action: { 
                                     if selectedCategories.contains(category) {
@@ -304,16 +337,12 @@ struct TemplatePickerView: View {
                                 }
                             )
                         }
-                    }
-                    .padding(.horizontal, geometry.size.width > 768 ? 40 : 20)
-                }
-            
-                // Design Filter
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
+                        
+                        // Design Filters
                         ForEach(TemplateDesign.allCases, id: \.self) { design in
-                            FilterChip(
+                            ModernFilterChip(
                                 title: design.rawValue.capitalized,
+                                icon: designIcon(for: design),
                                 isSelected: selectedDesigns.contains(design),
                                 action: { 
                                     if selectedDesigns.contains(design) {
@@ -325,11 +354,11 @@ struct TemplatePickerView: View {
                             )
                         }
                     }
-                    .padding(.horizontal, geometry.size.width > 768 ? 40 : 20)
+                    .padding(.horizontal, UIDevice.current.userInterfaceIdiom == .pad ? 20 : 16)
                 }
-            }
         }
-        .padding(.vertical, 16)
+        .padding(.horizontal, UIDevice.current.userInterfaceIdiom == .pad ? 20 : 16)
+        .padding(.vertical, 8)
     }
     
     // MARK: - Templates Grid
@@ -337,7 +366,7 @@ struct TemplatePickerView: View {
     private var templatesGrid: some View {
         GeometryReader { geometry in
             ScrollView {
-                LazyVGrid(columns: gridColumns(for: geometry.size.width), spacing: 20) {
+                LazyVGrid(columns: gridColumns(for: geometry.size.width), spacing: 12) {
                     ForEach(filteredTemplates) { template in
                         TemplateCard(descriptor: template) {
                             if template.isPremium && !app.isPremium {
@@ -348,8 +377,8 @@ struct TemplatePickerView: View {
                         }
                     }
                 }
-                .padding(.horizontal, geometry.size.width > 768 ? 40 : 20)
-                .padding(.bottom, 32)
+                .padding(.horizontal, UIDevice.current.userInterfaceIdiom == .pad ? 40 : 20)
+                .padding(.bottom, 16)
             }
         }
     }
@@ -358,23 +387,23 @@ struct TemplatePickerView: View {
         if width > 1200 {
             // Large iPad - 4 columns
             return [
-                GridItem(.flexible(), spacing: 16),
-                GridItem(.flexible(), spacing: 16),
-                GridItem(.flexible(), spacing: 16),
-                GridItem(.flexible(), spacing: 16)
+                GridItem(.flexible(), spacing: 12),
+                GridItem(.flexible(), spacing: 12),
+                GridItem(.flexible(), spacing: 12),
+                GridItem(.flexible(), spacing: 12)
             ]
         } else if width > 768 {
             // iPad - 3 columns
             return [
-                GridItem(.flexible(), spacing: 16),
-                GridItem(.flexible(), spacing: 16),
-                GridItem(.flexible(), spacing: 16)
+                GridItem(.flexible(), spacing: 12),
+                GridItem(.flexible(), spacing: 12),
+                GridItem(.flexible(), spacing: 12)
             ]
         } else {
             // iPhone - 2 columns
             return [
-                GridItem(.flexible(), spacing: 12),
-                GridItem(.flexible(), spacing: 12)
+                GridItem(.flexible(), spacing: 8),
+                GridItem(.flexible(), spacing: 8)
             ]
         }
     }
@@ -485,27 +514,109 @@ private struct TemplateCard: View {
 
 // MARK: - Filter Chip
 
-private struct FilterChip: View {
+// MARK: - Modern Filter Chip
+
+private struct ModernFilterChip: View {
     let title: String
+    let icon: String
     let isSelected: Bool
     let action: () -> Void
     
+    @State private var isPressed = false
+    
     var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.system(size: 14, weight: .medium))
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(
+        Button(action: {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                action()
+            }
+        }) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(isSelected ? .white : .secondary)
+                
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(isSelected ? .white : .primary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(
+                ZStack {
+                    // Background
                     RoundedRectangle(cornerRadius: 20)
-                        .fill(isSelected ? Color.primary : Color.clear)
+                        .fill(isSelected ? Color.black : Color.clear)
                         .overlay(
                             RoundedRectangle(cornerRadius: 20)
-                                .stroke(Color.primary.opacity(0.3), lineWidth: 1)
+                                .stroke(isSelected ? Color.clear : Color.secondary.opacity(0.2), lineWidth: 1.5)
                         )
-                )
-                .foregroundColor(isSelected ? .white : .primary)
+                    
+                    // Shimmer effect for selected state
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.white.opacity(0.1), Color.clear, Color.white.opacity(0.1)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .offset(x: isPressed ? 50 : -50)
+                            .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: false), value: isPressed)
+                    }
+                }
+            )
+            .scaleEffect(isSelected ? 1.05 : (isPressed ? 0.95 : 1.0))
+            .shadow(
+                color: isSelected ? .black.opacity(0.3) : .clear,
+                radius: isSelected ? 8 : 0,
+                x: 0,
+                y: isSelected ? 4 : 0
+            )
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+            .animation(.spring(response: 0.2, dampingFraction: 0.8), value: isPressed)
         }
+        .buttonStyle(PlainButtonStyle())
+        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
+            isPressed = pressing
+        }, perform: {})
+    }
+}
+
+// MARK: - Helper Functions
+
+private func categoryIcon(for category: TemplateCategory) -> String {
+    switch category {
+    case .business: return "briefcase.fill"
+    case .creative: return "paintbrush.fill"
+    case .tech: return "laptopcomputer"
+    }
+}
+
+private func designIcon(for design: TemplateDesign) -> String {
+    switch design {
+    case .modernClean: return "sparkles"
+    case .professionalMinimal: return "minus.circle.fill"
+    case .corporateFormal: return "building.2.fill"
+    case .executiveLuxury: return "crown.fill"
+    case .businessClassic: return "book.fill"
+    case .enterpriseBold: return "building.fill"
+    case .consultingElegant: return "hand.raised.fill"
+    case .financialStructured: return "chart.bar.fill"
+    case .legalTraditional: return "scale.3d"
+    case .healthcareModern: return "cross.fill"
+    case .realEstateWarm: return "house.fill"
+    case .insuranceTrust: return "shield.fill"
+    case .bankingSecure: return "lock.fill"
+    case .accountingDetailed: return "doc.text.fill"
+    case .consultingProfessional: return "person.fill"
+    case .creativeVibrant: return "paintbrush.fill"
+    case .artisticBold: return "paintpalette.fill"
+    case .designStudio: return "pencil.and.outline"
+    case .fashionElegant: return "tshirt.fill"
+    case .photographyClean: return "camera.fill"
+    case .techModern: return "laptopcomputer"
+    default: return "doc.fill"
     }
 }
 
@@ -793,4 +904,161 @@ private struct FloatingElement: Identifiable {
     var opacity: Double
     var scale: Double
     var rotation: Double
+}
+
+// MARK: - Custom Logo Edit Alert
+
+struct CustomLogoEditAlert: View {
+    @Binding var isPresented: Bool
+    let onRemove: () -> Void
+    let onChange: () -> Void
+    
+    @State private var dragOffset = CGSize.zero
+    @State private var scale: CGFloat = 0.8
+    @State private var opacity: Double = 0
+    
+    var body: some View {
+        ZStack {
+            // Background overlay
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    dismissAlert()
+                }
+                .opacity(opacity)
+            
+            // Alert content
+            VStack(spacing: 0) {
+                // Header
+                VStack(spacing: 8) {
+                    Image(systemName: "photo.circle.fill")
+                        .font(.system(size: 32, weight: .medium))
+                        .foregroundColor(.black)
+                    
+                    Text("Edit Logo")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.primary)
+                    
+                    Text("Choose an action for your logo")
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.top, 24)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 20)
+                
+                // Divider
+                Rectangle()
+                    .fill(Color.secondary.opacity(0.2))
+                    .frame(height: 1)
+                
+                // Action buttons
+                VStack(spacing: 0) {
+                    // Change Logo button
+                    Button(action: {
+                        onChange()
+                    }) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "photo")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.blue)
+                            
+                            Text("Change Logo")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 16)
+                    }
+                    
+                    // Divider
+                    Rectangle()
+                        .fill(Color.secondary.opacity(0.2))
+                        .frame(height: 1)
+                        .padding(.horizontal, 24)
+                    
+                    // Remove Logo button
+                    Button(action: {
+                        onRemove()
+                    }) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.red)
+                            
+                            Text("Remove Logo")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.red)
+                            
+                            Spacer()
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 16)
+                    }
+                    
+                    // Divider
+                    Rectangle()
+                        .fill(Color.secondary.opacity(0.2))
+                        .frame(height: 1)
+                        .padding(.horizontal, 24)
+                    
+                    // Cancel button
+                    Button(action: {
+                        dismissAlert()
+                    }) {
+                        Text("Cancel")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                    }
+                }
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(.systemBackground))
+                    .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 10)
+            )
+            .frame(maxWidth: 320)
+            .scaleEffect(scale)
+            .offset(dragOffset)
+            .opacity(opacity)
+            .gesture(
+                DragGesture()
+                    .onChanged { value in
+                        dragOffset = value.translation
+                    }
+                    .onEnded { value in
+                        if abs(value.translation.height) > 100 {
+                            dismissAlert()
+                        } else {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                dragOffset = .zero
+                            }
+                        }
+                    }
+            )
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                scale = 1.0
+                opacity = 1.0
+            }
+        }
+    }
+    
+    private func dismissAlert() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            scale = 0.8
+            opacity = 0
+            dragOffset = .zero
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            isPresented = false
+        }
+    }
 }
