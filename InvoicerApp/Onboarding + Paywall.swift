@@ -30,7 +30,6 @@ struct OnboardingView: View {
     @State private var appear = false
     @State private var showCelebration = false
     @State private var particles: [Particle] = []
-    @Namespace private var dotsNS
     @Namespace private var heroNS
 
     private let privacyURL = URL(string: "https://simhado.github.io/invoice-maker-pro-site/privacy.html")!
@@ -93,7 +92,7 @@ struct OnboardingView: View {
 
                 // Dots + Footer с улучшенными анимациями
                 VStack(spacing: 28) {
-                    FancyDots(count: 4, index: page, namespace: dotsNS)
+                    FancyDots(count: 4, index: page)
                         .padding(.top, 8)
 
                     FooterLinks(
@@ -395,7 +394,6 @@ private struct Bullet: View {
 private struct FancyDots: View {
     let count: Int
     let index: Int
-    var namespace: Namespace.ID
 
     var body: some View {
         HStack(spacing: 10) {
@@ -408,7 +406,6 @@ private struct FancyDots: View {
                             if i == index {
                                 RoundedRectangle(cornerRadius: 3)
                                     .stroke(Color.primary.opacity(0.35), lineWidth: 0.5)
-                                    .matchedGeometryEffect(id: "dot", in: namespace)
                             }
                         }
                     )

@@ -11,10 +11,21 @@ import UIKit
 struct RootContainer: View {
     @EnvironmentObject private var app: AppState
     @State private var showTemplatePicker = false
+    @State private var showLoadingScreen = true
 
     var body: some View {
         Group {
-            if app.hasCompletedOnboarding {
+            if showLoadingScreen {
+                LoadingScreen()
+                    .onAppear {
+                        // Показываем лоадинг скрин на 3 секунды
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                            withAnimation(.easeInOut(duration: 0.5)) {
+                                showLoadingScreen = false
+                            }
+                        }
+                    }
+            } else if app.hasCompletedOnboarding {
                 RootTabView()
                     .environmentObject(app)
             } else {

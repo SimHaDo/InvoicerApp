@@ -7,6 +7,7 @@
 
 import SwiftUI
 import PhotosUI
+import UniformTypeIdentifiers
 
 // MARK: - FloatingElement
 
@@ -260,102 +261,16 @@ struct MyInfoView: View {
 private struct LogoSection: View {
     @EnvironmentObject private var app: AppState
     @Environment(\.colorScheme) private var scheme
-    @State private var photoItem: PhotosPickerItem?
+        @State private var photoItem: PhotosPickerItem?
+        @State private var showPhotosPicker = false
+        @State private var showFilePicker = false
+        @State private var isLoading = false
+        @State private var showLogoEditAlert = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 12) {
-                Image(systemName: "photo.circle.fill")
-                    .font(.system(size: 24, weight: .medium))
-                    .foregroundColor(.primary)
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Company Logo")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.primary)
-                    
-                    Text("Add or change your logo")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.secondary)
-                }
-                
-                Spacer()
-            }
-            
-            HStack(spacing: 16) {
-                // Logo preview
-                if let img = app.logoImage {
-                    Image(uiImage: img)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 80, height: 80)
-                        .background(Color.secondary.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                } else {
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(scheme == .light ? Color.black.opacity(0.05) : Color.white.opacity(0.1))
-                        .frame(width: 80, height: 80)
-                        .overlay(
-                            Image(systemName: "photo")
-                                .font(.system(size: 24, weight: .medium))
-                                .foregroundStyle(.secondary)
-                        )
-                }
-                
-                VStack(alignment: .leading, spacing: 12) {
-                    PhotosPicker(selection: $photoItem, matching: .images) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "photo")
-                                .font(.system(size: 14, weight: .medium))
-                            Text(app.logoImage == nil ? "Add Logo" : "Change Logo")
-                                .font(.system(size: 14, weight: .medium))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(scheme == .light ? Color.black.opacity(0.05) : Color.white.opacity(0.1))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.primary.opacity(0.2), lineWidth: 1)
-                                )
-                        )
-                        .foregroundColor(.primary)
-                    }
-                    .onChange(of: photoItem) { new in
-                        guard let new else { return }
-                        Task {
-                            if let data = try? await new.loadTransferable(type: Data.self) {
-                                app.logoData = data
-                            }
-                        }
-                    }
-                    
-                    if app.logoData != nil {
-                        Button(role: .destructive) {
-                            app.logoData = nil
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "trash")
-                                    .font(.system(size: 14, weight: .medium))
-                                Text("Remove Logo")
-                                    .font(.system(size: 14, weight: .medium))
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.red.opacity(0.1))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Color.red.opacity(0.3), lineWidth: 1)
-                                    )
-                            )
-                            .foregroundColor(.red)
-                        }
-                    }
-                }
-            }
+            headerSection
+            contentSection
         }
         .padding(20)
         .background(
@@ -367,6 +282,180 @@ private struct LogoSection: View {
                 )
                 .shadow(color: Color.black.opacity(scheme == .light ? 0.05 : 0.2), radius: 8, y: 4)
         )
+            .photosPicker(isPresented: $showPhotosPicker, selection: $photoItem, matching: .images)
+        .fileImporter(
+            isPresented: $showFilePicker,
+            allowedContentTypes: [.image, .jpeg, .png, .gif, .bmp, .tiff],
+            allowsMultipleSelection: false
+        ) { result in
+            handleFileSelection(result)
+        }
+        .onChange(of: photoItem) { new in
+            handlePhotoSelection(new)
+        }
+        .overlay(
+            // Custom Logo Edit Alert
+            Group {
+                if showLogoEditAlert {
+                    CustomLogoEditAlert(
+                        isPresented: $showLogoEditAlert,
+                        onRemove: { 
+                            app.logoData = nil
+                            showLogoEditAlert = false
+                        },
+                        onChange: {
+                            showLogoEditAlert = false
+                            // Trigger PhotosPicker
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                showPhotosPicker = true
+                            }
+                        },
+                        onFileSelect: {
+                            showLogoEditAlert = false
+                            // Trigger FilePicker
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                showFilePicker = true
+                            }
+                        }
+                    )
+                }
+            }
+        )
+    }
+    
+    // MARK: - Computed Properties
+    
+    private var headerSection: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "photo.circle.fill")
+                .font(.system(size: 24, weight: .medium))
+                .foregroundColor(.primary)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Company Logo")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.primary)
+                
+                Text("Add or change your logo")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+            
+            Spacer()
+        }
+    }
+    
+    private var contentSection: some View {
+        HStack(spacing: 16) {
+            logoPreview
+            editButtonSection
+        }
+    }
+    
+    private var logoPreview: some View {
+        Group {
+            if let img = app.logoImage {
+                Image(uiImage: img)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 80, height: 80)
+                    .background(Color.secondary.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+            } else {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(scheme == .light ? Color.black.opacity(0.05) : Color.white.opacity(0.1))
+                    .frame(width: 80, height: 80)
+                    .overlay(
+                        Image(systemName: "photo")
+                            .font(.system(size: 24, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    )
+            }
+        }
+    }
+    
+    private var editButtonSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Button {
+                showLogoEditAlert = true
+            } label: {
+                HStack(spacing: 8) {
+                    if isLoading {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    Text(isLoading ? "Loading..." : (app.logoImage == nil ? "Add Logo" : "Edit Logo"))
+                        .font(.system(size: 14, weight: .medium))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(scheme == .light ? Color.black.opacity(0.05) : Color.white.opacity(0.1))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.primary.opacity(0.2), lineWidth: 1)
+                        )
+                )
+                .foregroundColor(.primary)
+            }
+            .disabled(isLoading)
+        }
+    }
+    
+    // MARK: - Helper Functions
+    
+    private func handlePhotoSelection(_ new: PhotosPickerItem?) {
+        guard let new else { return }
+        isLoading = true
+        
+        Task {
+            do {
+                if let data = try await new.loadTransferable(type: Data.self) {
+                    await MainActor.run {
+                        app.logoData = data
+                        isLoading = false
+                    }
+                } else {
+                    await MainActor.run {
+                        isLoading = false
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    isLoading = false
+                    print("Error loading photo: \(error)")
+                }
+            }
+        }
+    }
+    
+    private func handleFileSelection(_ result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            isLoading = true
+            
+            Task {
+                do {
+                    let data = try Data(contentsOf: url)
+                    await MainActor.run {
+                        app.logoData = data
+                        isLoading = false
+                    }
+                } catch {
+                    await MainActor.run {
+                        isLoading = false
+                        print("Error loading file: \(error)")
+                    }
+                }
+            }
+        case .failure(let error):
+            print("File picker error: \(error)")
+        }
     }
 }
 

@@ -51,9 +51,6 @@ struct InvoicesScreen: View {
     @State private var showTemplatePicker = false
     @State private var showEmptyPaywall = false
     @State private var showWizard = false
-    @State private var showContent = false
-    @State private var pulseAnimation = false
-    @State private var shimmerOffset: CGFloat = -1
     @State private var floatingElements: [FloatingElement] = []
 
     var body: some View {
@@ -62,7 +59,7 @@ struct InvoicesScreen: View {
                 // Анимированный фон
                 backgroundView()
                 
-                // Плавающие элементы
+                // Плавающие элементы (статичные)
                 ForEach(floatingElements) { element in
                     Circle()
                         .fill(
@@ -75,7 +72,6 @@ struct InvoicesScreen: View {
                         .opacity(element.opacity)
                         .rotationEffect(.degrees(element.rotation))
                         .position(x: element.x, y: element.y)
-                        .animation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true), value: element.scale)
                 }
                 
                 ScrollView {
@@ -105,12 +101,6 @@ struct InvoicesScreen: View {
             }
         }
         .onAppear {
-            // Устанавливаем showContent только один раз при первом появлении
-            if !showContent {
-                showContent = true
-            }
-            pulseAnimation = true
-            startShimmerAnimation()
             createFloatingElements()
         }
             // 1) Company setup (если нет компании)
@@ -178,14 +168,10 @@ struct InvoicesScreen: View {
                         )
                     )
                     .shadow(color: scheme == .dark ? UI.darkAccent.opacity(0.3) : .black.opacity(0.1), radius: 2, y: 1)
-                    .offset(y: showContent ? 0 : -20)
-                    .opacity(showContent ? 1 : 0)
                 
                 Text("Manage all your invoices")
                     .font(.system(size: 16, weight: .medium))
                     .foregroundStyle(scheme == .dark ? UI.darkSecondaryText : .secondary)
-                    .offset(y: showContent ? 0 : -15)
-                    .opacity(showContent ? 1 : 0)
             }
             Spacer()
             
@@ -210,13 +196,9 @@ struct InvoicesScreen: View {
                             lineWidth: 1
                         )
                 )
-                .offset(y: showContent ? 0 : -20)
-                .opacity(showContent ? 1 : 0)
             
             if app.isPremium { 
                 ProBadge()
-                    .scaleEffect(showContent ? 1.0 : 0.9)
-                    .opacity(showContent ? 1 : 0)
             }
         }
     }
@@ -316,8 +298,6 @@ struct InvoicesScreen: View {
                         )
                         .foregroundColor(scheme == .light ? .white : .black)
                     }
-                    .scaleEffect(showContent ? 1.0 : 0.9)
-                    .opacity(showContent ? 1 : 0)
                 } else {
                     Button(action: onNewInvoice) {
                         HStack(spacing: 8) {
@@ -335,8 +315,6 @@ struct InvoicesScreen: View {
                         )
                         .foregroundColor(scheme == .light ? .white : .black)
                     }
-                    .scaleEffect(showContent ? 1.0 : 0.9)
-                    .opacity(showContent ? 1 : 0)
                 }
             }
         }
@@ -365,16 +343,15 @@ struct InvoicesScreen: View {
                     )
                     .blendMode(.screen)
                     
-                    // Анимированный shimmer эффект
+                    // Статичный shimmer эффект
                     LinearGradient(
-                        colors: [.clear, Color.white.opacity(0.3), .clear],
+                        colors: [.clear, Color.white.opacity(0.1), .clear],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
-                    .offset(x: shimmerOffset * 400)
                     .blendMode(.overlay)
                     
-                    // Плавающие световые пятна
+                    // Плавающие световые пятна (статичные)
                     ForEach(0..<3, id: \.self) { i in
                         Circle()
                             .fill(Color.primary.opacity(0.05))
@@ -383,14 +360,7 @@ struct InvoicesScreen: View {
                                 x: CGFloat(100 + i * 150),
                                 y: CGFloat(200 + i * 100)
                             )
-                            .scaleEffect(pulseAnimation ? 1.2 : 0.8)
-                            .opacity(pulseAnimation ? 0.6 : 0.3)
-                            .animation(
-                                .easeInOut(duration: 3.0 + Double(i) * 0.5)
-                                .repeatForever(autoreverses: true)
-                                .delay(Double(i) * 0.3),
-                                value: pulseAnimation
-                            )
+                            .opacity(0.3)
                     }
                 }
             } else {
@@ -411,16 +381,15 @@ struct InvoicesScreen: View {
                     )
                     .blendMode(.screen)
                     
-                    // Анимированный shimmer эффект для темной темы
+                    // Статичный shimmer эффект для темной темы
                     LinearGradient(
-                        colors: [.clear, UI.darkAccent.opacity(0.2), .clear],
+                        colors: [.clear, UI.darkAccent.opacity(0.1), .clear],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
-                    .offset(x: shimmerOffset * 400)
                     .blendMode(.overlay)
                     
-                    // Плавающие световые пятна для темной темы
+                    // Плавающие световые пятна для темной темы (статичные)
                     ForEach(0..<3, id: \.self) { i in
                         Circle()
                             .fill(
@@ -435,14 +404,7 @@ struct InvoicesScreen: View {
                                 x: CGFloat(120 + i * 180),
                                 y: CGFloat(180 + i * 120)
                             )
-                            .scaleEffect(pulseAnimation ? 1.3 : 0.7)
-                            .opacity(pulseAnimation ? 0.8 : 0.4)
-                            .animation(
-                                .easeInOut(duration: 4.0 + Double(i) * 0.7)
-                                .repeatForever(autoreverses: true)
-                                .delay(Double(i) * 0.4),
-                                value: pulseAnimation
-                            )
+                            .opacity(0.4)
                     }
                 }
             }
@@ -450,13 +412,7 @@ struct InvoicesScreen: View {
         .ignoresSafeArea()
     }
     
-    // MARK: - Animation Functions
-    
-    private func startShimmerAnimation() {
-        withAnimation(.linear(duration: 3.0).repeatForever(autoreverses: false)) {
-            shimmerOffset = 1
-        }
-    }
+    // MARK: - Helper Functions
     
     private func createFloatingElements() {
         floatingElements = (0..<5).map { _ in
