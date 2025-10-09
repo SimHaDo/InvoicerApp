@@ -42,6 +42,16 @@ enum Storage {
         
         let logoURL = documentsURL.appendingPathComponent("company_logo.png")
         
+        // Сначала удаляем старый файл если он существует
+        if FileManager.default.fileExists(atPath: logoURL.path) {
+            do {
+                try FileManager.default.removeItem(at: logoURL)
+                print("Storage: Old logo removed")
+            } catch {
+                print("Storage: Failed to remove old logo: \(error)")
+            }
+        }
+        
         if let imageData = imageData {
             // Compress the image before saving
             if let image = UIImage(data: imageData),
@@ -52,11 +62,11 @@ enum Storage {
                 } catch {
                     print("Storage: Failed to save logo: \(error)")
                 }
+            } else {
+                print("Storage: Failed to compress image")
             }
         } else {
-            // Remove logo file if nil
-            try? FileManager.default.removeItem(at: logoURL)
-            print("Storage: Logo removed")
+            print("Storage: Logo data is nil, file removed")
         }
     }
     

@@ -10,6 +10,8 @@ import SwiftUI
 struct RootTabView: View {
     @EnvironmentObject private var app: AppState
     @State private var selectedTab: Tab = .invoices
+    @State private var navigationPath = NavigationPath()
+    @State private var shouldDismissMyInfo = false
 
     enum Tab: String, CaseIterable {
         case invoices = "Invoices"
@@ -34,7 +36,15 @@ struct RootTabView: View {
             // iPad layout with NavigationSplitView
             NavigationSplitView {
                 List(Tab.allCases, id: \.self) { tab in
-                    Button(action: { selectedTab = tab }) {
+                    Button(action: { 
+                        selectedTab = tab
+                        // Очищаем навигацию при переключении табов на iPad
+                        if UIDevice.current.userInterfaceIdiom == .pad {
+                            navigationPath = NavigationPath()
+                            shouldDismissMyInfo = true
+                            print("RootTabView: Tab switched to \(tab.rawValue), cleared navigation")
+                        }
+                    }) {
                         Label(tab.rawValue, systemImage: tab.icon)
                             .foregroundColor(selectedTab == tab ? .accentColor : .primary)
                     }
@@ -42,7 +52,15 @@ struct RootTabView: View {
                 }
                 .navigationTitle("Invoice Maker PRO")
             } detail: {
-                selectedView
+                NavigationStack(path: $navigationPath) {
+                    selectedView
+                        .environment(\.shouldDismissMyInfo, shouldDismissMyInfo)
+                        .onChange(of: shouldDismissMyInfo) { newValue in
+                            if newValue {
+                                shouldDismissMyInfo = false
+                            }
+                        }
+                }
             }
         } else {
             // iPhone layout with TabView
@@ -84,5 +102,18 @@ struct RootTabView: View {
         case .settings:
             SettingsTab()
         }
+    }
+}
+
+// MARK: - Environment Key for Dismissing MyInfo
+
+private struct ShouldDismissMyInfoKey: EnvironmentKey {
+    static let defaultValue: Bool = false
+}
+
+extension EnvironmentValues {
+    var shouldDismissMyInfo: Bool {
+        get { self[ShouldDismissMyInfoKey.self] }
+        set { self[ShouldDismissMyInfoKey.self] = newValue }
     }
 }

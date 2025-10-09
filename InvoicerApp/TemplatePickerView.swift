@@ -13,6 +13,7 @@ struct TemplatePickerView: View {
     @EnvironmentObject private var app: AppState
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var scheme
+    @ObservedObject private var permissionManager = PermissionManager.shared
 
     let onSelect: (CompleteInvoiceTemplate) -> Void
     init(onSelect: @escaping (CompleteInvoiceTemplate) -> Void = { _ in }) {
@@ -23,6 +24,8 @@ struct TemplatePickerView: View {
     @State private var showLogoEditAlert = false
     @State private var showPhotosPicker = false
     @State private var showFilePicker = false
+    @State private var showPermissionAlert = false
+    @State private var permissionType: PermissionType = .photoLibrary
     @State private var selectedCategories: Set<TemplateCategory> = []
     @State private var selectedDesigns: Set<TemplateDesign> = []
     @State private var searchText = ""
@@ -152,19 +155,42 @@ struct TemplatePickerView: View {
                         },
                         onChange: {
                             showLogoEditAlert = false
-                            // Trigger PhotosPicker
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                showPhotosPicker = true
-                            }
+                            requestPhotoPermission()
                         },
                         onFileSelect: {
                             showLogoEditAlert = false
-                            // Trigger FilePicker
+                            // File picker doesn't need permission
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                                 showFilePicker = true
                             }
                         }
                     )
+                }
+            }
+        )
+        .overlay(
+            // Permission Alert
+            Group {
+                if showPermissionAlert {
+                    ZStack {
+                        Color.black.opacity(0.4)
+                            .ignoresSafeArea(.all)
+                            .onTapGesture {
+                                showPermissionAlert = false
+                            }
+                        
+                        PermissionAlert(
+                            permissionType: permissionType,
+                            isPresented: $showPermissionAlert,
+                            onSettings: {
+                                permissionManager.openAppSettings()
+                            },
+                            onCancel: {
+                                showPermissionAlert = false
+                            }
+                        )
+                    }
+                    .zIndex(1002)
                 }
             }
         )
@@ -439,6 +465,23 @@ struct TemplatePickerView: View {
     private func resetFilters() {
         selectedCategories.removeAll()
         selectedDesigns.removeAll()
+    }
+    
+    private func requestPhotoPermission() {
+        Task {
+            let status = await permissionManager.requestPhotoLibraryPermission()
+            await MainActor.run {
+                if status == .granted {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showPhotosPicker = true
+                    }
+                } else {
+                    // Если разрешение не дано, показываем алерт с переходом в настройки
+                    permissionType = .photoLibrary
+                    showPermissionAlert = true
+                }
+            }
+        }
     }
 }
 
@@ -974,7 +1017,7 @@ struct CustomLogoEditAlert: View {
         ZStack {
             // Background overlay
             Color.black.opacity(0.4)
-                .ignoresSafeArea()
+                .ignoresSafeArea(.all)
                 .onTapGesture {
                     dismissAlert()
                 }
@@ -1104,6 +1147,7 @@ struct CustomLogoEditAlert: View {
             .scaleEffect(scale)
             .offset(dragOffset)
             .opacity(opacity)
+            .zIndex(1000)
             .gesture(
                 DragGesture()
                     .onChanged { value in

@@ -34,6 +34,7 @@ final class InvoiceWizardVM: ObservableObject {
     @Published var selectedSaved: Set<UUID> = []              // выбранные из app.paymentMethods
     @Published var customMethods: [PaymentMethod] = []        // кастомные для этого инвойса
     @Published var paymentNotes: String = ""                  // дополнительные примечания (на инвойсе)
+    @Published var includeLogo: Bool = true                   // включить логотип в инвойс
 
     var subtotal: Decimal { items.map { $0.total }.reduce(0, +) }
 }
@@ -101,7 +102,7 @@ struct InvoiceWizardView: View {
     @ViewBuilder private var content: some View {
         switch vm.step {
         case 1:
-            StepCompanyInfoView { vm.step = 2 }
+            StepCompanyInfoView(vm: vm) { vm.step = 2 }
         case 2:
             StepClientInfoView(vm: vm, next: { vm.step = 3 }, prev: { vm.step = 1 })
         case 3:
@@ -179,7 +180,7 @@ struct InvoiceWizardView: View {
                 customer: customer,
                 currencyCode: vm.currency,
                 template: app.selectedTemplate,
-                logo: app.logoImage
+                logo: vm.includeLogo ? app.logoImage : nil
             )
             shareURL = url
             shouldDismissAfterShare = false
@@ -463,6 +464,7 @@ struct CompanySetupCard: ViewModifier {
 
 struct StepCompanyInfoView: View {
     @EnvironmentObject private var app: AppState
+    @ObservedObject var vm: InvoiceWizardVM
     var next: () -> Void
     @State private var company = Company()
 
@@ -513,6 +515,51 @@ struct StepCompanyInfoView: View {
                             icon: "location"
                         )
                     }
+                }
+                .modifier(CompanySetupCard())
+                
+                // Logo Toggle Section
+                VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Image(systemName: "photo.circle.fill")
+                                .foregroundColor(.green)
+                                .font(.title3)
+                            Text("Logo Settings")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                        }
+                        Text("Choose whether to include your company logo")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Include Logo")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.primary)
+                            
+                            Text("Show your company logo on the invoice")
+                                .font(.system(size: 14, weight: .regular))
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        Toggle("", isOn: $vm.includeLogo)
+                            .toggleStyle(SwitchToggleStyle(tint: .blue))
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.secondary.opacity(0.05))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
+                            )
+                    )
                 }
                 .modifier(CompanySetupCard())
 

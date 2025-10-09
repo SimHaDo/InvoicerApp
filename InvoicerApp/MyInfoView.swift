@@ -9,20 +9,12 @@ import SwiftUI
 import PhotosUI
 import UniformTypeIdentifiers
 
-// MARK: - FloatingElement
-
-private struct FloatingElement: Identifiable {
-    let id = UUID()
-    var x: Double
-    var y: Double
-    var opacity: Double
-    var scale: Double
-    var rotation: Double
-}
 
 struct MyInfoView: View {
     @EnvironmentObject private var app: AppState
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.shouldDismissMyInfo) private var shouldDismissMyInfo
 
     // локальный editable слепок компании
     @State private var editingCompany: Company = .init()
@@ -32,26 +24,12 @@ struct MyInfoView: View {
     @State private var photoItem: PhotosPickerItem?
     
     @State private var showContent = false
-    @State private var pulseAnimation = false
-    @State private var shimmerOffset: CGFloat = -1
-    @State private var floatingElements: [FloatingElement] = []
 
     var body: some View {
         ZStack {
             // Анимированный фон
             backgroundView()
             
-            // Плавающие элементы
-            ForEach(floatingElements) { element in
-                Circle()
-                    .fill(Color.primary.opacity(0.05))
-                    .frame(width: 40, height: 40)
-                    .scaleEffect(element.scale)
-                    .opacity(element.opacity)
-                    .rotationEffect(.degrees(element.rotation))
-                    .position(x: element.x, y: element.y)
-                    .animation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true), value: element.scale)
-            }
             
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
@@ -113,10 +91,33 @@ struct MyInfoView: View {
                 editingCompany = Company()
                 isEditingCompany = true
             }
-            showContent = true
-            pulseAnimation = true
-            startShimmerAnimation()
-            createFloatingElements()
+            if !showContent {
+                showContent = true
+            }
+            // Обновляем разрешения при появлении view
+            PermissionManager.shared.refreshPermissions()
+        }
+        .onDisappear {
+            // Очищаем состояние при исчезновении view (переключение табов)
+            // Особенно важно для iPad где NavigationSplitView может держать view в памяти
+            showContent = false
+            print("MyInfoView: onDisappear called, clearing state")
+        }
+        .onChange(of: scenePhase) { newPhase in
+            if newPhase == .active {
+                // Обновляем разрешения когда приложение становится активным
+                PermissionManager.shared.refreshPermissions()
+            } else if newPhase == .background {
+                // Очищаем состояние при переходе в фон
+                showContent = false
+            }
+        }
+        .onChange(of: shouldDismissMyInfo) { newValue in
+            if newValue {
+                // Принудительно очищаем состояние при переключении табов на iPad
+                showContent = false
+                print("MyInfoView: Received dismiss signal, clearing state")
+            }
         }
         .sheet(isPresented: $showAddEditMethod) {
             AddEditPaymentMethodSheet { new in
@@ -139,121 +140,22 @@ struct MyInfoView: View {
     private func backgroundView() -> some View {
         Group {
             if scheme == .light {
-                ZStack {
-                    // Основной градиент
-                    LinearGradient(
-                        colors: [Color.white, Color(white: 0.97), Color(white: 0.95)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    
-                    // Радиальный градиент с анимацией
-                    RadialGradient(
-                        colors: [Color.white, Color(white: 0.96), .clear],
-                        center: .topLeading,
-                        startRadius: 24,
-                        endRadius: 520
-                    )
-                    .blendMode(.screen)
-                    
-                    // Анимированный shimmer эффект
-                    LinearGradient(
-                        colors: [.clear, Color.white.opacity(0.3), .clear],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                    .offset(x: shimmerOffset * 400)
-                    .blendMode(.overlay)
-                    
-                    // Плавающие световые пятна
-                    ForEach(0..<3, id: \.self) { i in
-                        Circle()
-                            .fill(Color.primary.opacity(0.05))
-                            .frame(width: 200, height: 200)
-                            .position(
-                                x: CGFloat(100 + i * 150),
-                                y: CGFloat(200 + i * 100)
-                            )
-                            .scaleEffect(pulseAnimation ? 1.2 : 0.8)
-                            .opacity(pulseAnimation ? 0.6 : 0.3)
-                            .animation(
-                                .easeInOut(duration: 3.0 + Double(i) * 0.5)
-                                .repeatForever(autoreverses: true)
-                                .delay(Double(i) * 0.3),
-                                value: pulseAnimation
-                            )
-                    }
-                }
+                LinearGradient(
+                    colors: [Color.white, Color(white: 0.97), Color(white: 0.95)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
             } else {
-                ZStack {
-                    // Основной градиент для темной темы
-                    LinearGradient(
-                        colors: [Color.black, Color.black.opacity(0.92)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    
-                    // Радиальный градиент
-                    RadialGradient(
-                        colors: [Color.white.opacity(0.08), .clear],
-                        center: .topLeading,
-                        startRadius: 24,
-                        endRadius: 520
-                    )
-                    .blendMode(.screen)
-                    
-                    // Анимированный shimmer эффект для темной темы
-                    LinearGradient(
-                        colors: [.clear, Color.white.opacity(0.1), .clear],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                    .offset(x: shimmerOffset * 400)
-                    .blendMode(.overlay)
-                    
-                    // Плавающие световые пятна для темной темы
-                    ForEach(0..<3, id: \.self) { i in
-                        Circle()
-                            .fill(Color.primary.opacity(0.08))
-                            .frame(width: 240, height: 240)
-                            .position(
-                                x: CGFloat(120 + i * 180),
-                                y: CGFloat(180 + i * 120)
-                            )
-                            .scaleEffect(pulseAnimation ? 1.3 : 0.7)
-                            .opacity(pulseAnimation ? 0.8 : 0.4)
-                            .animation(
-                                .easeInOut(duration: 4.0 + Double(i) * 0.7)
-                                .repeatForever(autoreverses: true)
-                                .delay(Double(i) * 0.4),
-                                value: pulseAnimation
-                            )
-                    }
-                }
+                LinearGradient(
+                    colors: [Color.black, Color.black.opacity(0.92)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
             }
         }
         .ignoresSafeArea()
     }
     
-    // MARK: - Animation Functions
-    
-    private func startShimmerAnimation() {
-        withAnimation(.linear(duration: 3.0).repeatForever(autoreverses: false)) {
-            shimmerOffset = 1
-        }
-    }
-    
-    private func createFloatingElements() {
-        floatingElements = (0..<5).map { _ in
-            FloatingElement(
-                x: Double.random(in: 50...350),
-                y: Double.random(in: 100...600),
-                opacity: Double.random(in: 0.3...0.7),
-                scale: Double.random(in: 0.8...1.2),
-                rotation: Double.random(in: 0...360)
-            )
-        }
-    }
 }
 
 // MARK: - Section Components
@@ -261,11 +163,14 @@ struct MyInfoView: View {
 private struct LogoSection: View {
     @EnvironmentObject private var app: AppState
     @Environment(\.colorScheme) private var scheme
-        @State private var photoItem: PhotosPickerItem?
-        @State private var showPhotosPicker = false
-        @State private var showFilePicker = false
-        @State private var isLoading = false
-        @State private var showLogoEditAlert = false
+    @ObservedObject private var permissionManager = PermissionManager.shared
+    @State private var photoItem: PhotosPickerItem?
+    @State private var showPhotosPicker = false
+    @State private var showFilePicker = false
+    @State private var isLoading = false
+    @State private var showLogoEditAlert = false
+    @State private var showPermissionAlert = false
+    @State private var permissionType: PermissionType = .photoLibrary
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -293,31 +198,60 @@ private struct LogoSection: View {
         .onChange(of: photoItem) { new in
             handlePhotoSelection(new)
         }
+        .zIndex(showLogoEditAlert || showPermissionAlert ? 1000 : 0)
         .overlay(
             // Custom Logo Edit Alert
             Group {
                 if showLogoEditAlert {
-                    CustomLogoEditAlert(
-                        isPresented: $showLogoEditAlert,
-                        onRemove: { 
-                            app.logoData = nil
-                            showLogoEditAlert = false
-                        },
+                        CustomLogoEditAlert(
+                            isPresented: $showLogoEditAlert,
+                            onRemove: { 
+                                app.logoData = nil
+                                showLogoEditAlert = false
+                            },
                         onChange: {
                             showLogoEditAlert = false
-                            // Trigger PhotosPicker
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                showPhotosPicker = true
-                            }
+                            requestPhotoPermission()
                         },
-                        onFileSelect: {
-                            showLogoEditAlert = false
-                            // Trigger FilePicker
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                showFilePicker = true
+                            onFileSelect: {
+                                showLogoEditAlert = false
+                                // File picker doesn't need permission
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    showFilePicker = true
+                                }
                             }
-                        }
-                    )
+                        )
+                    .zIndex(1001)
+                }
+            }
+        )
+        .overlay(
+            // Permission Alert
+            Group {
+                if showPermissionAlert {
+                    ZStack {
+                        Color.black.opacity(0.4)
+                            .ignoresSafeArea(.all)
+                            .onTapGesture {
+                                showPermissionAlert = false
+                            }
+                        
+                        PermissionAlert(
+                            permissionType: permissionType,
+                            isPresented: $showPermissionAlert,
+                            onSettings: {
+                                permissionManager.openAppSettings()
+                                // Обновляем разрешения через 1 секунду после открытия настроек
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                                    permissionManager.refreshPermissions()
+                                }
+                            },
+                            onCancel: {
+                                showPermissionAlert = false
+                            }
+                        )
+                    }
+                    .zIndex(1002)
                 }
             }
         )
@@ -415,6 +349,7 @@ private struct LogoSection: View {
         Task {
             do {
                 if let data = try await new.loadTransferable(type: Data.self) {
+                    // Устанавливаем новый логотип напрямую (AppState сам очистит старый)
                     await MainActor.run {
                         app.logoData = data
                         isLoading = false
@@ -441,7 +376,17 @@ private struct LogoSection: View {
             
             Task {
                 do {
+                    // Start accessing the security-scoped resource
+                    let accessing = url.startAccessingSecurityScopedResource()
+                    defer {
+                        if accessing {
+                            url.stopAccessingSecurityScopedResource()
+                        }
+                    }
+                    
                     let data = try Data(contentsOf: url)
+                    
+                    // Устанавливаем новый логотип напрямую (AppState сам очистит старый)
                     await MainActor.run {
                         app.logoData = data
                         isLoading = false
@@ -455,6 +400,23 @@ private struct LogoSection: View {
             }
         case .failure(let error):
             print("File picker error: \(error)")
+        }
+    }
+    
+    private func requestPhotoPermission() {
+        Task {
+            let status = await permissionManager.requestPhotoLibraryPermission()
+            await MainActor.run {
+                if status == .granted {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showPhotosPicker = true
+                    }
+                } else {
+                    // Если разрешение не дано, показываем алерт с переходом в настройки
+                    permissionType = .photoLibrary
+                    showPermissionAlert = true
+                }
+            }
         }
     }
 }

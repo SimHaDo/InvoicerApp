@@ -35,11 +35,19 @@ final class AppState: ObservableObject {
         CompleteInvoiceTemplate(template: TemplateCatalog.all.first!, theme: TemplateCatalog.themes.first!)
 
     @Published var logoData: Data? = Storage.loadLogo() {
-        didSet { Storage.saveLogo(logoData) }
+        didSet { 
+            print("AppState: Logo data changed, saving...")
+            Storage.saveLogo(logoData)
+        }
     }
     var logoImage: UIImage? {
-        get { logoData.flatMap(UIImage.init(data:)) }
-        set { logoData = newValue?.pngData() }
+        get { 
+            guard let data = logoData else { return nil }
+            return UIImage(data: data)
+        }
+        set { 
+            logoData = newValue?.pngData()
+        }
     }
 
     @Published var isPremium: Bool = false
