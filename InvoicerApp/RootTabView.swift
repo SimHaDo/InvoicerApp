@@ -12,6 +12,7 @@ struct RootTabView: View {
     @State private var selectedTab: Tab = .invoices
     @State private var navigationPath = NavigationPath()
     @State private var shouldDismissMyInfo = false
+    @State private var showMyInfo = false
 
     enum Tab: String, CaseIterable {
         case invoices = "Invoices"
@@ -42,6 +43,7 @@ struct RootTabView: View {
                         if UIDevice.current.userInterfaceIdiom == .pad {
                             navigationPath = NavigationPath()
                             shouldDismissMyInfo = true
+                            showMyInfo = false
                             print("RootTabView: Tab switched to \(tab.rawValue), cleared navigation")
                         }
                     }) {
@@ -90,30 +92,45 @@ struct RootTabView: View {
     
     @ViewBuilder
     private var selectedView: some View {
-        switch selectedTab {
-        case .invoices:
-            InvoicesScreen()
-        case .customers:
-            CustomersScreen()
-        case .products:
-            ProductsScreen()
-        case .analytics:
-            AnalyticsScreen()
-        case .settings:
-            SettingsTab()
+        if showMyInfo && selectedTab == .settings {
+            MyInfoView()
+                .environmentObject(app)
+        } else {
+            switch selectedTab {
+            case .invoices:
+                InvoicesScreen()
+            case .customers:
+                CustomersScreen()
+            case .products:
+                ProductsScreen()
+            case .analytics:
+                AnalyticsScreen()
+            case .settings:
+                SettingsTab()
+                    .environment(\.showMyInfo, $showMyInfo)
+            }
         }
     }
 }
 
-// MARK: - Environment Key for Dismissing MyInfo
+// MARK: - Environment Keys
 
 private struct ShouldDismissMyInfoKey: EnvironmentKey {
     static let defaultValue: Bool = false
+}
+
+private struct ShowMyInfoKey: EnvironmentKey {
+    static let defaultValue: Binding<Bool> = .constant(false)
 }
 
 extension EnvironmentValues {
     var shouldDismissMyInfo: Bool {
         get { self[ShouldDismissMyInfoKey.self] }
         set { self[ShouldDismissMyInfoKey.self] = newValue }
+    }
+    
+    var showMyInfo: Binding<Bool> {
+        get { self[ShowMyInfoKey.self] }
+        set { self[ShowMyInfoKey.self] = newValue }
     }
 }

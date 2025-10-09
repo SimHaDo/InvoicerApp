@@ -127,12 +127,30 @@ struct SettingsTab: View {
 private struct MyInfoCard: View {
     @EnvironmentObject private var app: AppState
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.shouldDismissMyInfo) private var shouldDismissMyInfo
+    @Environment(\.showMyInfo) private var showMyInfo
     
     var body: some View {
-                    NavigationLink {
-            MyInfoView()
-                            .environmentObject(app)
-                    } label: {
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            // На iPad используем программную навигацию
+            Button(action: {
+                showMyInfo.wrappedValue = true
+            }) {
+                cardContent
+            }
+            .buttonStyle(PlainButtonStyle())
+        } else {
+            // На iPhone используем обычный NavigationLink
+            NavigationLink {
+                MyInfoView()
+                    .environmentObject(app)
+            } label: {
+                cardContent
+            }
+        }
+    }
+    
+    private var cardContent: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 12) {
                 Image(systemName: "building.2")
@@ -216,7 +234,6 @@ private struct MyInfoCard: View {
                 )
                 .shadow(color: Color.black.opacity(scheme == .light ? 0.05 : 0.2), radius: 8, y: 4)
         )
-        }
     }
 }
 
