@@ -33,59 +33,68 @@ struct RootTabView: View {
     }
 
     var body: some View {
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            // iPad layout with NavigationSplitView
-            NavigationSplitView {
-                List(Tab.allCases, id: \.self) { tab in
-                    Button(action: { 
-                        selectedTab = tab
-                        // Очищаем навигацию при переключении табов на iPad
-                        if UIDevice.current.userInterfaceIdiom == .pad {
-                            navigationPath = NavigationPath()
-                            shouldDismissMyInfo = true
-                            showMyInfo = false
-                            print("RootTabView: Tab switched to \(tab.rawValue), cleared navigation")
-                        }
-                    }) {
-                        Label(tab.rawValue, systemImage: tab.icon)
-                            .foregroundColor(selectedTab == tab ? .accentColor : .primary)
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                }
-                .navigationTitle("Invoice Maker PRO")
-            } detail: {
-                NavigationStack(path: $navigationPath) {
-                    selectedView
-                        .environment(\.shouldDismissMyInfo, shouldDismissMyInfo)
-                        .onChange(of: shouldDismissMyInfo) { newValue in
-                            if newValue {
-                                shouldDismissMyInfo = false
+        Group {
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                // iPad layout with NavigationSplitView
+                NavigationSplitView {
+                    List(Tab.allCases, id: \.self) { tab in
+                        Button(action: { 
+                            selectedTab = tab
+                            // Очищаем навигацию при переключении табов на iPad
+                            if UIDevice.current.userInterfaceIdiom == .pad {
+                                navigationPath = NavigationPath()
+                                shouldDismissMyInfo = true
+                                showMyInfo = false
+                                print("RootTabView: Tab switched to \(tab.rawValue), cleared navigation")
                             }
+                        }) {
+                            Label(tab.rawValue, systemImage: tab.icon)
+                                .foregroundColor(selectedTab == tab ? .accentColor : .primary)
                         }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                    .navigationTitle("Invoice Maker PRO")
+                } detail: {
+                    NavigationStack(path: $navigationPath) {
+                        selectedView
+                            .environment(\.shouldDismissMyInfo, shouldDismissMyInfo)
+                            .onChange(of: shouldDismissMyInfo) { newValue in
+                                if newValue {
+                                    shouldDismissMyInfo = false
+                                }
+                            }
+                    }
+                }
+            } else {
+                // iPhone layout with TabView
+                TabView(selection: $selectedTab) {
+                    InvoicesScreen()
+                        .tabItem { Image(systemName: Tab.invoices.icon); Text(Tab.invoices.rawValue) }
+                        .tag(Tab.invoices)
+
+                    CustomersScreen()
+                        .tabItem { Image(systemName: Tab.customers.icon); Text(Tab.customers.rawValue) }
+                        .tag(Tab.customers)
+
+                    ProductsScreen()
+                        .tabItem { Image(systemName: Tab.products.icon); Text(Tab.products.rawValue) }
+                        .tag(Tab.products)
+
+                    AnalyticsScreen()
+                        .tabItem { Image(systemName: Tab.analytics.icon); Text(Tab.analytics.rawValue) }
+                        .tag(Tab.analytics)
+
+                    SettingsTab()
+                        .tabItem { Image(systemName: Tab.settings.icon); Text(Tab.settings.rawValue) }
+                        .tag(Tab.settings)
                 }
             }
-        } else {
-            // iPhone layout with TabView
-            TabView(selection: $selectedTab) {
-                InvoicesScreen()
-                    .tabItem { Image(systemName: Tab.invoices.icon); Text(Tab.invoices.rawValue) }
-                    .tag(Tab.invoices)
-
-                CustomersScreen()
-                    .tabItem { Image(systemName: Tab.customers.icon); Text(Tab.customers.rawValue) }
-                    .tag(Tab.customers)
-
-                ProductsScreen()
-                    .tabItem { Image(systemName: Tab.products.icon); Text(Tab.products.rawValue) }
-                    .tag(Tab.products)
-
-                AnalyticsScreen()
-                    .tabItem { Image(systemName: Tab.analytics.icon); Text(Tab.analytics.rawValue) }
-                    .tag(Tab.analytics)
-
-                SettingsTab()
-                    .tabItem { Image(systemName: Tab.settings.icon); Text(Tab.settings.rawValue) }
-                    .tag(Tab.settings)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NavigateToMyInfo"))) { _ in
+            // Switch to settings tab and show MyInfoView
+            selectedTab = .settings
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                showMyInfo = true
             }
         }
     }

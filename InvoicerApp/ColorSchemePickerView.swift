@@ -61,14 +61,29 @@ struct ColorSchemePickerView: View {
         }
         .navigationTitle("Choose Color Scheme")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("Next") {
-                    if let theme = selectedTheme {
-                        onColorSelected(theme)
-                    }
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Back") {
+                    dismiss()
                 }
-                .disabled(selectedTheme == nil)
+            }
+            
+            ToolbarItem(placement: .topBarTrailing) {
+                HStack(spacing: 16) {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Button("Next") {
+                        if let theme = selectedTheme {
+                            onColorSelected(theme)
+                        }
+                    }
+                    .disabled(selectedTheme == nil)
+                }
             }
         }
         .onAppear {

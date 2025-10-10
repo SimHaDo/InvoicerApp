@@ -105,6 +105,10 @@ struct InvoicesScreen: View {
             .sheet(isPresented: $showEmptyPaywall) {
                 EmptyScreen()
             }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NavigateToMyInfo"))) { _ in
+                // Close the invoice creation flow when navigating to MyInfo
+                showInvoiceCreation = false
+            }
         }
     }
 

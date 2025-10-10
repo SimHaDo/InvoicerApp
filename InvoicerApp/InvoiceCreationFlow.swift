@@ -69,13 +69,25 @@ struct InvoiceCreationFlow: View {
                 }
             .navigationTitle("Create Invoice")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
             .onAppear {
                 configureFromAppState()
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") {
-                        dismiss()
+                    Button("Back") {
+                        if navigationPath.count > 0 {
+                            navigationPath.removeLast()
+                        } else {
+                            dismiss()
+                        }
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.secondary)
                     }
                 }
             }
@@ -160,7 +172,25 @@ struct TemplateSelectionView: View {
         }
         .navigationTitle("Choose Template")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(false)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Back") {
+                    if navigationPath.wrappedValue.count > 0 {
+                        navigationPath.wrappedValue.removeLast()
+                    } else {
+                        onClose?()
+                    }
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(action: { onClose?() }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
         .onAppear {
             showContent = true
             pulseAnimation = true
@@ -436,6 +466,25 @@ struct InvoiceStepView: View {
         }
         .navigationTitle("Create Invoice")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Back") {
+                    if navigationPath.wrappedValue.count > 0 {
+                        navigationPath.wrappedValue.removeLast()
+                    } else {
+                        dismiss()
+                    }
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
         .onAppear {
             vm.step = step
         }
@@ -454,10 +503,13 @@ struct InvoiceStepView: View {
     @ViewBuilder private var stepContent: some View {
         switch step {
         case 1:
-            StepCompanyInfoView(vm: vm) { 
+            StepCompanyInfoView(vm: vm, next: { 
                 print("🚀 Moving to client info...")
                 navigationPath.wrappedValue.append(InvoiceCreationStep.clientInfo)
-            }
+            }, prev: {
+                print("🚀 Moving back to template selection...")
+                navigationPath.wrappedValue.removeLast()
+            })
         case 2:
             StepClientInfoView(vm: vm, next: { 
                 print("🚀 Moving to payment details...")

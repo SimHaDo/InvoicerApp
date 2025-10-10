@@ -105,7 +105,7 @@ struct InvoiceWizardView: View {
     @ViewBuilder private var content: some View {
         switch vm.step {
         case 1:
-            StepCompanyInfoView(vm: vm) { vm.step = 2 }
+            StepCompanyInfoView(vm: vm, next: { vm.step = 2 }, prev: nil)
         case 2:
             StepClientInfoView(vm: vm, next: { vm.step = 3 }, prev: { vm.step = 1 })
         case 3:
@@ -469,6 +469,7 @@ struct StepCompanyInfoView: View {
     @EnvironmentObject private var app: AppState
     @ObservedObject var vm: InvoiceWizardVM
     var next: () -> Void
+    var prev: (() -> Void)?
     @State private var company = Company()
 
     var body: some View {
@@ -531,19 +532,61 @@ struct StepCompanyInfoView: View {
                             Text("Logo Settings")
                                 .font(.title3)
                                 .fontWeight(.bold)
+                            
+                            Spacer()
+                            
+                            // Edit button to go to MyInfoView
+                            if app.logoData != nil {
+                                Button(action: {
+                                    // Dismiss the entire invoice creation flow and navigate to MyInfoView
+                                    NotificationCenter.default.post(name: NSNotification.Name("NavigateToMyInfo"), object: nil)
+                                }) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "pencil.circle.fill")
+                                        Text("Edit")
+                                    }
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.blue)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color.blue.opacity(0.1))
+                                    )
+                                }
+                            }
                         }
-                        Text("Choose whether to include your company logo")
+                        Text(app.logoData != nil ? "Your company logo is ready" : "No logo uploaded yet")
                             .font(.caption)
                             .foregroundColor(.secondary)
+                    }
+                    
+                    // Logo Preview
+                    if let logoData = app.logoData, let uiImage = UIImage(data: logoData) {
+                        HStack {
+                            Spacer()
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(maxWidth: 120, maxHeight: 120)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.blue.opacity(0.3), lineWidth: 2)
+                                )
+                                .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
+                            Spacer()
+                        }
+                        .padding(.vertical, 8)
                     }
                     
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Include Logo")
                                 .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.primary)
+                                .foregroundColor(app.logoData != nil ? .primary : .secondary)
                             
-                            Text("Show your company logo on the invoice")
+                            Text(app.logoData != nil ? "Show your company logo on the invoice" : "Upload a logo in Settings to enable this option")
                                 .font(.system(size: 14, weight: .regular))
                                 .foregroundColor(.secondary)
                         }
@@ -552,6 +595,7 @@ struct StepCompanyInfoView: View {
                         
                         Toggle("", isOn: $vm.includeLogo)
                             .toggleStyle(SwitchToggleStyle(tint: .blue))
+                            .disabled(app.logoData == nil)
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
@@ -560,14 +604,14 @@ struct StepCompanyInfoView: View {
                             .fill(Color.secondary.opacity(0.05))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
+                                    .stroke(app.logoData != nil ? Color.blue.opacity(0.2) : Color.secondary.opacity(0.1), lineWidth: 1)
                             )
                     )
                 }
                 .modifier(CompanySetupCard())
 
                 HStack(spacing: 16) {
-                    Button(action: {}) {
+                    Button(action: { prev?() }) {
                 HStack {
                             Image(systemName: "chevron.left")
                             Text("Previous")
@@ -580,7 +624,7 @@ struct StepCompanyInfoView: View {
                         )
                         .foregroundColor(.secondary)
                     }
-                        .disabled(true)
+                        .disabled(prev == nil)
                     
                     Button(action: {
                         app.company = company
@@ -614,6 +658,16 @@ struct StepCompanyInfoView: View {
         }
         .onAppear {
             company = app.company ?? Company()
+            // Automatically disable includeLogo if no logo is loaded
+            if app.logoData == nil {
+                vm.includeLogo = false
+            }
+        }
+        .onChange(of: app.logoData) { newLogoData in
+            // Automatically disable includeLogo if logo is removed
+            if newLogoData == nil {
+                vm.includeLogo = false
+            }
         }
     }
 }

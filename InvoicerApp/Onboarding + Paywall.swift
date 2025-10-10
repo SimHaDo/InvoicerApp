@@ -94,6 +94,9 @@ struct OnboardingView: View {
                 VStack(spacing: 28) {
                     FancyDots(count: 4, index: page)
                         .padding(.top, 8)
+                        .opacity(appear ? 1 : 0)
+                        .offset(y: appear ? 0 : 20)
+                        .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2), value: appear)
 
                     FooterLinks(
                         onRestore: { Task { try? await SubscriptionManager.shared.restore() } },
@@ -102,9 +105,6 @@ struct OnboardingView: View {
                     )
                 }
                 .padding(.bottom, 32)
-                .opacity(appear ? 1 : 0)
-                .offset(y: appear ? 0 : 20)
-                .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2), value: appear)
             }
 
             // Плавающая кнопка Next / Continue с улучшенными эффектами
