@@ -430,7 +430,7 @@ struct StepHeader: View {
     private var stepTitle: String {
         switch step {
         case 1: return "Company Information"
-        case 2: return "Client Details"
+        case 2: return "Customer Details"
         case 3: return "Payment Methods"
         case 4: return "Invoice Items"
         default: return "Unknown Step"
@@ -440,7 +440,7 @@ struct StepHeader: View {
     private var stepDescription: String {
         switch step {
         case 1: return "Set up your business details"
-        case 2: return "Add client information"
+        case 2: return "Add customer information"
         case 3: return "Configure payment options"
         case 4: return "Add products and services"
         default: return "Complete this step"
@@ -715,6 +715,21 @@ struct StepCompanyInfoView: View {
                 vm.includeLogo = false
             }
         }
+        .onTapGesture {
+            // Закрываем клавиатуру при тапе на ScrollView
+            hideKeyboard()
+        }
+        .simultaneousGesture(
+            DragGesture()
+                .onChanged { _ in
+                    // Закрываем клавиатуру при скролле
+                    hideKeyboard()
+                }
+        )
+    }
+    
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 
@@ -725,6 +740,8 @@ struct StepClientInfoView: View {
     @ObservedObject var vm: InvoiceWizardVM
     var next: () -> Void
     var prev: () -> Void
+    
+    @State private var showAddCustomer = false
 
     var body: some View {
         ScrollView {
@@ -736,7 +753,7 @@ struct StepClientInfoView: View {
                             Image(systemName: "person.2.fill")
                                 .foregroundColor(.blue)
                                 .font(.title2)
-                            Text("Select Customer")
+                            Text("Customer Details")
                                 .font(.title2)
                                 .fontWeight(.bold)
                         }
@@ -751,6 +768,35 @@ struct StepClientInfoView: View {
                                 customer: customer,
                                 isSelected: vm.customer?.id == customer.id,
                                 onTap: { vm.customer = customer }
+                            )
+                        }
+                        
+                        // Add New Customer Button
+                        Button(action: { showAddCustomer = true }) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "person.crop.circle.badge.plus")
+                                    .font(.system(size: 20, weight: .medium))
+                                    .foregroundColor(.blue)
+                                
+                                Text("Add New Customer")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.blue)
+                                
+                                Spacer()
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.blue)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.blue.opacity(0.1))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                                    )
                             )
                         }
                         
@@ -880,6 +926,12 @@ struct StepClientInfoView: View {
                         .background(
                             RoundedRectangle(cornerRadius: 16)
                                 .fill(
+                                    vm.customer == nil ?
+                                    LinearGradient(
+                                        colors: [Color.gray.opacity(0.3), Color.gray.opacity(0.3)],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    ) :
                                     LinearGradient(
                                         colors: [.blue, .purple],
                                         startPoint: .leading,
@@ -887,19 +939,38 @@ struct StepClientInfoView: View {
                                     )
                                 )
                         )
-                        .foregroundColor(.white)
+                        .foregroundColor(vm.customer == nil ? .gray : .white)
                         .fontWeight(.semibold)
                     }
-                        .disabled(vm.customer == nil)
+                    .disabled(vm.customer == nil)
                 }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 32)
         }
+        .onTapGesture {
+            // Закрываем клавиатуру при тапе на ScrollView
+            hideKeyboard()
+        }
+        .simultaneousGesture(
+            DragGesture()
+                .onChanged { _ in
+                    // Закрываем клавиатуру при скролле
+                    hideKeyboard()
+                }
+        )
+        .sheet(isPresented: $showAddCustomer) {
+            AddCustomerView()
+                .environmentObject(app)
+        }
     }
 
     private func initials(for name: String) -> String {
         name.split(separator: " ").compactMap { $0.first }.prefix(2).map(String.init).joined()
+    }
+    
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 
@@ -1131,6 +1202,21 @@ struct StepPaymentDetailsView: View {
                 }
             }
         }
+        .onTapGesture {
+            // Закрываем клавиатуру при тапе на ScrollView
+            hideKeyboard()
+        }
+        .simultaneousGesture(
+            DragGesture()
+                .onChanged { _ in
+                    // Закрываем клавиатуру при скролле
+                    hideKeyboard()
+                }
+        )
+    }
+    
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 
     private var canProceed: Bool {
@@ -1268,6 +1354,21 @@ struct StepItemsPricingView: View {
             }
             .padding()
         }
+        .onTapGesture {
+            // Закрываем клавиатуру при тапе на ScrollView
+            hideKeyboard()
+        }
+        .simultaneousGesture(
+            DragGesture()
+                .onChanged { _ in
+                    // Закрываем клавиатуру при скролле
+                    hideKeyboard()
+                }
+        )
+    }
+    
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 
     private var filteredProducts: [Product] {
