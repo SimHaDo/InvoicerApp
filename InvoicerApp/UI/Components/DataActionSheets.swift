@@ -365,7 +365,7 @@ struct ResetConfirmationSheet: View {
                         if isConfirmed {
                             Button {
                                 Task {
-                                    await dataManager.resetAllData(appState: app)
+                                    _ = await dataManager.resetAllData(appState: app)
                                     dismiss()
                                 }
                             } label: {

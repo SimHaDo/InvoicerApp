@@ -13,6 +13,13 @@ struct ColorSchemePickerView: View {
     
     let selectedTemplate: InvoiceTemplateDescriptor
     let onColorSelected: (TemplateTheme) -> Void
+    let onClose: (() -> Void)?
+    
+    init(selectedTemplate: InvoiceTemplateDescriptor, onColorSelected: @escaping (TemplateTheme) -> Void, onClose: (() -> Void)? = nil) {
+        self.selectedTemplate = selectedTemplate
+        self.onColorSelected = onColorSelected
+        self.onClose = onClose
+    }
     
     @State private var showContent = false
     @State private var pulseAnimation = false
@@ -71,7 +78,10 @@ struct ColorSchemePickerView: View {
             
             ToolbarItem(placement: .topBarTrailing) {
                 HStack(spacing: 16) {
-                    Button(action: { dismiss() }) {
+                    Button(action: { 
+                        // Полностью очищаем стэк и закрываем флоу
+                        onClose?()
+                    }) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.title2)
                             .foregroundColor(.secondary)

@@ -74,11 +74,30 @@ struct TemplatePickerView: View {
     private var iPadLayout: some View {
         NavigationStack(path: $navigationPath) {
             contentView
-                .navigationTitle("Invoice Templates")
+                .navigationTitle("Choose Template")
                 .navigationBarTitleDisplayMode(.large)
+                .navigationBarBackButtonHidden(true)
                 .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) { 
-                        Button("Next") { dismiss() } 
+                    ToolbarItem(placement: .topBarLeading) {
+                        // Показываем кнопку Back только если есть элементы в навигационном стэке
+                        if navigationPath.count > 0 {
+                            Button("Back") {
+                                navigationPath.removeLast()
+                            }
+                            .foregroundColor(.blue)
+                        }
+                    }
+                    
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(action: { 
+                            // Полностью очищаем стэк и закрываем флоу
+                            navigationPath = NavigationPath()
+                            dismiss()
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
                 .navigationDestination(for: InvoiceTemplateDescriptor.self) { template in
@@ -88,6 +107,11 @@ struct TemplatePickerView: View {
                             let completeTemplate = CompleteInvoiceTemplate(template: template, theme: selectedTheme)
                             app.selectedTemplate = completeTemplate
                             onSelect(completeTemplate)
+                        },
+                        onClose: {
+                            // Полностью очищаем стэк и закрываем флоу
+                            navigationPath = NavigationPath()
+                            dismiss()
                         }
                     )
                 }
@@ -97,11 +121,30 @@ struct TemplatePickerView: View {
     private var iPhoneLayout: some View {
         NavigationStack(path: $navigationPath) {
             contentView
-                .navigationTitle("Invoice Templates")
+                .navigationTitle("Choose Template")
                 .navigationBarTitleDisplayMode(.inline)
+                .navigationBarBackButtonHidden(true)
                 .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) { 
-                        Button("Next") { dismiss() } 
+                    ToolbarItem(placement: .topBarLeading) {
+                        // Показываем кнопку Back только если есть элементы в навигационном стэке
+                        if navigationPath.count > 0 {
+                            Button("Back") {
+                                navigationPath.removeLast()
+                            }
+                            .foregroundColor(.blue)
+                        }
+                    }
+                    
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(action: { 
+                            // Полностью очищаем стэк и закрываем флоу
+                            navigationPath = NavigationPath()
+                            dismiss()
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
                 .navigationDestination(for: InvoiceTemplateDescriptor.self) { template in
@@ -111,6 +154,11 @@ struct TemplatePickerView: View {
                             let completeTemplate = CompleteInvoiceTemplate(template: template, theme: selectedTheme)
                             app.selectedTemplate = completeTemplate
                             onSelect(completeTemplate)
+                        },
+                        onClose: {
+                            // Полностью очищаем стэк и закрываем флоу
+                            navigationPath = NavigationPath()
+                            dismiss()
                         }
                     )
                 }
@@ -378,7 +426,7 @@ struct TemplatePickerView: View {
                         // All Categories Filter
                         ModernFilterChip(
                             title: "All",
-                            icon: "square.grid.2x2",
+                            icon: "star.fill",
                             isSelected: selectedCategories.isEmpty && selectedDesigns.isEmpty,
                             action: { 
                                 selectedCategories.removeAll()
@@ -606,79 +654,123 @@ struct ModernFilterChip: View {
     @State private var isPressed = false
     @Environment(\.colorScheme) private var scheme
     
+    // Get category-specific colors
+    private var categoryColors: (primary: Color, secondary: Color, accent: Color) {
+        switch title {
+        case "Business":
+            return (Color.blue, Color.blue.opacity(0.8), Color.blue.opacity(0.3))
+        case "Creative":
+            return (Color.purple, Color.purple.opacity(0.8), Color.purple.opacity(0.3))
+        case "Technology":
+            return (Color.green, Color.green.opacity(0.8), Color.green.opacity(0.3))
+        case "All":
+            return (Color.orange, Color.orange.opacity(0.8), Color.orange.opacity(0.3))
+        default:
+            return (Color.gray, Color.gray.opacity(0.8), Color.gray.opacity(0.3))
+        }
+    }
+    
     var body: some View {
         Button(action: {
             withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                 action()
             }
         }) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(
-                        isSelected ? 
-                        (scheme == .dark ? UI.darkText : .white) : 
-                        (scheme == .dark ? UI.darkSecondaryText : .secondary)
-                    )
+            HStack(spacing: 8) {
+                // Icon with background circle
+                ZStack {
+                    Circle()
+                        .fill(
+                            isSelected ? 
+                            (scheme == .dark ? categoryColors.primary : .white) :
+                            (scheme == .dark ? categoryColors.accent : categoryColors.primary.opacity(0.1))
+                        )
+                        .frame(width: 24, height: 24)
+                    
+                    Image(systemName: icon)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(
+                            isSelected ? 
+                            (scheme == .dark ? .white : categoryColors.primary) :
+                            (scheme == .dark ? categoryColors.primary : categoryColors.primary)
+                        )
+                }
                 
                 Text(title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(
                         isSelected ? 
-                        (scheme == .dark ? UI.darkText : .white) : 
-                        (scheme == .dark ? UI.darkText : .primary)
+                        (scheme == .dark ? .white : .white) : 
+                        (scheme == .dark ? .primary : .primary)
                     )
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 12)
             .background(
                 ZStack {
-                    // Background
-                    RoundedRectangle(cornerRadius: 20)
+                    // Main background with gradient
+                    RoundedRectangle(cornerRadius: 25)
                         .fill(
                             isSelected ? 
                             (scheme == .dark ? 
-                                AnyShapeStyle(LinearGradient(colors: [UI.darkAccent, UI.darkAccentSecondary], startPoint: .topLeading, endPoint: .bottomTrailing)) :
-                                AnyShapeStyle(Color.black)
+                                AnyShapeStyle(LinearGradient(
+                                    colors: [categoryColors.primary, categoryColors.secondary], 
+                                    startPoint: .topLeading, 
+                                    endPoint: .bottomTrailing
+                                )) :
+                                AnyShapeStyle(LinearGradient(
+                                    colors: [categoryColors.primary, categoryColors.secondary], 
+                                    startPoint: .topLeading, 
+                                    endPoint: .bottomTrailing
+                                ))
                             ) : 
-                            (scheme == .dark ? AnyShapeStyle(UI.darkSecondaryBackground) : AnyShapeStyle(Color.clear))
+                            (scheme == .dark ? 
+                                AnyShapeStyle(LinearGradient(
+                                    colors: [Color.secondary.opacity(0.1), Color.secondary.opacity(0.05)], 
+                                    startPoint: .topLeading, 
+                                    endPoint: .bottomTrailing
+                                )) : 
+                                AnyShapeStyle(LinearGradient(
+                                    colors: [Color.gray.opacity(0.1), Color.gray.opacity(0.05)], 
+                                    startPoint: .topLeading, 
+                                    endPoint: .bottomTrailing
+                                ))
+                            )
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 20)
+                            RoundedRectangle(cornerRadius: 25)
                                 .stroke(
                                     isSelected ? Color.clear : 
-                                    (scheme == .dark ? UI.darkStroke : Color.secondary.opacity(0.2)), 
+                                    (scheme == .dark ? categoryColors.primary.opacity(0.3) : categoryColors.primary.opacity(0.2)), 
                                     lineWidth: 1.5
                                 )
                         )
                     
-                    // Shimmer effect for selected state
+                    // Subtle inner glow for selected state
                     if isSelected {
-                        RoundedRectangle(cornerRadius: 20)
+                        RoundedRectangle(cornerRadius: 25)
                             .fill(
                                 LinearGradient(
                                     colors: [
-                                        scheme == .dark ? UI.darkText.opacity(0.2) : Color.white.opacity(0.1), 
+                                        Color.white.opacity(0.1), 
                                         Color.clear, 
-                                        scheme == .dark ? UI.darkText.opacity(0.2) : Color.white.opacity(0.1)
+                                        Color.white.opacity(0.05)
                                     ],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
                                 )
                             )
-                            .offset(x: isPressed ? 50 : -50)
-                            .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: false), value: isPressed)
                     }
                 }
             )
-            .scaleEffect(isSelected ? 1.05 : (isPressed ? 0.95 : 1.0))
+            .scaleEffect(isSelected ? 1.08 : (isPressed ? 0.95 : 1.0))
             .shadow(
                 color: isSelected ? 
-                (scheme == .dark ? UI.darkAccent.opacity(0.4) : .black.opacity(0.3)) : 
+                (scheme == .dark ? categoryColors.primary.opacity(0.4) : categoryColors.primary.opacity(0.3)) : 
                 .clear,
-                radius: isSelected ? 8 : 0,
+                radius: isSelected ? 12 : 0,
                 x: 0,
-                y: isSelected ? 4 : 0
+                y: isSelected ? 6 : 0
             )
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
             .animation(.spring(response: 0.2, dampingFraction: 0.8), value: isPressed)
@@ -694,9 +786,9 @@ struct ModernFilterChip: View {
 
 private func categoryIcon(for category: TemplateCategory) -> String {
     switch category {
-    case .business: return "briefcase.fill"
-    case .creative: return "paintbrush.fill"
-    case .tech: return "laptopcomputer"
+    case .business: return "building.2.crop.circle.fill"
+    case .creative: return "paintpalette.fill"
+    case .tech: return "cpu.fill"
     }
 }
 

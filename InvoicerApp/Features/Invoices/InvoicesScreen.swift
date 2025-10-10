@@ -98,7 +98,9 @@ struct InvoicesScreen: View {
             createFloatingElements()
         }
             .fullScreenCover(isPresented: $showInvoiceCreation) {
-                InvoiceCreationFlow()
+                InvoiceCreationFlow(onClose: {
+                    showInvoiceCreation = false
+                })
                     .environmentObject(app)
             }
             // Paywall-заглушка

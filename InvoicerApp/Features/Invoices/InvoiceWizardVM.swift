@@ -871,84 +871,196 @@ struct StepPaymentDetailsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-
-                // Choice
-                GroupBox {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Payment Details on Invoice").font(.headline)
-
-                        Picker("Show on invoice", selection: $vm.paymentChoice) {
-                            ForEach(InvoiceWizardVM.PaymentChoice.allCases) { ch in
-                                Text(ch.title).tag(ch)
+                // Header
+                VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Image(systemName: "creditcard.fill")
+                                .foregroundColor(.blue)
+                                .font(.title3)
+                            Text("Payment Details")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                        }
+                        Text("Choose how to display payment information on the invoice")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    // Custom Payment Choice Picker
+                    VStack(spacing: 12) {
+                        Text("Payment Information")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.primary)
+                        
+                        VStack(spacing: 8) {
+                            ForEach(InvoiceWizardVM.PaymentChoice.allCases) { choice in
+                                PaymentChoiceCard(
+                                    choice: choice,
+                                    isSelected: vm.paymentChoice == choice,
+                                    onTap: { vm.paymentChoice = choice }
+                                )
                             }
                         }
-                        .pickerStyle(.segmented)
+                    }
+                }
+                .modifier(CompanySetupCard())
 
-                        // Saved
+                // Payment Methods Section
+                if vm.paymentChoice == .saved || vm.paymentChoice == .custom {
+                    VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Image(systemName: "list.bullet")
+                                    .foregroundColor(.green)
+                                    .font(.title3)
+                                Text("Payment Methods")
+                                    .font(.title3)
+                                    .fontWeight(.bold)
+                            }
+                            Text("Select payment methods to include on the invoice")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        // Saved Methods
                         if vm.paymentChoice == .saved {
                             if app.paymentMethods.isEmpty {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("You have no saved payment methods").foregroundStyle(.secondary)
-                                    Button {
-                                        showAddSheet = true
-                                    } label: {
-                                        Label("Add Method", systemImage: "plus")
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text("You have no saved payment methods")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(.secondary)
+                                    
+                                    Button(action: { showAddSheet = true }) {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "plus.circle.fill")
+                                            Text("Add Payment Method")
+                                        }
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(.blue)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 10)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .fill(Color.blue.opacity(0.1))
+                                        )
                                     }
                                 }
                             } else {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    ForEach(app.paymentMethods) { m in
-                                        SavedMethodRow(
-                                            method: m,
-                                            isSelected: vm.selectedSaved.contains(m.id),
+                                VStack(spacing: 12) {
+                                    ForEach(app.paymentMethods) { method in
+                                        SavedMethodCard(
+                                            method: method,
+                                            isSelected: vm.selectedSaved.contains(method.id),
                                             onToggle: {
-                                                if vm.selectedSaved.contains(m.id) {
-                                                    vm.selectedSaved.remove(m.id)
+                                                if vm.selectedSaved.contains(method.id) {
+                                                    vm.selectedSaved.remove(method.id)
                                                 } else {
-                                                    vm.selectedSaved.insert(m.id)
+                                                    vm.selectedSaved.insert(method.id)
                                                 }
                                             },
-                                            onEdit: { editing = m }
+                                            onEdit: { editing = method }
                                         )
                                     }
-                                    Button {
-                                        showAddSheet = true
-                                    } label: {
-                                        Label("Add Another", systemImage: "plus")
+                                    
+                                    Button(action: { showAddSheet = true }) {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "plus.circle.fill")
+                                            Text("Add Another Method")
+                                        }
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(.blue)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 10)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .fill(Color.blue.opacity(0.1))
+                                        )
                                     }
                                 }
                             }
                         }
 
-                        // Custom per-invoice
+                        // Custom Methods
                         if vm.paymentChoice == .custom {
-                            // Используем твой общий редактор методов, который уже есть в проекте
                             PaymentMethodsEditor(methods: $vm.customMethods)
                         }
-
-                        // Notes
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Additional notes (optional)")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                            TextField("Shown below the payment block in PDF",
-                                      text: $vm.paymentNotes,
-                                      axis: .vertical)
-                            .textInputAutocapitalization(.never)
-                            .lineLimit(2...5)
-                            .padding(10)
-                            .background(RoundedRectangle(cornerRadius: 10).fill(Color.secondary.opacity(0.08)))
-                        }
                     }
-                    .padding(4)
+                    .modifier(CompanySetupCard())
                 }
 
-                HStack {
-                    Button("Previous", action: prev).buttonStyle(.bordered)
-                    Spacer()
-                    Button("Next", action: next)
-                        .buttonStyle(.borderedProminent)
-                        .disabled(!canProceed)
+                // Notes Section
+                VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Image(systemName: "note.text")
+                                .foregroundColor(.orange)
+                                .font(.title3)
+                            Text("Additional Notes")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                        }
+                        Text("Optional notes to include with payment information")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Payment Notes")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.primary)
+                        
+                        TextField("Shown below the payment block in PDF",
+                                  text: $vm.paymentNotes,
+                                  axis: .vertical)
+                        .textInputAutocapitalization(.never)
+                        .lineLimit(2...5)
+                        .padding(12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.secondary.opacity(0.08))
+                        )
+                    }
+                }
+                .modifier(CompanySetupCard())
+
+                // Navigation Buttons
+                HStack(spacing: 16) {
+                    Button(action: prev) {
+                        HStack {
+                            Image(systemName: "chevron.left")
+                            Text("Previous")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.secondary.opacity(0.1))
+                        )
+                        .foregroundColor(.secondary)
+                    }
+                    
+                    Button(action: next) {
+                        HStack {
+                            Text("Next")
+                            Image(systemName: "chevron.right")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [.blue, .purple],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                        )
+                        .foregroundColor(.white)
+                        .fontWeight(.semibold)
+                    }
+                    .disabled(!canProceed)
                 }
             }
             .padding()
@@ -1372,4 +1484,151 @@ struct ShareSheet: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+// MARK: - Custom Payment Components
+
+struct PaymentChoiceCard: View {
+    let choice: InvoiceWizardVM.PaymentChoice
+    let isSelected: Bool
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 12) {
+                // Icon
+                Image(systemName: choice.iconName)
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(isSelected ? .white : .blue)
+                    .frame(width: 40, height: 40)
+                    .background(
+                        Circle()
+                            .fill(isSelected ? Color.blue : Color.blue.opacity(0.1))
+                    )
+                
+                // Content
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(choice.title)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(isSelected ? .white : .primary)
+                    
+                    Text(choice.description)
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
+                }
+                
+                Spacer()
+                
+                // Selection indicator
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.white)
+                } else {
+                    Image(systemName: "circle")
+                        .font(.title2)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(isSelected ? 
+                          LinearGradient(colors: [.blue, .purple], startPoint: .leading, endPoint: .trailing) :
+                          LinearGradient(colors: [Color.secondary.opacity(0.05)], startPoint: .leading, endPoint: .trailing)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(
+                                isSelected ? Color.clear : Color.secondary.opacity(0.2),
+                                lineWidth: 1
+                            )
+                    )
+            )
+            .shadow(
+                color: isSelected ? Color.blue.opacity(0.3) : Color.clear,
+                radius: 8,
+                y: 4
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+struct SavedMethodCard: View {
+    let method: PaymentMethod
+    let isSelected: Bool
+    let onToggle: () -> Void
+    let onEdit: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Selection button
+            Button(action: onToggle) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.title2)
+                    .foregroundColor(isSelected ? .blue : .secondary)
+            }
+            .buttonStyle(PlainButtonStyle())
+            
+            // Method info
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Image(systemName: method.type.iconName)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.blue)
+                    
+                    Text(method.type.title)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+                    
+                    Spacer()
+                    
+                    Button(action: onEdit) {
+                        Image(systemName: "pencil.circle.fill")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.blue)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+                
+                Text(method.type.subtitle)
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(isSelected ? Color.blue.opacity(0.1) : Color.secondary.opacity(0.05))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(
+                            isSelected ? Color.blue.opacity(0.3) : Color.secondary.opacity(0.1),
+                            lineWidth: 1
+                        )
+                )
+        )
+    }
+}
+
+// MARK: - PaymentChoice Extensions
+
+extension InvoiceWizardVM.PaymentChoice {
+    var iconName: String {
+        switch self {
+        case .none: return "xmark.circle"
+        case .saved: return "bookmark.circle"
+        case .custom: return "pencil.circle"
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .none: return "Don't include payment information"
+        case .saved: return "Use your saved payment methods"
+        case .custom: return "Add custom payment methods for this invoice"
+        }
+    }
 }

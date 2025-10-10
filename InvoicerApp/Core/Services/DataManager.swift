@@ -186,13 +186,6 @@ class DataManager: ObservableObject {
                 isResetting = false
             }
             return true
-            
-        } catch {
-            await MainActor.run {
-                isResetting = false
-            }
-            print("Reset failed: \(error)")
-            return false
         }
     }
     

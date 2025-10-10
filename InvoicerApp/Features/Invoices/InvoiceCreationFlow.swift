@@ -16,6 +16,12 @@ struct InvoiceCreationFlow: View {
     @State private var navigationPath = NavigationPath()
     @StateObject private var vm = InvoiceWizardVM()
     
+    let onClose: (() -> Void)?
+    
+    init(onClose: (() -> Void)? = nil) {
+        self.onClose = onClose
+    }
+    
     var body: some View {
         NavigationStack(path: $navigationPath) {
             // Начальный экран
@@ -26,14 +32,20 @@ struct InvoiceCreationFlow: View {
                         .environmentObject(app)
                 } else {
                     // Если компания настроена, начинаем с выбора шаблона
-                    TemplateSelectionView(onClose: { dismiss() }, navigationPath: $navigationPath)
+                    TemplateSelectionView(onClose: { 
+                        // Закрываем флоу
+                        onClose?()
+                    }, navigationPath: $navigationPath)
                         .environmentObject(app)
                 }
             }
                 .navigationDestination(for: InvoiceCreationStep.self) { step in
                     switch step {
                     case .templateSelection:
-                        TemplateSelectionView(onClose: { dismiss() }, navigationPath: $navigationPath)
+                        TemplateSelectionView(onClose: { 
+                            // Закрываем флоу
+                            onClose?()
+                        }, navigationPath: $navigationPath)
                             .environmentObject(app)
                             
                     case .colorScheme(let template):
@@ -47,23 +59,27 @@ struct InvoiceCreationFlow: View {
                                 // Переходим к первому шагу создания инвойса
                                 navigationPath.append(InvoiceCreationStep.companyInfo)
                                 print("🚀 Navigating to company info...")
+                            },
+                            onClose: {
+                                // Закрываем флоу
+                                onClose?()
                             }
                         )
                         
                     case .companyInfo:
-                        InvoiceStepView(vm: vm, step: 1, navigationPath: $navigationPath)
+                        InvoiceStepView(vm: vm, step: 1, navigationPath: $navigationPath, onClose: onClose)
                             .environmentObject(app)
                         
                     case .clientInfo:
-                        InvoiceStepView(vm: vm, step: 2, navigationPath: $navigationPath)
+                        InvoiceStepView(vm: vm, step: 2, navigationPath: $navigationPath, onClose: onClose)
                             .environmentObject(app)
                         
                     case .paymentDetails:
-                        InvoiceStepView(vm: vm, step: 3, navigationPath: $navigationPath)
+                        InvoiceStepView(vm: vm, step: 3, navigationPath: $navigationPath, onClose: onClose)
                             .environmentObject(app)
                         
                     case .itemsPricing:
-                        InvoiceStepView(vm: vm, step: 4, navigationPath: $navigationPath)
+                        InvoiceStepView(vm: vm, step: 4, navigationPath: $navigationPath, onClose: onClose)
                             .environmentObject(app)
                     }
                 }
@@ -75,16 +91,18 @@ struct InvoiceCreationFlow: View {
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Back") {
-                        if navigationPath.count > 0 {
+                    // Показываем кнопку Back только если есть элементы в навигационном стэке
+                    if navigationPath.count > 0 {
+                        Button("Back") {
                             navigationPath.removeLast()
-                        } else {
-                            dismiss()
                         }
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: { dismiss() }) {
+                    Button(action: { 
+                        // Закрываем флоу
+                        onClose?()
+                    }) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.title2)
                             .foregroundColor(.secondary)
@@ -174,17 +192,11 @@ struct TemplateSelectionView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Back") {
-                    if navigationPath.wrappedValue.count > 0 {
-                        navigationPath.wrappedValue.removeLast()
-                    } else {
-                        onClose?()
-                    }
-                }
-            }
             ToolbarItem(placement: .topBarTrailing) {
-                Button(action: { onClose?() }) {
+                Button(action: { 
+                    // Полностью очищаем стэк и закрываем флоу
+                    onClose?()
+                }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title2)
                         .foregroundColor(.secondary)
@@ -453,6 +465,7 @@ struct InvoiceStepView: View {
     
     let step: Int
     let navigationPath: Binding<NavigationPath>
+    let onClose: (() -> Void)?
     
     // Для ShareSheet
     @State private var shareURL: URL?
@@ -468,17 +481,11 @@ struct InvoiceStepView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Back") {
-                    if navigationPath.wrappedValue.count > 0 {
-                        navigationPath.wrappedValue.removeLast()
-                    } else {
-                        dismiss()
-                    }
-                }
-            }
             ToolbarItem(placement: .topBarTrailing) {
-                Button(action: { dismiss() }) {
+                Button(action: { 
+                    // Закрываем флоу
+                    onClose?()
+                }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title2)
                         .foregroundColor(.secondary)
@@ -493,7 +500,8 @@ struct InvoiceStepView: View {
                 ShareSheet(activityItems: [url])
                     .onDisappear {
                         if shouldDismissAfterShare {
-                            dismiss()
+                            // Закрываем флоу
+                            onClose?()
                         }
                     }
             }
@@ -587,7 +595,7 @@ struct InvoiceStepView: View {
             )
             print("✅ PDF generated successfully at: \(url)")
             shareURL = url
-            shouldDismissAfterShare = false
+            shouldDismissAfterShare = true
             showShare = true
             print("✅ ShareSheet should now be visible")
         } catch {

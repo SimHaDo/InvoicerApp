@@ -289,8 +289,6 @@ final class FixedTemplateFactory {
             return FashionElegantTemplate(theme: theme)
         case .photographyClean:
             return PhotographyCleanTemplate(theme: theme)
-        default:
-            return CleanModernTemplate(theme: theme)
         }
     }
 }

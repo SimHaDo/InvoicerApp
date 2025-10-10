@@ -605,7 +605,7 @@ struct CorporateFormalTemplate: TemplateRenderer {
         ]
         
         var yOffset = startY + 30
-        for (index, item) in invoice.items.enumerated() {
+        for (_, item) in invoice.items.enumerated() {
             // Horizontal line
             context.setStrokeColor(primary.withAlphaComponent(0.2).cgColor)
             context.setLineWidth(0.5)
@@ -712,7 +712,6 @@ struct CreativeVibrantTemplate: TemplateRenderer {
     
     private func drawCreativeHeader(context: CGContext, page: CGRect, company: Company, logo: UIImage?, primary: UIColor, secondary: UIColor, accent: UIColor) {
         // Creative gradient background
-        let headerRect = CGRect(x: 0, y: 0, width: page.width, height: 120)
         let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
                                  colors: [primary.cgColor, secondary.cgColor, accent.cgColor] as CFArray,
                                  locations: [0.0, 0.5, 1.0])!

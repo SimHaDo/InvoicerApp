@@ -882,7 +882,7 @@ struct AccountingDetailedTemplate: SimpleTemplateRenderer {
         let left = P.left
         let right = page.width - P.right
         let primary = theme.primary
-        let secondary = theme.secondary
+        let _ = theme.secondary
         let accent = theme.accent
 
         // фон
@@ -1041,7 +1041,7 @@ struct ConsultingProfessionalTemplate: SimpleTemplateRenderer {
         let left = P.left
         let right = page.width - P.right
         let primary = theme.primary
-        let secondary = theme.secondary
+        let _ = theme.secondary
         let accent = theme.accent
 
         // фон
