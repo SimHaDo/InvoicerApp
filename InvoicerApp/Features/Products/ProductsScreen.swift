@@ -212,8 +212,7 @@ struct ProductsScreen: View {
                             ForEach(vm.filtered(app.products)) { p in
                                 ProductCard(
                                     product: p,
-                                    onEdit: { editingProduct = p },
-                                    onQuickAdd: { quickAdd(p) }
+                                    onEdit: { editingProduct = p }
                                 )
                             }
                         }
@@ -252,9 +251,6 @@ struct ProductsScreen: View {
         // TODO: open invoice wizard / template picker
     }
 
-    private func quickAdd(_ p: Product) {
-        // TODO: prefill line item & open wizard
-    }
 
     private var emptyList: some View {
         VStack(spacing: 12) {
@@ -295,7 +291,6 @@ struct ProductsScreen: View {
 private struct ProductCard: View {
     let product: Product
     var onEdit: () -> Void
-    var onQuickAdd: () -> Void
 
     private var kind: PricingKind { PricingMeta.decode(from: product.details).0 }
     private var cleanDetails: String { PricingMeta.decode(from: product.details).1 }
@@ -321,9 +316,6 @@ private struct ProductCard: View {
                     Spacer()
                     HStack(spacing: 10) {
                         Button("Edit", action: onEdit)
-                            .padding(.horizontal, 12).padding(.vertical, 7)
-                            .background(RoundedRectangle(cornerRadius: 10).fill(Color.secondary.opacity(0.09)))
-                        Button("Quick Add", action: onQuickAdd)
                             .padding(.horizontal, 12).padding(.vertical, 7)
                             .background(RoundedRectangle(cornerRadius: 10).fill(Color.black))
                             .foregroundStyle(.white)
@@ -376,6 +368,7 @@ struct ProductFormView: View {
     }
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var scheme
     let mode: Mode
     var initial: Product? = nil
     var onSave: (Product) -> Void
@@ -413,84 +406,314 @@ struct ProductFormView: View {
     }
 
     private var canSave: Bool { !name.trimmingCharacters(in: .whitespaces).isEmpty }
+    
+    private var isAddMode: Bool {
+        if case .add = mode { return true }
+        return false
+    }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Basics") {
-                    TextField("Name", text: $name).lineLimit(1)
-                    TextField("Details", text: $details, axis: .vertical)
-                }
-
-                Section("Pricing") {
-                    Picker("Type", selection: Binding<Int>(
-                        get: {
-                            switch pricing {
-                            case .hourly: return 0
-                            case .perUnit: return 1
-                            case .fixed:   return 2
-                            }
-                        },
-                        set: { (idx: Int) in
-                            switch idx {
-                            case 0: pricing = .hourly
-                            case 1: pricing = .perUnit(unit: unit)
-                            default: pricing = .fixed
-                            }
-                        })
-                    ) {
-                        Text("Hourly").tag(0)
-                        Text("Per Unit").tag(1)
-                        Text("Fixed Price").tag(2)
+        NavigationView {
+            ZStack {
+                backgroundView
+                contentView
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
                     }
-                    .pickerStyle(.segmented)
-
-                    if case .perUnit = pricing {
-                        Picker("Unit", selection: $unit) {
-                            Text("Item").tag("item")
-                            Text("Day").tag("day")
-                            Text("Seat").tag("seat")
-                            Text("License").tag("license")
-                        }
-                        .pickerStyle(.menu)
-                        .onChange(of: unit) { new in
-                            pricing = .perUnit(unit: new)
-                        }
+                }
+            }
+            .onTapGesture {
+                hideKeyboard()
+            }
+            .simultaneousGesture(
+                DragGesture()
+                    .onChanged { _ in
+                        hideKeyboard()
                     }
+            )
+        }
+    }
+    
+    private var contentView: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                headerSection
+                basicInfoSection
+                pricingSection
+                previewSection
+                saveButton
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+    
+    private var headerSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Image(systemName: isAddMode ? "plus.circle.fill" : "pencil.circle.fill")
+                        .foregroundColor(.blue)
+                        .font(.title2)
+                    Text(modeTitle)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                }
+                Text(isAddMode ? "Add a new product or service" : "Edit product details")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .modifier(CompanySetupCard())
+    }
+    
+    private var basicInfoSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: "info.circle")
+                        .foregroundColor(.blue)
+                        .font(.title3)
+                    Text("Basic Information")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                }
+                Text("Essential details about your product")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
 
-                    DecimalTextField(title: priceTitle, value: $rate)
-                }
-                Section("Category") {
-                    TextField("Category", text: $category)
-                }
-            }
-            .navigationTitle(modeTitle)
-        }
-        // Верхний тулбар (остался как был)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
-            }
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Save") { save() }.disabled(!canSave)
-            }
-        }
-        // Доп. фиксированная кнопка снизу только в режиме добавления
-        .safeAreaInset(edge: .bottom) {
-            if case .add = mode {
-                Button(action: save) {
-                    Text("Save")
-                        .bold()
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(RoundedRectangle(cornerRadius: 12).fill(canSave ? Color.black : Color.gray.opacity(0.4)))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal)
-                        .padding(.bottom, 8)
-                }
-                .disabled(!canSave)
+            VStack(spacing: 16) {
+                ModernTextField(
+                    title: "Product Name",
+                    text: $name,
+                    icon: "shippingbox"
+                )
+
+                ModernTextField(
+                    title: "Description (Optional)",
+                    text: $details,
+                    icon: "text.alignleft"
+                )
+
+                ModernTextField(
+                    title: "Category",
+                    text: $category,
+                    icon: "folder"
+                )
             }
         }
+        .modifier(CompanySetupCard())
+    }
+    
+    private var pricingSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: "dollarsign.circle")
+                        .foregroundColor(.green)
+                        .font(.title3)
+                    Text("Pricing")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                }
+                Text("Set how this product is priced")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            VStack(spacing: 16) {
+                pricingTypePicker
+                if case .perUnit = pricing {
+                    unitPicker
+                }
+                priceInput
+            }
+        }
+        .modifier(CompanySetupCard())
+    }
+    
+    private var pricingTypePicker: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Pricing Type")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.primary)
+
+            Picker("Type", selection: Binding<Int>(
+                get: {
+                    switch pricing {
+                    case .hourly: return 0
+                    case .perUnit: return 1
+                    case .fixed:   return 2
+                    }
+                },
+                set: { (idx: Int) in
+                    switch idx {
+                    case 0: pricing = .hourly
+                    case 1: pricing = .perUnit(unit: unit)
+                    default: pricing = .fixed
+                    }
+                })
+            ) {
+                Text("Hourly").tag(0)
+                Text("Per Unit").tag(1)
+                Text("Fixed Price").tag(2)
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+    
+    private var unitPicker: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Unit")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.primary)
+
+            Menu {
+                Picker("Unit", selection: $unit) {
+                    Text("Item").tag("item")
+                    Text("Day").tag("day")
+                    Text("Seat").tag("seat")
+                    Text("License").tag("license")
+                    Text("Hour").tag("hour")
+                    Text("Project").tag("project")
+                }
+            } label: {
+                HStack {
+                    Text(unit.capitalized)
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .background(unitPickerBackground)
+            }
+            .onChange(of: unit) { new in
+                pricing = .perUnit(unit: new)
+            }
+        }
+    }
+    
+    private var unitPickerBackground: some View {
+        RoundedRectangle(cornerRadius: 12)
+            .fill(
+                scheme == .dark ?
+                Color(red: 0.12, green: 0.12, blue: 0.16) :
+                Color.secondary.opacity(0.08)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(
+                        scheme == .dark ?
+                        Color.blue.opacity(0.2) :
+                        Color.clear,
+                        lineWidth: 1
+                    )
+            )
+    }
+    
+    private var priceInput: some View {
+        ModernTextField(
+            title: priceTitle,
+            text: Binding(
+                get: { 
+                    if rate == 0 { return "" }
+                    return String(format: "%.2f", NSDecimalNumber(decimal: rate).doubleValue)
+                },
+                set: { newValue in
+                    if let decimal = Decimal(string: newValue.replacingOccurrences(of: ",", with: ".")) {
+                        rate = decimal
+                    } else if newValue.isEmpty {
+                        rate = 0
+                    }
+                }
+            ),
+            icon: "dollarsign.circle"
+        )
+    }
+    
+    private var previewSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "eye")
+                    .foregroundColor(.blue)
+                    .font(.title3)
+                Text("Preview")
+                    .font(.title3)
+                    .fontWeight(.bold)
+            }
+
+            VStack(spacing: 8) {
+                HStack {
+                    Text("Name:")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(name.isEmpty ? "Product Name" : name)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.primary)
+                }
+
+                HStack {
+                    Text("Price:")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(rate == 0 ? "$0.00" : Money.fmt(rate, code: Locale.current.currency?.identifier ?? "USD"))
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.green)
+                }
+
+                HStack {
+                    Text("Type:")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(pricingTypeDisplay)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.blue)
+                }
+            }
+        }
+        .modifier(CompanySetupCard())
+    }
+    
+    private var saveButton: some View {
+        Button(action: save) {
+            HStack {
+                Image(systemName: "checkmark.circle.fill")
+                Text("Save Product")
+            }
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(saveButtonBackground)
+        }
+        .disabled(!canSave)
+        .padding(.bottom, 32)
+    }
+    
+    private var saveButtonBackground: some View {
+        RoundedRectangle(cornerRadius: 16)
+            .fill(
+                canSave ?
+                LinearGradient(
+                    colors: [.blue, .purple],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ) :
+                LinearGradient(
+                    colors: [.gray, .gray],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
     }
 
     private func save() {
@@ -504,6 +727,10 @@ struct ProductFormView: View {
         )
         onSave(p)
         dismiss()
+    }
+    
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 
     private var priceTitle: String {
@@ -519,6 +746,57 @@ struct ProductFormView: View {
         case .add:  return "Add Product"
         case .edit: return "Edit Product"
         }
+    }
+    
+    private var pricingTypeDisplay: String {
+        switch pricing {
+        case .hourly:              return "Hourly"
+        case .perUnit(let u):      return "Per \(u)"
+        case .fixed:               return "Fixed Price"
+        }
+    }
+    
+    private var backgroundView: some View {
+        Group {
+            if scheme == .light {
+                ZStack {
+                    // Основной градиент
+                    LinearGradient(
+                        colors: [Color.white, Color(white: 0.97), Color(white: 0.95)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    
+                    // Радиальный градиент
+                    RadialGradient(
+                        colors: [Color.white, Color(white: 0.96), .clear],
+                        center: .topLeading,
+                        startRadius: 24,
+                        endRadius: 520
+                    )
+                    .blendMode(.screen)
+                }
+            } else {
+                ZStack {
+                    // Основной градиент для темной темы
+                    LinearGradient(
+                        colors: [Color.black, Color.black.opacity(0.92)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    
+                    // Радиальный градиент
+                    RadialGradient(
+                        colors: [Color.white.opacity(0.08), .clear],
+                        center: .topLeading,
+                        startRadius: 24,
+                        endRadius: 520
+                    )
+                    .blendMode(.screen)
+                }
+            }
+        }
+        .ignoresSafeArea()
     }
 }
 // MARK: - Small helpers reused
