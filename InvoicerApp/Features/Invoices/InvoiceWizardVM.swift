@@ -249,7 +249,7 @@ struct StepHeader: View {
                 Spacer()
                 Text("\(Int((Double(step) / 4.0) * 100))%")
                     .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .foregroundColor(.black)
+                    .foregroundColor(scheme == .dark ? UI.darkAccent : .black)
                     .scaleEffect(step == 1 ? 1.0 : 1.1)
                     .animation(.spring(response: 0.5, dampingFraction: 0.6), value: step)
             }
@@ -267,9 +267,12 @@ struct StepHeader: View {
                     
                     // Progress fill
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.black)
+                        .fill(scheme == .dark ? UI.darkAccent : Color.black)
                         .frame(width: geometry.size.width * (Double(step) / 4.0), height: 6)
-                        .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                        .shadow(
+                            color: scheme == .dark ? UI.darkAccent.opacity(0.3) : .black.opacity(0.2), 
+                            radius: 4, x: 0, y: 2
+                        )
                         .animation(.spring(response: 0.8, dampingFraction: 0.8), value: step)
                     
                 }
@@ -340,7 +343,11 @@ struct StepHeader: View {
             HStack(spacing: 6) {
                 ForEach(1...4, id: \.self) { stepNumber in
                     Circle()
-                        .fill(stepNumber <= step ? Color.black : Color.secondary.opacity(0.3))
+                        .fill(
+                            stepNumber <= step ? 
+                            (scheme == .dark ? UI.darkAccent : Color.black) : 
+                            Color.secondary.opacity(0.3)
+                        )
                         .frame(width: stepNumber == step ? 8 : 6, height: stepNumber == step ? 8 : 6)
                         .scaleEffect(stepNumber == step ? 1.3 : 1.0)
                         .animation(.spring(response: 0.4, dampingFraction: 0.7), value: step)
@@ -387,9 +394,18 @@ struct StepHeader: View {
             
             // Main circle
             Circle()
-                .fill(n <= step ? Color.black : Color.secondary.opacity(0.3))
+                .fill(
+                    n <= step ? 
+                    (scheme == .dark ? UI.darkAccent : Color.black) : 
+                    Color.secondary.opacity(0.3)
+                )
                 .frame(width: 20, height: 20)
-                .shadow(color: n == step ? .black.opacity(0.2) : .clear, radius: 4, x: 0, y: 2)
+                .shadow(
+                    color: n == step ? 
+                    (scheme == .dark ? UI.darkAccent.opacity(0.3) : .black.opacity(0.2)) : 
+                    .clear, 
+                    radius: 4, x: 0, y: 2
+                )
                 .scaleEffect(n == step ? 1.2 : 1.0)
                 .animation(.spring(response: 0.5, dampingFraction: 0.7), value: step)
             
@@ -443,15 +459,27 @@ struct StepHeader: View {
 // MARK: - Step 1: Company
 
 struct CompanySetupCard: ViewModifier {
+    @Environment(\.colorScheme) private var scheme
+    
     func body(content: Content) -> some View {
         content
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(.ultraThinMaterial)
+                    .fill(
+                        scheme == .dark ? 
+                        AnyShapeStyle(Color(red: 0.12, green: 0.12, blue: 0.16)) : 
+                        AnyShapeStyle(Material.ultraThinMaterial)
+                    )
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(
+                                scheme == .dark ? 
+                                LinearGradient(
+                                    colors: [.blue.opacity(0.4), .purple.opacity(0.4)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ) :
                                 LinearGradient(
                                     colors: [.blue.opacity(0.3), .purple.opacity(0.3)],
                                     startPoint: .topLeading,
@@ -460,7 +488,10 @@ struct CompanySetupCard: ViewModifier {
                                 lineWidth: 1
                             )
                     )
-                    .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+                    .shadow(
+                        color: scheme == .dark ? .black.opacity(0.3) : .black.opacity(0.05), 
+                        radius: 8, x: 0, y: 4
+                    )
             )
     }
 }
@@ -471,6 +502,8 @@ struct StepCompanyInfoView: View {
     var next: () -> Void
     var prev: (() -> Void)?
     @State private var company = Company()
+    
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         ScrollView {
@@ -551,7 +584,11 @@ struct StepCompanyInfoView: View {
                                     .padding(.vertical, 6)
                                     .background(
                                         RoundedRectangle(cornerRadius: 8)
-                                            .fill(Color.blue.opacity(0.1))
+                                            .fill(
+                                                scheme == .dark ? 
+                                                Color.blue.opacity(0.2) : 
+                                                Color.blue.opacity(0.1)
+                                            )
                                     )
                                 }
                             }
@@ -572,7 +609,12 @@ struct StepCompanyInfoView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.blue.opacity(0.3), lineWidth: 2)
+                                        .stroke(
+                                            scheme == .dark ? 
+                                            Color.blue.opacity(0.5) : 
+                                            Color.blue.opacity(0.3), 
+                                            lineWidth: 2
+                                        )
                                 )
                                 .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
                             Spacer()
@@ -620,7 +662,11 @@ struct StepCompanyInfoView: View {
                         .padding(.vertical, 16)
                         .background(
                             RoundedRectangle(cornerRadius: 16)
-                                .fill(Color.secondary.opacity(0.1))
+                                .fill(
+                                    scheme == .dark ? 
+                                    Color(red: 0.15, green: 0.15, blue: 0.20) : 
+                                    Color.secondary.opacity(0.1)
+                                )
                         )
                         .foregroundColor(.secondary)
                     }
@@ -1135,6 +1181,8 @@ struct StepItemsPricingView: View {
 
     @State private var search = ""
     @State private var category = "All"
+    
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         ScrollView {
@@ -1146,6 +1194,17 @@ struct StepItemsPricingView: View {
                             Label("Add Products/Services", systemImage: "shippingbox")
                             Spacer()
                             Button("+ Add New") { /* TODO */ }
+                                .foregroundColor(.blue)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(
+                                            scheme == .dark ? 
+                                            Color.blue.opacity(0.2) : 
+                                            Color.blue.opacity(0.1)
+                                        )
+                                )
                         }
 
                         HStack(spacing: 8) {
@@ -1161,7 +1220,14 @@ struct StepItemsPricingView: View {
                                 HStack { Text(category); Image(systemName: "chevron.down") }
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 8)
-                                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.secondary.opacity(0.1)))
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(
+                                                scheme == .dark ? 
+                                                Color(red: 0.12, green: 0.12, blue: 0.16) : 
+                                                Color.secondary.opacity(0.1)
+                                            )
+                                    )
                             }
                         }
 
@@ -1308,7 +1374,12 @@ struct InvoiceDetailsView: View {
 extension View {
     func fieldStyle() -> some View {
         self.padding(12)
-            .background(RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.08)))
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(
+                        Color.secondary.opacity(0.08)
+                    )
+            )
     }
 }
 
@@ -1318,6 +1389,8 @@ struct ModernTextField: View {
     let icon: String
     var keyboardType: UIKeyboardType = .default
     var textInputAutocapitalization: TextInputAutocapitalization = .sentences
+    
+    @Environment(\.colorScheme) private var scheme
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -1339,11 +1412,17 @@ struct ModernTextField: View {
             .padding(.vertical, 14)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.secondary.opacity(0.08))
+                    .fill(
+                        scheme == .dark ? 
+                        Color(red: 0.12, green: 0.12, blue: 0.16) : 
+                        Color.secondary.opacity(0.08)
+                    )
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(
-                                text.isEmpty ? Color.clear : Color.blue.opacity(0.3),
+                                text.isEmpty ? 
+                                (scheme == .dark ? Color.blue.opacity(0.2) : Color.clear) : 
+                                Color.blue.opacity(0.3),
                                 lineWidth: 1
                             )
                     )
@@ -1356,6 +1435,24 @@ struct CustomerCard: View {
     let customer: Customer
     let isSelected: Bool
     let onTap: () -> Void
+    
+    @Environment(\.colorScheme) private var scheme
+    
+    private var backgroundColor: Color {
+        if isSelected {
+            return scheme == .dark ? Color.blue.opacity(0.2) : Color.blue.opacity(0.1)
+        } else {
+            return scheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.16) : Color.secondary.opacity(0.05)
+        }
+    }
+    
+    private var strokeColor: Color {
+        if isSelected {
+            return scheme == .dark ? Color.blue.opacity(0.5) : Color.blue.opacity(0.3)
+        } else {
+            return scheme == .dark ? Color.blue.opacity(0.2) : Color.clear
+        }
+    }
     
     var body: some View {
         Button(action: onTap) {
@@ -1387,13 +1484,10 @@ struct CustomerCard: View {
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(isSelected ? Color.blue.opacity(0.1) : Color.secondary.opacity(0.05))
+                    .fill(backgroundColor)
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
-                            .stroke(
-                                isSelected ? Color.blue.opacity(0.3) : Color.clear,
-                                lineWidth: 2
-                            )
+                            .stroke(strokeColor, lineWidth: 2)
                     )
             )
         }
@@ -1438,6 +1532,9 @@ struct Tag: View {
 
 struct ItemEditor: View {
     @Binding var item: LineItem
+    
+    @Environment(\.colorScheme) private var scheme
+    
     var body: some View {
         VStack(spacing: 8) {
             TextField("Description", text: $item.description).fieldStyle()
@@ -1450,7 +1547,15 @@ struct ItemEditor: View {
             .frame(height: 44)
         }
         .padding(10)
-        .background(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.15)))
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(
+                    scheme == .dark ? 
+                    Color.blue.opacity(0.2) : 
+                    Color.secondary.opacity(0.15), 
+                    lineWidth: 1
+                )
+        )
     }
 }
 
@@ -1492,6 +1597,8 @@ struct PaymentChoiceCard: View {
     let choice: InvoiceWizardVM.PaymentChoice
     let isSelected: Bool
     let onTap: () -> Void
+    
+    @Environment(\.colorScheme) private var scheme
     
     var body: some View {
         Button(action: onTap) {
@@ -1535,12 +1642,17 @@ struct PaymentChoiceCard: View {
                 RoundedRectangle(cornerRadius: 16)
                     .fill(isSelected ? 
                           LinearGradient(colors: [.blue, .purple], startPoint: .leading, endPoint: .trailing) :
-                          LinearGradient(colors: [Color.secondary.opacity(0.05)], startPoint: .leading, endPoint: .trailing)
+                          LinearGradient(
+                              colors: [scheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.16) : Color.secondary.opacity(0.05)], 
+                              startPoint: .leading, 
+                              endPoint: .trailing
+                          )
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(
-                                isSelected ? Color.clear : Color.secondary.opacity(0.2),
+                                isSelected ? Color.clear : 
+                                (scheme == .dark ? Color.blue.opacity(0.2) : Color.secondary.opacity(0.2)),
                                 lineWidth: 1
                             )
                     )
@@ -1560,6 +1672,24 @@ struct SavedMethodCard: View {
     let isSelected: Bool
     let onToggle: () -> Void
     let onEdit: () -> Void
+    
+    @Environment(\.colorScheme) private var scheme
+    
+    private var backgroundColor: Color {
+        if isSelected {
+            return scheme == .dark ? Color.blue.opacity(0.2) : Color.blue.opacity(0.1)
+        } else {
+            return scheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.16) : Color.secondary.opacity(0.05)
+        }
+    }
+    
+    private var strokeColor: Color {
+        if isSelected {
+            return scheme == .dark ? Color.blue.opacity(0.5) : Color.blue.opacity(0.3)
+        } else {
+            return scheme == .dark ? Color.blue.opacity(0.2) : Color.secondary.opacity(0.1)
+        }
+    }
     
     var body: some View {
         HStack(spacing: 12) {
@@ -1601,13 +1731,10 @@ struct SavedMethodCard: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(isSelected ? Color.blue.opacity(0.1) : Color.secondary.opacity(0.05))
+                .fill(backgroundColor)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
-                        .stroke(
-                            isSelected ? Color.blue.opacity(0.3) : Color.secondary.opacity(0.1),
-                            lineWidth: 1
-                        )
+                        .stroke(strokeColor, lineWidth: 1)
                 )
         )
     }

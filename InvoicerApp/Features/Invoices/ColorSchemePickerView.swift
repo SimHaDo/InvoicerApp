@@ -37,7 +37,11 @@ struct ColorSchemePickerView: View {
             // Плавающие элементы
             ForEach(floatingElements) { element in
                 Circle()
-                    .fill(Color.primary.opacity(0.05))
+                    .fill(
+                        scheme == .dark ? 
+                        Color.blue.opacity(0.08) : 
+                        Color.primary.opacity(0.05)
+                    )
                     .frame(width: 40, height: 40)
                     .scaleEffect(element.scale)
                     .opacity(element.opacity)
@@ -277,14 +281,17 @@ struct ColorSchemePickerView: View {
                 ZStack {
                     // Основной градиент для темной темы
                     LinearGradient(
-                        colors: [Color.black, Color.black.opacity(0.92)],
+                        colors: [
+                            Color(red: 0.05, green: 0.05, blue: 0.08), 
+                            Color(red: 0.08, green: 0.08, blue: 0.12)
+                        ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                     
                     // Радиальный градиент
                     RadialGradient(
-                        colors: [Color.white.opacity(0.08), .clear],
+                        colors: [Color.blue.opacity(0.12), .clear],
                         center: .topLeading,
                         startRadius: 24,
                         endRadius: 520
@@ -303,7 +310,7 @@ struct ColorSchemePickerView: View {
                     // Плавающие световые пятна для темной темы
                     ForEach(0..<3, id: \.self) { i in
                         Circle()
-                            .fill(Color.primary.opacity(0.08))
+                            .fill(Color.blue.opacity(0.1))
                             .frame(width: 240, height: 240)
                             .position(
                                 x: CGFloat(120 + i * 180),
@@ -351,6 +358,8 @@ private struct ColorSchemeCard: View {
     let theme: TemplateTheme
     let isSelected: Bool
     let onTap: () -> Void
+    
+    @Environment(\.colorScheme) private var scheme
     
     var body: some View {
         Button(action: onTap) {
@@ -411,11 +420,16 @@ private struct ColorSchemeCard: View {
             .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.primary.opacity(0.02))
+                    .fill(
+                        scheme == .dark ? 
+                        Color(red: 0.12, green: 0.12, blue: 0.16) : 
+                        Color.primary.opacity(0.02)
+                    )
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(
-                                isSelected ? Color.blue : Color.primary.opacity(0.1),
+                                isSelected ? Color.blue : 
+                                (scheme == .dark ? Color.blue.opacity(0.2) : Color.primary.opacity(0.1)),
                                 lineWidth: isSelected ? 2 : 1
                             )
                     )
@@ -431,13 +445,28 @@ private struct TemplatePreviewCard: View {
     let template: InvoiceTemplateDescriptor
     let theme: TemplateTheme
     
+    @Environment(\.colorScheme) private var scheme
+    
     var body: some View {
         let primary = Color(theme.primary)
         let secondary = Color(theme.secondary)
         
         ZStack {
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.secondarySystemBackground).opacity(0.6))
+                .fill(
+                    scheme == .dark ? 
+                    Color(red: 0.12, green: 0.12, blue: 0.16) : 
+                    Color(.secondarySystemBackground).opacity(0.6)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(
+                            scheme == .dark ? 
+                            Color.blue.opacity(0.2) : 
+                            Color.clear, 
+                            lineWidth: 1
+                        )
+                )
 
             VStack(spacing: 8) {
                 // Header with gradient based on design

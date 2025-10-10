@@ -191,18 +191,6 @@ struct TemplateSelectionView: View {
         .navigationTitle("Choose Template")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button(action: { 
-                    // Полностью очищаем стэк и закрываем флоу
-                    onClose?()
-                }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(.secondary)
-                }
-            }
-        }
         .onAppear {
             showContent = true
             pulseAnimation = true
@@ -235,7 +223,11 @@ struct TemplateSelectionView: View {
     var floatingElementsView: some View {
         ForEach(floatingElements) { element in
             Circle()
-                .fill(Color.primary.opacity(0.05))
+                .fill(
+                    scheme == .dark ? 
+                    Color.blue.opacity(0.08) : 
+                    Color.primary.opacity(0.05)
+                )
                 .frame(width: 40, height: 40)
                 .scaleEffect(element.scale)
                 .opacity(element.opacity)
@@ -272,8 +264,8 @@ struct TemplateSelectionView: View {
     var backgroundView: some View {
         LinearGradient(
             colors: [
-                scheme == .dark ? Color.black : Color.white,
-                scheme == .dark ? Color.gray.opacity(0.1) : Color.gray.opacity(0.05)
+                scheme == .dark ? Color(red: 0.05, green: 0.05, blue: 0.08) : Color.white,
+                scheme == .dark ? Color(red: 0.08, green: 0.08, blue: 0.12) : Color.gray.opacity(0.05)
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
@@ -300,8 +292,22 @@ struct TemplateSelectionView: View {
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 60, height: 40)
-                .cornerRadius(8)
-                .shadow(color: Color.black.opacity(0.1), radius: 4, y: 2)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .if(scheme == .dark) { view in
+                    view.colorInvert()
+                }
+                .shadow(
+                    color: scheme == .dark ? UI.darkAccent.opacity(0.4) : .black.opacity(0.2), 
+                    radius: 8, 
+                    y: 4
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(
+                            scheme == .dark ? UI.darkAccent.opacity(0.3) : Color.clear,
+                            lineWidth: 1
+                        )
+                )
         }
         .padding(.horizontal, isLargeScreen ? 40 : 20)
     }
@@ -319,7 +325,20 @@ struct TemplateSelectionView: View {
             .padding(.horizontal, 16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(scheme == .light ? Color(.systemGray6) : Color(.systemGray5).opacity(0.3))
+                    .fill(
+                        scheme == .dark ? 
+                        Color(red: 0.12, green: 0.12, blue: 0.16) : 
+                        Color(.systemGray6)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(
+                                scheme == .dark ? 
+                                Color.blue.opacity(0.2) : 
+                                Color.clear, 
+                                lineWidth: 1
+                            )
+                    )
             )
             
             // Category filters

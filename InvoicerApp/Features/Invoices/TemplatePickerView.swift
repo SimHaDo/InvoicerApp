@@ -301,22 +301,59 @@ struct TemplatePickerView: View {
         VStack(spacing: 8) {
         HStack(spacing: 12) {
             if let img = app.logoImage {
-                Image(uiImage: img).resizable().scaledToFit()
+                Image(uiImage: img)
+                    .resizable()
+                    .scaledToFit()
                     .frame(width: 56, height: 56)
-                    .background(Color.secondary.opacity(0.1))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .if(scheme == .dark) { view in
+                        view.colorInvert()
+                    }
+                    .shadow(
+                        color: scheme == .dark ? UI.darkAccent.opacity(0.4) : .black.opacity(0.2), 
+                        radius: 8, 
+                        y: 4
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(
+                                scheme == .dark ? UI.darkAccent.opacity(0.3) : Color.clear,
+                                lineWidth: 1
+                            )
+                    )
             } else {
-                    RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.08))
-                        .overlay(
-                            VStack(spacing: 4) {
-                                Image(systemName: "building.2")
-                                    .font(.system(size: 20, weight: .medium))
-                                    .foregroundStyle(.secondary)
-                                Text("Logo")
-                                    .font(.system(size: 10, weight: .medium))
-                                    .foregroundStyle(.secondary)
-                            }
-                        )
+                    RoundedRectangle(cornerRadius: 12).fill(
+                        scheme == .dark ? 
+                        Color(red: 0.12, green: 0.12, blue: 0.16) : 
+                        Color.secondary.opacity(0.08)
+                    )
+                    .overlay(
+                        VStack(spacing: 4) {
+                            Image(systemName: "building.2")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundStyle(
+                                    scheme == .dark ? 
+                                    Color.blue.opacity(0.7) : 
+                                    .secondary
+                                )
+                            Text("Logo")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(
+                                    scheme == .dark ? 
+                                    Color.blue.opacity(0.7) : 
+                                    .secondary
+                                )
+                        }
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(
+                                scheme == .dark ? 
+                                Color.white.opacity(0.4) : 
+                                Color.clear,
+                                lineWidth: 2
+                            )
+                    )
                     .frame(width: 56, height: 56)
             }
 
@@ -551,6 +588,8 @@ struct TemplateCard: View {
     let descriptor: InvoiceTemplateDescriptor
     let onTap: () -> Void
     
+    @Environment(\.colorScheme) private var scheme
+    
     var body: some View {
         Button(action: onTap) {
             VStack(spacing: 12) {
@@ -561,7 +600,12 @@ struct TemplateCard: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                                .stroke(
+                                    scheme == .dark ? 
+                                    Color.blue.opacity(0.2) : 
+                                    Color.primary.opacity(0.1), 
+                                    lineWidth: 1
+                                )
                         )
                     
                     // Premium Badge
@@ -726,7 +770,7 @@ struct ModernFilterChip: View {
                             ) : 
                             (scheme == .dark ? 
                                 AnyShapeStyle(LinearGradient(
-                                    colors: [Color.secondary.opacity(0.1), Color.secondary.opacity(0.05)], 
+                                    colors: [Color(red: 0.15, green: 0.15, blue: 0.20), Color(red: 0.12, green: 0.12, blue: 0.16)], 
                                     startPoint: .topLeading, 
                                     endPoint: .bottomTrailing
                                 )) : 
@@ -824,13 +868,19 @@ private func designIcon(for design: TemplateDesign) -> String {
 struct TemplateCardPreview: View {
     let descriptor: InvoiceTemplateDescriptor
     
+    @Environment(\.colorScheme) private var scheme
+    
     var body: some View {
         // Use default colors for preview since theme will be selected later
         let primary = Color.blue
         let secondary = Color.blue.opacity(0.7)
         
         RoundedRectangle(cornerRadius: 12)
-            .fill(Color(.secondarySystemBackground).opacity(0.6))
+            .fill(
+                scheme == .dark ? 
+                Color(red: 0.12, green: 0.12, blue: 0.16) : 
+                Color(.secondarySystemBackground).opacity(0.6)
+            )
             .overlay(
                 VStack(spacing: 6) {
                     // Template-specific preview based on design
