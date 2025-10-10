@@ -3,12 +3,9 @@ import UIKit
 
 // MARK: - Safe helpers (no KVC, no crashes)
 
-// Due Date via reflection (optional)
+// Due Date via direct access (safe)
 fileprivate func extractDueDate(from invoice: Invoice) -> Date? {
-    for c in Mirror(reflecting: invoice).children {
-        if c.label == "dueDate", let d = c.value as? Date { return d }
-    }
-    return nil
+    return invoice.dueDate
 }
 
 // ---- Payment Info extractor ----
@@ -67,8 +64,8 @@ fileprivate func _renderPaymentMethod(_ pm: Any) -> String? {
             return "Payment Link\nURL: \(url)"
 
         case .crypto(let kind, let address, let memo):
-            // CryptoKind.label ожидается в твоей модели
-            let asset = (kind as AnyObject).value(forKey: "label") as? String ?? "Crypto"
+            // Safe access to CryptoKind without Key-Value Coding
+            let asset = kind.rawValue.uppercased()
             return [
                 "Crypto • \(asset)",
                 "Address: \(address)",
@@ -100,9 +97,7 @@ fileprivate func _renderPaymentMethod(_ pm: Any) -> String? {
     return nil
 }
 
-/// Universal payment info extractor.
-/// Supports: `paymentInfo`, `paymentInstructions`, `paymentTerms`,
-/// `paymentMethod(s)`, `payments`, etc. (camel/snake case, any Optional).
+/// Safe payment info extractor.
 /// Returns nil if user selected "do not include" (empty paymentMethods array).
 fileprivate func extractPaymentInfo(from invoice: Invoice) -> String? {
     // Check if user selected "do not include" - if paymentMethods is empty, don't show payment info
@@ -110,46 +105,17 @@ fileprivate func extractPaymentInfo(from invoice: Invoice) -> String? {
         return nil
     }
     
-    // normalized key set (lowercased, '_' removed)
-    let keys: Set<String> = [
-        "paymentinfo","paymentinfos",
-        "paymentinstruction","paymentinstructions",
-        "paymentterm","paymentterms",
-        "paymentmethod","paymentmethods",
-        "payments","payinfo","instructions"
-    ]
-
-    func normalized(_ raw: String) -> String {
-        raw.lowercased().replacingOccurrences(of: "_", with: "")
-    }
-
-    let mirror = Mirror(reflecting: invoice)
-
-    // 1) direct fields on Invoice
-    for child in mirror.children {
-        guard let label = child.label else { continue }
-        let key = normalized(label)
-        guard keys.contains(key) else { continue }
-
-        let valueMirror = Mirror(reflecting: child.value)
-        let value: Any
-        if valueMirror.displayStyle == .optional {
-            guard let some = valueMirror.children.first?.value else { continue }
-            value = some
-        } else {
-            value = child.value
-        }
-
-        if let txt = _renderPaymentMethod(value) { return txt }
-    }
-
-    // 2) nested dictionaries like "meta" / "details"
-    for child in mirror.children {
-        if let dict = child.value as? [String: Any] {
-            for (k, v) in dict { if keys.contains(normalized(k)), let txt = _renderPaymentMethod(v) { return txt } }
+    // Direct access to paymentMethods - no Mirror needed
+    let paymentMethods = invoice.paymentMethods
+    var paymentInfoLines: [String] = []
+    
+    for method in paymentMethods {
+        if let info = _renderPaymentMethod(method) {
+            paymentInfoLines.append(info)
         }
     }
-    return nil
+    
+    return paymentInfoLines.isEmpty ? nil : paymentInfoLines.joined(separator: "\n\n")
 }
 
 // multi-line company block (neutral, generic)
@@ -158,12 +124,7 @@ fileprivate func companyLines(_ company: Company) -> [String] {
     if !company.name.isEmpty { lines.append(company.name) }
     if !company.address.oneLine.isEmpty { lines.append(company.address.oneLine) }
     if !company.email.isEmpty { lines.append(company.email) }
-    // try phone if present
-    for c in Mirror(reflecting: company).children {
-        if c.label?.lowercased() == "phone", let p = c.value as? String, !p.isEmpty {
-            lines.append(p)
-        }
-    }
+    // Phone is not available in Company model, so we skip it
     return lines
 }
 

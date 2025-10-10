@@ -135,139 +135,41 @@ private struct PaymentFormatter {
     }
 
     private static func format(method: Any) -> Line? {
-        let m = Mirror(reflecting: method)
-        if let typeChild = m.children.first(where: { $0.label == "type" }) {
-            return formatTypeValue(typeChild.value)
+        // Handle PaymentMethod directly
+        if let paymentMethod = method as? PaymentMethod {
+            return formatPaymentMethod(paymentMethod)
         }
-        return formatTypeValue(method)
+        
+        // For any other types, return a generic payment line
+        return Line(title: "Payment Method", value: "Custom payment method")
+    }
+    
+    private static func formatPaymentMethod(_ method: PaymentMethod) -> Line {
+        switch method.type {
+        case .bankIBAN(let iban, let swift, let beneficiary):
+            let value = [iban, swift, beneficiary].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: " • ")
+            return Line(title: "Bank (IBAN)", value: value)
+            
+        case .bankUS(let account, let routing, let bankName):
+            let value = [account, routing, bankName].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: " • ")
+            return Line(title: "Bank (US)", value: value)
+            
+        case .paypal(let email):
+            return Line(title: "PayPal", value: email)
+            
+        case .cardLink(let url):
+            return Line(title: "Card Payment", value: url)
+            
+        case .crypto(let kind, let address, let memo):
+            let title = "Crypto (\(kind.rawValue.uppercased()))"
+            let value = [address, memo].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: " • ")
+            return Line(title: title, value: value)
+            
+        case .other(let name, let details):
+            return Line(title: name, value: details)
+        }
     }
 
-    private static func formatTypeValue(_ v: Any) -> Line {
-        let mirror = Mirror(reflecting: v)
-
-        if mirror.displayStyle == .enum {
-            let caseName = String(describing: v).components(separatedBy: "(").first ?? "\(v)"
-            let lower = caseName.lowercased()
-            let payload = extractFields(from: v)
-
-            switch true {
-            case lower.contains("bankiban"):
-                let value = text(from: payload, preferredOrder: ["iban","bic","beneficiary","name","holder"]) ?? ""
-                return .init(title: "Bank (IBAN)", value: value)
-
-            case lower.contains("bankus"):
-                let value = text(from: payload, preferredOrder: ["account","routing","name","holder"]) ?? ""
-                return .init(title: "Bank (US)", value: value)
-
-            case lower.contains("paypal"):
-                let value = text(from: payload, preferredOrder: ["email","id"]) ?? ""
-                return .init(title: "PayPal", value: value)
-
-            case lower.contains("cardlink"), lower.contains("card"):
-                let value = text(from: payload, preferredOrder: ["url","link"]) ?? ""
-                return .init(title: "Card Payment", value: value)
-
-            case lower.contains("crypto"):
-                // Монета по множеству возможных ключей
-                let symKeyOrder = ["symbol","ticker","coin","currency","code","asset","token","kind"]
-                var sym: String?
-                for k in symKeyOrder {
-                    if let v = payload[k], !v.isEmpty { sym = v.uppercased(); break }
-                }
-                let title = sym.map { "Crypto (\($0))" } ?? "Crypto"
-                // Адрес + memo/tag + сеть
-                let value = text(from: payload,
-                                 preferredOrder: ["address","memo","tag","destinationtag","paymentid","network","name","holder","beneficiary","note","id","email","details","value"]) ?? ""
-                return .init(title: title, value: value)
-
-            default:
-                let title = (payload["name"]?.nonEmpty) ?? humanize(caseName)
-                let value = payload["details"]?.nonEmpty
-                    ?? text(from: payload, preferredOrder: ["value","address","info","note"]) ?? ""
-                return .init(title: title, value: value)
-            }
-        }
-
-        let dict = extractFields(from: v)
-        let title = dict["name"]?.nonEmpty ?? dict["method"]?.nonEmpty ?? "Payment"
-        let value = dict["details"]?.nonEmpty
-            ?? text(from: dict, preferredOrder: ["iban","account","email","url","address"]) ?? ""
-        return .init(title: title, value: value)
-    }
-
-    private static func extractFields(from any: Any) -> [String:String] {
-        var out: [String:String] = [:]
-        let mirror = Mirror(reflecting: any)
-
-        if mirror.displayStyle == .enum, let payload = mirror.children.first?.value {
-            return extractFields(from: payload)
-        }
-
-        for (labelOpt, value) in mirror.children {
-            guard let rawLabel = labelOpt else { continue }
-            let label = rawLabel.lowercased()
-
-            if let s = value as? String, !s.isEmpty {
-                out[label] = s
-            } else if let sOpt = value as? String?, let s = sOpt, !s.isEmpty {
-                out[label] = s
-            } else if let desc = value as? CustomStringConvertible {
-                let s = desc.description
-                if !s.isEmpty { out[label] = s }
-            } else {
-                let nested = Mirror(reflecting: value)
-                if !nested.children.isEmpty {
-                    let nestedMap = extractFields(from: value)
-                    for (k, v) in nestedMap where !v.isEmpty { out[k] = v }
-                }
-            }
-        }
-        return out
-    }
-
-    private static func text(from dict: [String:String], preferredOrder keys: [String]) -> String? {
-        var parts: [String] = []
-        for k in keys {
-            if let v = dict[k], !v.isEmpty {
-                switch k {
-                case "iban": parts.append("IBAN: \(v)")
-                case "bic": parts.append("BIC/SWIFT: \(v)")
-                case "account": parts.append("Account: \(v)")
-                case "routing": parts.append("Routing: \(v)")
-                case "email": parts.append("Email: \(v)")
-                case "url", "link": parts.append(v)
-                case "address": parts.append(v)
-                case "memo": parts.append("Memo: \(v)")
-                case "tag": parts.append("Tag: \(v)")
-                case "destinationtag": parts.append("Destination tag: \(v)")
-                case "paymentid": parts.append("Payment ID: \(v)")
-                case "network": parts.append("Network: \(v)")
-                case "symbol", "kind", "coin", "ticker", "currency", "code", "asset", "token":
-                    break // монету показали в заголовке
-                case "beneficiary","name","holder": parts.append(v)
-                default: parts.append(v)
-                }
-            }
-        }
-        return parts.isEmpty ? nil : parts.joined(separator: " • ")
-    }
-
-    private static func humanize(_ raw: String) -> String {
-        let s1 = raw.replacingOccurrences(of: "_", with: " ")
-        var s2 = ""
-        for ch in s1 {
-            if ch.isUppercase { s2.append(" ") }
-            s2.append(ch)
-        }
-        return s2.trimmingCharacters(in: .whitespaces).capitalized
-    }
-}
-
-private extension String {
-    var nonEmpty: String? {
-        let t = trimmingCharacters(in: .whitespacesAndNewlines)
-        return t.isEmpty ? nil : t
-    }
 }
 
 /// Блок «Payment Details»: рендерит ИМЕННО invoice.paymentMethods + invoice.paymentNotes.

@@ -740,18 +740,56 @@ struct TemplateCardPreview: View {
         RoundedRectangle(cornerRadius: 12)
             .fill(Color(.secondarySystemBackground).opacity(0.6))
             .overlay(
-                VStack(spacing: 8) {
-                    // Header with gradient based on style
-                    headerSection(primary: primary, secondary: secondary)
-                    
-                    // Company info section
-                    companyInfoSection
-                    
-                    // Items table with style-specific design
-                    itemsTableSection(primary: primary)
-                    
-                    // Total section
-                    totalSection
+                VStack(spacing: 6) {
+                    // Template-specific preview based on design
+                    switch descriptor.design {
+                    case .geometricAbstract:
+                        geometricAbstractPreview(primary: primary, secondary: secondary)
+                    case .techModern:
+                        techModernPreview(primary: primary, secondary: secondary)
+                    case .vintageRetro:
+                        vintageRetroPreview(primary: primary, secondary: secondary)
+                    case .businessClassic:
+                        businessClassicPreview(primary: primary, secondary: secondary)
+                    case .modernClean:
+                        minimalistCleanPreview(primary: primary, secondary: secondary)
+                    case .creativeVibrant:
+                        creativeArtisticPreview(primary: primary, secondary: secondary)
+                    case .professionalMinimal:
+                        minimalistCleanPreview(primary: primary, secondary: secondary)
+                    case .corporateFormal:
+                        businessClassicPreview(primary: primary, secondary: secondary)
+                    case .executiveLuxury:
+                        businessClassicPreview(primary: primary, secondary: secondary)
+                    case .enterpriseBold:
+                        techModernPreview(primary: primary, secondary: secondary)
+                    case .consultingElegant:
+                        businessClassicPreview(primary: primary, secondary: secondary)
+                    case .financialStructured:
+                        businessClassicPreview(primary: primary, secondary: secondary)
+                    case .legalTraditional:
+                        businessClassicPreview(primary: primary, secondary: secondary)
+                    case .healthcareModern:
+                        minimalistCleanPreview(primary: primary, secondary: secondary)
+                    case .realEstateWarm:
+                        vintageRetroPreview(primary: primary, secondary: secondary)
+                    case .insuranceTrust:
+                        businessClassicPreview(primary: primary, secondary: secondary)
+                    case .bankingSecure:
+                        businessClassicPreview(primary: primary, secondary: secondary)
+                    case .accountingDetailed:
+                        businessClassicPreview(primary: primary, secondary: secondary)
+                    case .consultingProfessional:
+                        businessClassicPreview(primary: primary, secondary: secondary)
+                    case .artisticBold:
+                        creativeArtisticPreview(primary: primary, secondary: secondary)
+                    case .designStudio:
+                        creativeArtisticPreview(primary: primary, secondary: secondary)
+                    case .fashionElegant:
+                        creativeArtisticPreview(primary: primary, secondary: secondary)
+                    case .photographyClean:
+                        minimalistCleanPreview(primary: primary, secondary: secondary)
+                    }
                     
                     Spacer(minLength: 2)
                 }
@@ -759,65 +797,432 @@ struct TemplateCardPreview: View {
             )
     }
     
+    // MARK: - Template-Specific Previews
+    
     @ViewBuilder
-    private func headerSection(primary: Color, secondary: Color) -> some View {
-                HStack {
-                    RoundedRectangle(cornerRadius: 6)
-                .fill(headerGradient(primary: primary, secondary: secondary))
-                        .frame(width: 60, height: 14)
-                    Spacer()
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(primary.opacity(0.5))
-                        .frame(width: 34, height: 14)
-                }
-                .padding(.horizontal, 10)
-                .padding(.top, 8)
-    }
-
-    @ViewBuilder
-    private var companyInfoSection: some View {
-                HStack(spacing: 8) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Rect(.label, w: 80, h: 10)
-                        Rect(.secondaryLabel, w: 60, h: 8)
+    private func geometricAbstractPreview(primary: Color, secondary: Color) -> some View {
+        VStack(spacing: 4) {
+            // Geometric header with triangles and shapes
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 3) {
+                        Triangle()
+                            .fill(primary)
+                            .frame(width: 8, height: 8)
+                        Triangle()
+                            .fill(secondary)
+                            .frame(width: 6, height: 6)
+                        Triangle()
+                            .fill(primary.opacity(0.7))
+                            .frame(width: 7, height: 7)
                     }
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 4) {
-                        Rect(.secondaryLabel, w: 70, h: 8)
-                        Rect(.secondaryLabel, w: 70, h: 8)
-                        Rect(.secondaryLabel, w: 70, h: 8)
-                    }
+                    Rect(.label, w: 45, h: 6)
                 }
-                .padding(.horizontal, 10)
-    }
-
-    @ViewBuilder
-    private func itemsTableSection(primary: Color) -> some View {
-                VStack(spacing: 4) {
-                    RoundedRectangle(cornerRadius: 4)
-                .fill(tableHeaderGradient(primary: primary))
-                        .frame(height: 14)
-                        .padding(.horizontal, 8)
-                    ForEach(0..<3) { _ in
-                        HStack {
-                            Rect(.label, w: 90, h: 8)
-                            Spacer()
-                            Rect(.label, w: 28, h: 8)
-                            Rect(.label, w: 40, h: 8)
-                            Rect(.label, w: 40, h: 8)
-                        }
-                        .padding(.horizontal, 8)
+                Spacer()
+                Circle()
+                    .fill(primary.opacity(0.3))
+                    .frame(width: 20, height: 20)
             }
-                    }
+            .padding(.horizontal, 8)
+            .padding(.top, 6)
+            
+            // Company info with geometric elements
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Rect(.label, w: 60, h: 6)
+                    Rect(.secondaryLabel, w: 40, h: 4)
                 }
-
-    @ViewBuilder
-    private var totalSection: some View {
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Rect(.secondaryLabel, w: 50, h: 4)
+                    Rect(.secondaryLabel, w: 45, h: 4)
+                }
+            }
+            .padding(.horizontal, 8)
+            
+            // Items with geometric table
+            VStack(spacing: 2) {
                 HStack {
+                    Rect(.label, w: 70, h: 5)
                     Spacer()
-                    Rect(.label, w: 60, h: 10)
+                    Rect(.label, w: 20, h: 5)
+                    Rect(.label, w: 25, h: 5)
                 }
-                .padding(.horizontal, 10)
+                .padding(.horizontal, 6)
+                .background(primary.opacity(0.1))
+                .cornerRadius(3)
+                
+                ForEach(0..<2) { _ in
+                    HStack {
+                        Rect(.label, w: 65, h: 4)
+                        Spacer()
+                        Rect(.label, w: 18, h: 4)
+                        Rect(.label, w: 22, h: 4)
+                    }
+                    .padding(.horizontal, 6)
+                }
+            }
+            
+            // Total with geometric accent
+            HStack {
+                Spacer()
+                HStack(spacing: 3) {
+                    Triangle()
+                        .fill(primary)
+                        .frame(width: 6, height: 6)
+                    Rect(.label, w: 35, h: 6)
+                }
+            }
+            .padding(.horizontal, 8)
+        }
+    }
+    
+    @ViewBuilder
+    private func techModernPreview(primary: Color, secondary: Color) -> some View {
+        VStack(spacing: 4) {
+            // Modern tech header with gradients
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(LinearGradient(colors: [primary, secondary], startPoint: .leading, endPoint: .trailing))
+                        .frame(width: 50, height: 8)
+                    Rect(.label, w: 40, h: 5)
+                }
+                Spacer()
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(primary.opacity(0.2))
+                    .frame(width: 16, height: 16)
+            }
+            .padding(.horizontal, 8)
+            .padding(.top, 6)
+            
+            // Clean company info
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Rect(.label, w: 55, h: 5)
+                    Rect(.secondaryLabel, w: 35, h: 4)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Rect(.secondaryLabel, w: 45, h: 4)
+                    Rect(.secondaryLabel, w: 40, h: 4)
+                }
+            }
+            .padding(.horizontal, 8)
+            
+            // Modern table design
+            VStack(spacing: 2) {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(primary.opacity(0.15))
+                    .frame(height: 6)
+                    .overlay(
+                        HStack {
+                            Rect(.label, w: 60, h: 4)
+                            Spacer()
+                            Rect(.label, w: 18, h: 4)
+                            Rect(.label, w: 22, h: 4)
+                        }
+                        .padding(.horizontal, 6)
+                    )
+                
+                ForEach(0..<2) { _ in
+                    HStack {
+                        Rect(.label, w: 55, h: 4)
+                        Spacer()
+                        Rect(.label, w: 16, h: 4)
+                        Rect(.label, w: 20, h: 4)
+                    }
+                    .padding(.horizontal, 6)
+                }
+            }
+            
+            // Modern total
+            HStack {
+                Spacer()
+                Rect(.label, w: 30, h: 5)
+            }
+            .padding(.horizontal, 8)
+        }
+    }
+    
+    @ViewBuilder
+    private func vintageRetroPreview(primary: Color, secondary: Color) -> some View {
+        VStack(spacing: 4) {
+            // Vintage header with decorative elements
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 2) {
+                        Circle()
+                            .fill(primary)
+                            .frame(width: 6, height: 6)
+                        Circle()
+                            .fill(secondary)
+                            .frame(width: 4, height: 4)
+                        Circle()
+                            .fill(primary.opacity(0.7))
+                            .frame(width: 5, height: 5)
+                    }
+                    Rect(.label, w: 45, h: 6)
+                }
+                Spacer()
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(primary.opacity(0.3))
+                    .frame(width: 18, height: 12)
+            }
+            .padding(.horizontal, 8)
+            .padding(.top, 6)
+            
+            // Vintage company info
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Rect(.label, w: 50, h: 5)
+                    Rect(.secondaryLabel, w: 35, h: 4)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Rect(.secondaryLabel, w: 40, h: 4)
+                    Rect(.secondaryLabel, w: 35, h: 4)
+                }
+            }
+            .padding(.horizontal, 8)
+            
+            // Vintage table with borders
+            VStack(spacing: 1) {
+                HStack {
+                    Rect(.label, w: 60, h: 5)
+                    Spacer()
+                    Rect(.label, w: 20, h: 5)
+                    Rect(.label, w: 25, h: 5)
+                }
+                .padding(.horizontal, 6)
+                .background(primary.opacity(0.1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 1)
+                        .stroke(primary.opacity(0.3), lineWidth: 1)
+                )
+                
+                ForEach(0..<2) { _ in
+                    HStack {
+                        Rect(.label, w: 55, h: 4)
+                        Spacer()
+                        Rect(.label, w: 18, h: 4)
+                        Rect(.label, w: 22, h: 4)
+                    }
+                    .padding(.horizontal, 6)
+                }
+            }
+            
+            // Vintage total
+            HStack {
+                Spacer()
+                Rect(.label, w: 35, h: 5)
+            }
+            .padding(.horizontal, 8)
+        }
+    }
+    
+    @ViewBuilder
+    private func businessClassicPreview(primary: Color, secondary: Color) -> some View {
+        VStack(spacing: 4) {
+            // Classic business header
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Rect(.label, w: 50, h: 6)
+                    Rect(.secondaryLabel, w: 35, h: 4)
+                }
+                Spacer()
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(primary.opacity(0.2))
+                    .frame(width: 20, height: 14)
+            }
+            .padding(.horizontal, 8)
+            .padding(.top, 6)
+            
+            // Professional company info
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Rect(.label, w: 55, h: 5)
+                    Rect(.secondaryLabel, w: 40, h: 4)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Rect(.secondaryLabel, w: 45, h: 4)
+                    Rect(.secondaryLabel, w: 40, h: 4)
+                }
+            }
+            .padding(.horizontal, 8)
+            
+            // Classic table design
+            VStack(spacing: 2) {
+                HStack {
+                    Rect(.label, w: 65, h: 5)
+                    Spacer()
+                    Rect(.label, w: 20, h: 5)
+                    Rect(.label, w: 25, h: 5)
+                }
+                .padding(.horizontal, 6)
+                .background(primary.opacity(0.1))
+                
+                ForEach(0..<2) { _ in
+                    HStack {
+                        Rect(.label, w: 60, h: 4)
+                        Spacer()
+                        Rect(.label, w: 18, h: 4)
+                        Rect(.label, w: 22, h: 4)
+                    }
+                    .padding(.horizontal, 6)
+                }
+            }
+            
+            // Classic total
+            HStack {
+                Spacer()
+                Rect(.label, w: 40, h: 5)
+            }
+            .padding(.horizontal, 8)
+        }
+    }
+    
+    @ViewBuilder
+    private func minimalistCleanPreview(primary: Color, secondary: Color) -> some View {
+        VStack(spacing: 3) {
+            // Minimalist header
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Rect(.label, w: 45, h: 6)
+                    Rect(.secondaryLabel, w: 30, h: 4)
+                }
+                Spacer()
+                Circle()
+                    .fill(primary.opacity(0.2))
+                    .frame(width: 12, height: 12)
+            }
+            .padding(.horizontal, 8)
+            .padding(.top, 6)
+            
+            // Clean company info
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Rect(.label, w: 50, h: 5)
+                    Rect(.secondaryLabel, w: 35, h: 4)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Rect(.secondaryLabel, w: 40, h: 4)
+                    Rect(.secondaryLabel, w: 35, h: 4)
+                }
+            }
+            .padding(.horizontal, 8)
+            
+            // Minimalist table
+            VStack(spacing: 1) {
+                HStack {
+                    Rect(.label, w: 60, h: 4)
+                    Spacer()
+                    Rect(.label, w: 18, h: 4)
+                    Rect(.label, w: 22, h: 4)
+                }
+                .padding(.horizontal, 6)
+                .background(primary.opacity(0.05))
+                
+                ForEach(0..<2) { _ in
+                    HStack {
+                        Rect(.label, w: 55, h: 3)
+                        Spacer()
+                        Rect(.label, w: 16, h: 3)
+                        Rect(.label, w: 20, h: 3)
+                    }
+                    .padding(.horizontal, 6)
+                }
+            }
+            
+            // Minimalist total
+            HStack {
+                Spacer()
+                Rect(.label, w: 30, h: 4)
+            }
+            .padding(.horizontal, 8)
+        }
+    }
+    
+    @ViewBuilder
+    private func creativeArtisticPreview(primary: Color, secondary: Color) -> some View {
+        VStack(spacing: 4) {
+            // Creative header with artistic elements
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 2) {
+                        Star()
+                            .fill(primary)
+                            .frame(width: 8, height: 8)
+                        Star()
+                            .fill(secondary)
+                            .frame(width: 6, height: 6)
+                        Star()
+                            .fill(primary.opacity(0.7))
+                            .frame(width: 7, height: 7)
+                    }
+                    Rect(.label, w: 45, h: 6)
+                }
+                Spacer()
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(LinearGradient(colors: [primary, secondary], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 16, height: 16)
+            }
+            .padding(.horizontal, 8)
+            .padding(.top, 6)
+            
+            // Artistic company info
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Rect(.label, w: 50, h: 5)
+                    Rect(.secondaryLabel, w: 35, h: 4)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Rect(.secondaryLabel, w: 40, h: 4)
+                    Rect(.secondaryLabel, w: 35, h: 4)
+                }
+            }
+            .padding(.horizontal, 8)
+            
+            // Creative table design
+            VStack(spacing: 2) {
+                HStack {
+                    Rect(.label, w: 60, h: 5)
+                    Spacer()
+                    Rect(.label, w: 20, h: 5)
+                    Rect(.label, w: 25, h: 5)
+                }
+                .padding(.horizontal, 6)
+                .background(
+                    LinearGradient(colors: [primary.opacity(0.1), secondary.opacity(0.1)], startPoint: .leading, endPoint: .trailing)
+                )
+                .cornerRadius(2)
+                
+                ForEach(0..<2) { _ in
+                    HStack {
+                        Rect(.label, w: 55, h: 4)
+                        Spacer()
+                        Rect(.label, w: 18, h: 4)
+                        Rect(.label, w: 22, h: 4)
+                    }
+                    .padding(.horizontal, 6)
+                }
+            }
+            
+            // Creative total
+            HStack {
+                Spacer()
+                HStack(spacing: 2) {
+                    Star()
+                        .fill(primary)
+                        .frame(width: 4, height: 4)
+                    Rect(.label, w: 30, h: 5)
+                }
+            }
+            .padding(.horizontal, 8)
+        }
     }
     
     private func headerGradient(primary: Color, secondary: Color) -> LinearGradient {
@@ -1194,5 +1599,40 @@ struct CustomLogoEditAlert: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             isPresented = false
         }
+    }
+}
+
+// MARK: - Custom Shapes for Template Previews
+
+struct Triangle: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.closeSubpath()
+        return path
+    }
+}
+
+struct Star: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        let radius = min(rect.width, rect.height) / 2
+        
+        for i in 0..<5 {
+            let angle = Double(i) * 4 * Double.pi / 5 - Double.pi / 2
+            let x = center.x + radius * cos(angle)
+            let y = center.y + radius * sin(angle)
+            
+            if i == 0 {
+                path.move(to: CGPoint(x: x, y: y))
+            } else {
+                path.addLine(to: CGPoint(x: x, y: y))
+            }
+        }
+        path.closeSubpath()
+        return path
     }
 }
