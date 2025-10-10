@@ -47,10 +47,8 @@ struct InvoicesScreen: View {
     @StateObject private var vm = InvoicesVM()
     @Environment(\.colorScheme) private var scheme
 
-    @State private var showCompanySetup = false
-    @State private var showTemplatePicker = false
+    @State private var showInvoiceCreation = false // Unified state for full-screen flow
     @State private var showEmptyPaywall = false
-    @State private var showWizard = false
     @State private var floatingElements: [FloatingElement] = []
 
     var body: some View {
@@ -74,7 +72,7 @@ struct InvoicesScreen: View {
                         .position(x: element.x, y: element.y)
                 }
                 
-                ScrollView {
+                ScrollView(.vertical, showsIndicators: true) {
                     VStack(alignment: .leading, spacing: UI.largeSpacing) {
                         screenHeader
                         headerCard
@@ -91,45 +89,18 @@ struct InvoicesScreen: View {
                 .padding(.top, 16)
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: onNewInvoice) {
-                        Image(systemName: app.canCreateInvoice ? "plus.circle.fill" : "lock.circle")
-                            .imageScale(.large)
-                    }
-                }
-            }
+            .navigationBarItems(trailing: Button(action: onNewInvoice) {
+                Image(systemName: app.canCreateInvoice ? "plus.circle.fill" : "lock.circle")
+                    .imageScale(.large)
+            })
         }
         .onAppear {
             createFloatingElements()
         }
-            // 1) Company setup (если нет компании)
-            .sheet(isPresented: $showCompanySetup) {
-                CompanySetupView(onContinue: {
-                    showCompanySetup = false
-                    showTemplatePicker = true
-                })
-                .environmentObject(app) // Явно передаем AppState
+            .fullScreenCover(isPresented: $showInvoiceCreation) {
+                InvoiceCreationFlow()
+                    .environmentObject(app)
             }
-            // 2) Template picker -> после выбора открываем визард
-            .sheet(isPresented: $showTemplatePicker) {
-                TemplatePickerView { _ in
-                    // закрываем пикер
-                    showTemplatePicker = false
-                    // открываем визард в следующем тике
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                        showWizard = true
-                    }
-                }
-                .environmentObject(app) // Явно передаем AppState
-            }
-            // 3) Визард создания инвойса
-            .sheet(isPresented: $showWizard) {
-                InvoiceWizardView()
-                    .environmentObject(app) // Явно передаем AppState
-            }
-            .presentationDetents(UIDevice.current.userInterfaceIdiom == .pad ? [.large] : [.medium, .large])
-            .presentationDragIndicator(UIDevice.current.userInterfaceIdiom == .pad ? .visible : .automatic)
             // Paywall-заглушка
             .sheet(isPresented: $showEmptyPaywall) {
                 EmptyScreen()
@@ -145,12 +116,8 @@ struct InvoicesScreen: View {
             showEmptyPaywall = true
             return
         }
-        // если компания не настроена — сначала CompanySetup
-        if app.company == nil {
-            showCompanySetup = true
-        } else {
-            showTemplatePicker = true
-        }
+        // Открываем полноэкранный флоу создания инвойса
+        showInvoiceCreation = true
     }
 
     // MARK: - Sections

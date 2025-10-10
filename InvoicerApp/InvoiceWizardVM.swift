@@ -61,6 +61,9 @@ struct InvoiceWizardView: View {
                 StepHeader(step: vm.step)
                 content
             }
+            .onAppear {
+                print("🎯 InvoiceWizardView appeared with template: \(app.selectedTemplate.name)")
+            }
             .navigationTitle("Create Invoice")
             .toolbar {
                 // Нажимаем на "лейбл" – открываем выбор шаблона

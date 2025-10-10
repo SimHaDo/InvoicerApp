@@ -62,14 +62,10 @@ struct ColorSchemePickerView: View {
         .navigationTitle("Choose Color Scheme")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Back") { dismiss() }
-            }
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Done") {
+                Button("Next") {
                     if let theme = selectedTheme {
                         onColorSelected(theme)
-                        dismiss()
                     }
                 }
                 .disabled(selectedTheme == nil)

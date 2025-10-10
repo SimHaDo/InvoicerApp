@@ -70,47 +70,59 @@ struct TemplatePickerView: View {
         
         return filtered
     }
+    
+    private var iPadLayout: some View {
+        NavigationStack(path: $navigationPath) {
+            contentView
+                .navigationTitle("Invoice Templates")
+                .navigationBarTitleDisplayMode(.large)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) { 
+                        Button("Next") { dismiss() } 
+                    }
+                }
+                .navigationDestination(for: InvoiceTemplateDescriptor.self) { template in
+                    ColorSchemePickerView(
+                        selectedTemplate: template,
+                        onColorSelected: { selectedTheme in
+                            let completeTemplate = CompleteInvoiceTemplate(template: template, theme: selectedTheme)
+                            app.selectedTemplate = completeTemplate
+                            onSelect(completeTemplate)
+                        }
+                    )
+                }
+        }
+    }
+    
+    private var iPhoneLayout: some View {
+        NavigationStack(path: $navigationPath) {
+            contentView
+                .navigationTitle("Invoice Templates")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) { 
+                        Button("Next") { dismiss() } 
+                    }
+                }
+                .navigationDestination(for: InvoiceTemplateDescriptor.self) { template in
+                    ColorSchemePickerView(
+                        selectedTemplate: template,
+                        onColorSelected: { selectedTheme in
+                            let completeTemplate = CompleteInvoiceTemplate(template: template, theme: selectedTheme)
+                            app.selectedTemplate = completeTemplate
+                            onSelect(completeTemplate)
+                        }
+                    )
+                }
+        }
+    }
 
     var body: some View {
         GeometryReader { geometry in
             if geometry.size.width > 768 {
-                // iPad layout - full screen with NavigationStack
-                NavigationStack(path: $navigationPath) {
-                    contentView
-                        .navigationTitle("Invoice Templates")
-                        .navigationBarTitleDisplayMode(.large)
-                        .toolbar {
-                            ToolbarItem(placement: .topBarTrailing) { 
-                                Button("Done") { dismiss() } 
-                            }
-                        }
-                        .navigationDestination(for: InvoiceTemplateDescriptor.self) { template in
-                            ColorSchemePickerView(selectedTemplate: template) { selectedTheme in
-                                let completeTemplate = CompleteInvoiceTemplate(template: template, theme: selectedTheme)
-                                app.selectedTemplate = completeTemplate
-                                onSelect(completeTemplate)
-                            }
-                        }
-                }
+                iPadLayout
             } else {
-                // iPhone layout - compact with inline title
-                NavigationStack(path: $navigationPath) {
-                    contentView
-                        .navigationTitle("Invoice Templates")
-                        .navigationBarTitleDisplayMode(.inline)
-                        .toolbar {
-                            ToolbarItem(placement: .topBarTrailing) { 
-                                Button("Done") { dismiss() } 
-                            }
-                        }
-                        .navigationDestination(for: InvoiceTemplateDescriptor.self) { template in
-                            ColorSchemePickerView(selectedTemplate: template) { selectedTheme in
-                                let completeTemplate = CompleteInvoiceTemplate(template: template, theme: selectedTheme)
-                                app.selectedTemplate = completeTemplate
-                                onSelect(completeTemplate)
-                            }
-                        }
-                }
+                iPhoneLayout
             }
         }
         .sheet(isPresented: $showPaywall) {
@@ -487,7 +499,7 @@ struct TemplatePickerView: View {
 
 // MARK: - Template Card
 
-private struct TemplateCard: View {
+struct TemplateCard: View {
     let descriptor: InvoiceTemplateDescriptor
     let onTap: () -> Void
     
@@ -585,7 +597,7 @@ private struct TemplateCard: View {
 
 // MARK: - Modern Filter Chip
 
-private struct ModernFilterChip: View {
+struct ModernFilterChip: View {
     let title: String
     let icon: String
     let isSelected: Bool

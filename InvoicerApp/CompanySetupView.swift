@@ -18,10 +18,9 @@ private struct FloatingElement: Identifiable {
     var rotation: Double
 }
 
-// Company Setup → возвращает управление наверх через onContinue
+// Company Setup
 struct CompanySetupView: View {
     @EnvironmentObject private var app: AppState
-    var onContinue: () -> Void
 
     @State private var company = Company()
     @Environment(\.colorScheme) private var scheme
@@ -197,7 +196,6 @@ struct CompanySetupView: View {
     private var continueButton: some View {
         Button {
             app.company = company
-            onContinue()
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "arrow.right.circle.fill")
