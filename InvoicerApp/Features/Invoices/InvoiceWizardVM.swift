@@ -36,7 +36,52 @@ final class InvoiceWizardVM: ObservableObject {
     @Published var paymentNotes: String = ""                  // дополнительные примечания (на инвойсе)
     @Published var includeLogo: Bool = true                   // включить логотип в инвойс
 
+    // Tax and Discount state
+    @Published var taxRate: Decimal = 0
+    @Published var taxType: TaxType = .percentage
+    @Published var discountValue: Decimal = 0
+    @Published var discountType: DiscountType = .percentage
+    @Published var isDiscountEnabled: Bool = false
+
+    enum TaxType: String, CaseIterable, Identifiable {
+        case percentage = "percentage"
+        case amount = "amount"
+        
+        var id: String { rawValue }
+        var displayName: String {
+            switch self {
+            case .percentage: return "Percentage"
+            case .amount: return "Amount"
+            }
+        }
+    }
+
     var subtotal: Decimal { items.map { $0.total }.reduce(0, +) }
+    
+    var taxableAmount: Decimal {
+        items.filter { !$0.isTaxExempt }.map { $0.total }.reduce(0, +)
+    }
+    
+    var taxAmount: Decimal {
+        if taxType == .percentage {
+            return taxableAmount * (taxRate / 100)
+        } else {
+            return taxRate
+        }
+    }
+    
+    var calculatedDiscountAmount: Decimal {
+        if !isDiscountEnabled { return 0 }
+        if discountType == .percentage {
+            return subtotal * (discountValue / 100)
+        } else {
+            return discountValue
+        }
+    }
+    
+    var total: Decimal {
+        subtotal + taxAmount - calculatedDiscountAmount
+    }
 }
 
 // MARK: - Wizard
@@ -1267,104 +1312,247 @@ struct StepItemsPricingView: View {
 
     @State private var search = ""
     @State private var category = "All"
+    @State private var showAddItemSheet = false
+    @State private var editingItem: LineItem? = nil
     
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 16) {
-                // Add Products/Services
-                GroupBox {
-                    VStack(alignment: .leading, spacing: 12) {
+            VStack(spacing: 24) {
+                // Header
+                VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
                         HStack {
-                            Label("Add Products/Services", systemImage: "shippingbox")
-                            Spacer()
-                            Button("+ Add New") { /* TODO */ }
+                            Image(systemName: "list.bullet.rectangle")
                                 .foregroundColor(.blue)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(
-                                            scheme == .dark ? 
-                                            Color.blue.opacity(0.2) : 
-                                            Color.blue.opacity(0.1)
-                                        )
-                                )
+                                .font(.title2)
+                            Text("Invoice Items")
+                                .font(.title2)
+                                .fontWeight(.bold)
                         }
+                        Text("Add products and services to your invoice")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .modifier(CompanySetupCard())
 
-                        HStack(spacing: 8) {
-                            TextField("Search products/services…", text: $search).fieldStyle()
+                // Add Items Section
+                VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
+                                .foregroundColor(.green)
+                                .font(.title3)
+                            Text("Add Items")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                        }
+                        Text("Choose from your catalog or add custom items")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    // Search and Filter
+                    VStack(spacing: 12) {
+                        ModernTextField(
+                            title: "Search products/services",
+                            text: $search,
+                            icon: "magnifyingglass"
+                        )
+                        
+                        HStack(spacing: 12) {
                             Menu {
                                 Picker("Category", selection: $category) {
-                                    Text("All").tag("All")
+                                    Text("All Categories").tag("All")
                                     ForEach(Array(Set(app.products.map { $0.category })).sorted(), id: \.self) { c in
                                         Text(c).tag(c)
                                     }
                                 }
                             } label: {
-                                HStack { Text(category); Image(systemName: "chevron.down") }
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 8)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .fill(
-                                                scheme == .dark ? 
-                                                Color(red: 0.12, green: 0.12, blue: 0.16) : 
-                                                Color.secondary.opacity(0.1)
+                                HStack {
+                                    Text(category == "All" ? "All Categories" : category)
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                    Image(systemName: "chevron.down")
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(
+                                            scheme == .dark ? 
+                                            Color(red: 0.12, green: 0.12, blue: 0.16) : 
+                                            Color.secondary.opacity(0.08)
+                                        )
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(
+                                                    scheme == .dark ? 
+                                                    Color.blue.opacity(0.2) : 
+                                                    Color.clear,
+                                                    lineWidth: 1
+                                                )
+                                        )
+                                )
+                            }
+                            
+                            Button(action: { showAddItemSheet = true }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "plus.circle.fill")
+                                    Text("Add New")
+                                }
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [.blue, .purple],
+                                                startPoint: .leading,
+                                                endPoint: .trailing
                                             )
-                                    )
+                                        )
+                                )
                             }
                         }
-
-                        ForEach(filteredProducts) { p in
-                            WizardProductRow(p: p) { add(product: p) }
-                        }
                     }
-                    .padding(4)
+                    
+                    // Products List
+                    if !filteredProducts.isEmpty {
+                        VStack(spacing: 8) {
+                            ForEach(filteredProducts) { product in
+                                ProductCard(
+                                    product: product,
+                                    onAdd: { add(product: product) }
+                                )
+                            }
+                        }
+                    } else if !search.isEmpty || category != "All" {
+                        VStack(spacing: 12) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 32))
+                                .foregroundColor(.secondary)
+                            Text("No products found")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                            Text("Try adjusting your search or category filter")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 20)
+                    }
                 }
+                .modifier(CompanySetupCard())
 
                 // Invoice Items
-                GroupBox {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Text("Invoice Items").font(.headline)
-                            Spacer()
-                            Button("+ Add Custom Item") { addCustom() }
+                if !vm.items.isEmpty {
+                    VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "list.bullet")
+                                    .foregroundColor(.orange)
+                                    .font(.title3)
+                                Text("Invoice Items")
+                                    .font(.title3)
+                                    .fontWeight(.bold)
+                            }
+                            Text("Items added to this invoice")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
                         }
-                        ForEach(vm.items) { item in
-                            ItemEditor(item: binding(for: item))
-                        }
-                        HStack {
-                            Text("Subtotal")
-                            Spacer()
-                            Text(Money.fmt(vm.subtotal, code: vm.currency)).bold()
+                        
+                        VStack(spacing: 12) {
+                            ForEach(vm.items) { item in
+                                InvoiceItemCard(
+                                    item: binding(for: item),
+                                    onDelete: { deleteItem(item) }
+                                )
+                            }
                         }
                     }
-                    .padding(4)
+                    .modifier(CompanySetupCard())
                 }
 
-                HStack {
-                    Button("Previous", action: prev).buttonStyle(.bordered)
-                    Spacer()
-                    Button("Generate", action: onSaved)
-                        .buttonStyle(.borderedProminent)
-                        .disabled(vm.items.isEmpty)
+                // Tax Section
+                TaxSection(vm: vm)
+                    .modifier(CompanySetupCard())
+
+                // Discount Section
+                DiscountSection(vm: vm)
+                    .modifier(CompanySetupCard())
+
+                // Summary Section
+                SummarySection(vm: vm)
+                    .modifier(CompanySetupCard())
+
+                // Navigation Buttons
+                HStack(spacing: 16) {
+                    Button(action: prev) {
+                        HStack {
+                            Image(systemName: "chevron.left")
+                            Text("Previous")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.secondary.opacity(0.1))
+                        )
+                        .foregroundColor(.secondary)
+                    }
+                    
+                    Button(action: onSaved) {
+                        HStack {
+                            Text("Generate Invoice")
+                            Image(systemName: "chevron.right")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [.blue, .purple],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                        )
+                        .foregroundColor(.white)
+                        .fontWeight(.semibold)
+                    }
+                    .disabled(vm.items.isEmpty)
                 }
             }
-            .padding()
+            .padding(.horizontal, 20)
+            .padding(.bottom, 32)
         }
         .onTapGesture {
-            // Закрываем клавиатуру при тапе на ScrollView
             hideKeyboard()
         }
         .simultaneousGesture(
             DragGesture()
                 .onChanged { _ in
-                    // Закрываем клавиатуру при скролле
                     hideKeyboard()
                 }
         )
+        .sheet(isPresented: $showAddItemSheet) {
+            AddEditItemSheet { newItem in
+                vm.items.append(newItem)
+            }
+        }
+        .sheet(item: $editingItem) { item in
+            AddEditItemSheet(existing: item) { updatedItem in
+                if let idx = vm.items.firstIndex(where: { $0.id == item.id }) {
+                    vm.items[idx] = updatedItem
+                }
+            }
+        }
     }
     
     private func hideKeyboard() {
@@ -1381,8 +1569,9 @@ struct StepItemsPricingView: View {
     private func add(product p: Product) {
         vm.items.append(LineItem(description: p.name, quantity: 1, rate: p.rate))
     }
-    private func addCustom() {
-        vm.items.append(LineItem(description: "", quantity: 1, rate: 0))
+    
+    private func deleteItem(_ item: LineItem) {
+        vm.items.removeAll { $0.id == item.id }
     }
 
     private func binding(for item: LineItem) -> Binding<LineItem> {
@@ -1393,32 +1582,88 @@ struct StepItemsPricingView: View {
     }
 }
 
-// MARK: - Local product row for wizard
+// MARK: - Product Card
 
-private struct WizardProductRow: View {
-    let p: Product
+private struct ProductCard: View {
+    let product: Product
     let onAdd: () -> Void
+    
+    @Environment(\.colorScheme) private var scheme
+    
     var body: some View {
-        HStack(alignment: .center) {
+        HStack(spacing: 12) {
+            // Product Info
             VStack(alignment: .leading, spacing: 4) {
-                HStack { Text(p.name).bold(); Tag(text: p.category) }
-                if !p.details.isEmpty {
-                    Text(p.details).font(.caption).foregroundStyle(.secondary)
+                HStack {
+                    Text(product.name)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+                    
+                    Spacer()
+                    
+                    Text(product.category)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.blue)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill(Color.blue.opacity(0.1))
+                        )
                 }
-                Text("\(Money.fmt(p.rate, code: Locale.current.currency?.identifier ?? "USD")) / hour")
-                    .font(.caption)
+                
+                if !product.details.isEmpty {
+                    Text(product.details)
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                }
+                
+                Text("\(Money.fmt(product.rate, code: Locale.current.currency?.identifier ?? "USD")) / hour")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.green)
             }
-            Spacer()
+            
+            // Add Button
             Button(action: onAdd) {
-                HStack { Image(systemName: "cart.badge.plus"); Text("Add") }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.black))
-                    .foregroundStyle(.white)
+                HStack(spacing: 6) {
+                    Image(systemName: "plus.circle.fill")
+                    Text("Add")
+                }
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(
+                            LinearGradient(
+                                colors: [.blue, .purple],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                )
             }
         }
-        .padding(10)
-        .background(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.15)))
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(
+                    scheme == .dark ? 
+                    Color(red: 0.12, green: 0.12, blue: 0.16) : 
+                    Color.secondary.opacity(0.05)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(
+                            scheme == .dark ? 
+                            Color.blue.opacity(0.2) : 
+                            Color.secondary.opacity(0.1),
+                            lineWidth: 1
+                        )
+                )
+        )
     }
 }
 
@@ -1631,32 +1876,585 @@ struct Tag: View {
     }
 }
 
-struct ItemEditor: View {
+// MARK: - Invoice Item Card
+
+private struct InvoiceItemCard: View {
     @Binding var item: LineItem
+    let onDelete: () -> Void
     
+    @Environment(\.colorScheme) private var scheme
+    @State private var showDetails = false
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            // Main Item Info
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.description.isEmpty ? "Untitled Item" : item.description)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .lineLimit(2)
+                    
+                    HStack(spacing: 16) {
+                        Text("Qty: \(NSDecimalNumber(decimal: item.quantity).doubleValue, specifier: "%.1f")")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.secondary)
+                        
+                        Text("Rate: \(Money.fmt(item.rate, code: Locale.current.currency?.identifier ?? "USD"))")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.secondary)
+                        
+                        if item.isTaxExempt {
+                            Text("Tax Exempt")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.green)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.green.opacity(0.1))
+                                )
+                        }
+                    }
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(Money.fmt(item.total, code: Locale.current.currency?.identifier ?? "USD"))
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.primary)
+                    
+                    Button(action: { showDetails.toggle() }) {
+                        Image(systemName: showDetails ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            
+            // Expandable Details
+            if showDetails {
+                VStack(spacing: 12) {
+                    Divider()
+                    
+                    // Description
+                    ModernTextField(
+                        title: "Description",
+                        text: $item.description,
+                        icon: "text.alignleft"
+                    )
+                    
+                    // Quantity and Rate
+                    HStack(spacing: 12) {
+                        ModernTextField(
+                            title: "Quantity",
+                            text: Binding(
+                                get: { String(format: "%.1f", NSDecimalNumber(decimal: item.quantity).doubleValue) },
+                                set: { item.quantity = Decimal(string: $0) ?? 0 }
+                            ),
+                            icon: "number"
+                        )
+                        
+                        ModernTextField(
+                            title: "Rate",
+                            text: Binding(
+                                get: { String(format: "%.2f", NSDecimalNumber(decimal: item.rate).doubleValue) },
+                                set: { item.rate = Decimal(string: $0) ?? 0 }
+                            ),
+                            icon: "dollarsign.circle"
+                        )
+                    }
+                    
+                    // Discount
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Discount")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
+                            
+                            Picker("Type", selection: $item.discountType) {
+                                ForEach(DiscountType.allCases, id: \.self) { type in
+                                    Text(type.displayName).tag(type)
+                                }
+                            }
+                            .pickerStyle(SegmentedPickerStyle())
+                            .frame(width: 120)
+                        }
+                        
+                        ModernTextField(
+                            title: item.discountType == .percentage ? "Discount %" : "Discount Amount",
+                            text: Binding(
+                                get: { String(format: "%.2f", NSDecimalNumber(decimal: item.discount).doubleValue) },
+                                set: { item.discount = Decimal(string: $0) ?? 0 }
+                            ),
+                            icon: "percent"
+                        )
+                    }
+                    
+                    // Tax Exempt Toggle
+                    HStack {
+                        Toggle("Tax Exempt", isOn: $item.isTaxExempt)
+                            .font(.system(size: 14, weight: .medium))
+                        
+                        Spacer()
+                    }
+                    
+                    // Delete Button
+                    Button(action: onDelete) {
+                        HStack {
+                            Image(systemName: "trash")
+                            Text("Remove Item")
+                        }
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.red)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.red.opacity(0.1))
+                        )
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(
+                    scheme == .dark ? 
+                    Color(red: 0.12, green: 0.12, blue: 0.16) : 
+                    Color.secondary.opacity(0.05)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(
+                            scheme == .dark ? 
+                            Color.blue.opacity(0.2) : 
+                            Color.secondary.opacity(0.1),
+                            lineWidth: 1
+                        )
+                )
+        )
+        .animation(.easeInOut(duration: 0.3), value: showDetails)
+    }
+}
+
+// MARK: - Tax Section
+
+private struct TaxSection: View {
+    @ObservedObject var vm: InvoiceWizardVM
     @Environment(\.colorScheme) private var scheme
     
     var body: some View {
-        VStack(spacing: 8) {
-            TextField("Description", text: $item.description).fieldStyle()
-            HStack {
-                DecimalField(title: "Quantity", value: $item.quantity)
-                DecimalField(title: "Rate", value: $item.rate)
-                Spacer()
-                Text(Money.fmt(item.total, code: Locale.current.currency?.identifier ?? "USD")).bold()
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: "percent")
+                        .foregroundColor(.red)
+                        .font(.title3)
+                    Text("Tax")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                }
+                Text("Add tax to taxable items")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
-            .frame(height: 44)
-        }
-        .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(
-                    scheme == .dark ? 
-                    Color.blue.opacity(0.2) : 
-                    Color.secondary.opacity(0.15), 
-                    lineWidth: 1
+            
+            VStack(spacing: 12) {
+                HStack {
+                    Text("Tax Type")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.primary)
+                    
+                    Spacer()
+                    
+                    Picker("Type", selection: $vm.taxType) {
+                        ForEach(InvoiceWizardVM.TaxType.allCases, id: \.self) { type in
+                            Text(type.displayName).tag(type)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .frame(width: 120)
+                }
+                
+                ModernTextField(
+                    title: vm.taxType == .percentage ? "Tax Rate %" : "Tax Amount",
+                    text: Binding(
+                        get: { String(format: "%.2f", NSDecimalNumber(decimal: vm.taxRate).doubleValue) },
+                        set: { vm.taxRate = Decimal(string: $0) ?? 0 }
+                    ),
+                    icon: "percent"
                 )
-        )
+                
+                if vm.taxAmount > 0 {
+                    HStack {
+                        Text("Tax Amount:")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                        
+                        Text(Money.fmt(vm.taxAmount, code: vm.currency))
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.red)
+                    }
+                    .padding(.top, 8)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Discount Section
+
+private struct DiscountSection: View {
+    @ObservedObject var vm: InvoiceWizardVM
+    @Environment(\.colorScheme) private var scheme
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: "tag")
+                        .foregroundColor(.green)
+                        .font(.title3)
+                    Text("Discount")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                }
+                Text("Apply discount to the total amount")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            VStack(spacing: 12) {
+                HStack {
+                    Toggle("Enable Discount", isOn: $vm.isDiscountEnabled)
+                        .font(.system(size: 14, weight: .semibold))
+                    
+                    Spacer()
+                }
+                
+                if vm.isDiscountEnabled {
+                    VStack(spacing: 12) {
+                        HStack {
+                            Text("Discount Type")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
+                            
+                            Picker("Type", selection: $vm.discountType) {
+                                ForEach(DiscountType.allCases, id: \.self) { type in
+                                    Text(type.displayName).tag(type)
+                                }
+                            }
+                            .pickerStyle(SegmentedPickerStyle())
+                            .frame(width: 120)
+                        }
+                        
+                        ModernTextField(
+                            title: vm.discountType == .percentage ? "Discount %" : "Discount Amount",
+                            text: Binding(
+                                get: { String(format: "%.2f", NSDecimalNumber(decimal: vm.discountValue).doubleValue) },
+                                set: { vm.discountValue = Decimal(string: $0) ?? 0 }
+                            ),
+                            icon: "percent"
+                        )
+                        
+                        if vm.calculatedDiscountAmount > 0 {
+                            HStack {
+                                Text("Discount Amount:")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                
+                                Spacer()
+                                
+                                Text(Money.fmt(vm.calculatedDiscountAmount, code: vm.currency))
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.green)
+                            }
+                            .padding(.top, 8)
+                        }
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: vm.isDiscountEnabled)
+    }
+}
+
+// MARK: - Summary Section
+
+private struct SummarySection: View {
+    @ObservedObject var vm: InvoiceWizardVM
+    @Environment(\.colorScheme) private var scheme
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: "calculator")
+                        .foregroundColor(.blue)
+                        .font(.title3)
+                    Text("Invoice Summary")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                }
+                Text("Final calculation breakdown")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            VStack(spacing: 12) {
+                // Subtotal
+                HStack {
+                    Text("Subtotal")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.primary)
+                    
+                    Spacer()
+                    
+                    Text(Money.fmt(vm.subtotal, code: vm.currency))
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+                }
+                
+                // Tax
+                if vm.taxAmount > 0 {
+                    HStack {
+                        Text("Tax")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                        
+                        Text(Money.fmt(vm.taxAmount, code: vm.currency))
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.red)
+                    }
+                }
+                
+                // Discount
+                if vm.calculatedDiscountAmount > 0 {
+                    HStack {
+                        Text("Discount")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                        
+                        Text("-\(Money.fmt(vm.calculatedDiscountAmount, code: vm.currency))")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.green)
+                    }
+                }
+                
+                Divider()
+                
+                // Total
+                HStack {
+                    Text("Total")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.primary)
+                    
+                    Spacer()
+                    
+                    Text(Money.fmt(vm.total, code: vm.currency))
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.blue)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Add Edit Item Sheet
+
+struct AddEditItemSheet: View {
+    private let existing: LineItem?
+    var onSave: (LineItem) -> Void
+    
+    @State private var description = ""
+    @State private var quantity: Decimal = 1
+    @State private var rate: Decimal = 0
+    @State private var discount: Decimal = 0
+    @State private var discountType: DiscountType = .percentage
+    @State private var isTaxExempt = false
+    
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var scheme
+    
+    init(existing: LineItem? = nil, onSave: @escaping (LineItem) -> Void) {
+        self.existing = existing
+        self.onSave = onSave
+    }
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Header
+                    VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundColor(.blue)
+                                    .font(.title2)
+                                Text(existing == nil ? "Add New Item" : "Edit Item")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                            }
+                            Text("Add a custom item to your invoice")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .modifier(CompanySetupCard())
+                    
+                    // Form
+                    VStack(spacing: 16) {
+                        ModernTextField(
+                            title: "Description",
+                            text: $description,
+                            icon: "text.alignleft"
+                        )
+                        
+                        HStack(spacing: 12) {
+                            ModernTextField(
+                                title: "Quantity",
+                                text: Binding(
+                                    get: { String(format: "%.1f", NSDecimalNumber(decimal: quantity).doubleValue) },
+                                    set: { quantity = Decimal(string: $0) ?? 0 }
+                                ),
+                                icon: "number"
+                            )
+                            
+                            ModernTextField(
+                                title: "Rate",
+                                text: Binding(
+                                    get: { String(format: "%.2f", NSDecimalNumber(decimal: rate).doubleValue) },
+                                    set: { rate = Decimal(string: $0) ?? 0 }
+                                ),
+                                icon: "dollarsign.circle"
+                            )
+                        }
+                        
+                        // Discount
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("Discount")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.primary)
+                                
+                                Spacer()
+                                
+                                Picker("Type", selection: $discountType) {
+                                    ForEach(DiscountType.allCases, id: \.self) { type in
+                                        Text(type.displayName).tag(type)
+                                    }
+                                }
+                                .pickerStyle(SegmentedPickerStyle())
+                                .frame(width: 120)
+                            }
+                            
+                            ModernTextField(
+                                title: discountType == .percentage ? "Discount %" : "Discount Amount",
+                                text: Binding(
+                                    get: { String(format: "%.2f", NSDecimalNumber(decimal: discount).doubleValue) },
+                                    set: { discount = Decimal(string: $0) ?? 0 }
+                                ),
+                                icon: "percent"
+                            )
+                        }
+                        
+                        // Tax Exempt
+                        HStack {
+                            Toggle("Tax Exempt", isOn: $isTaxExempt)
+                                .font(.system(size: 14, weight: .medium))
+                            
+                            Spacer()
+                        }
+                    }
+                    .modifier(CompanySetupCard())
+                    
+                    // Preview
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Image(systemName: "eye")
+                                .foregroundColor(.blue)
+                                .font(.title3)
+                            Text("Preview")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                        }
+                        
+                        VStack(spacing: 8) {
+                            HStack {
+                                Text("Total:")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.primary)
+                                
+                                Spacer()
+                                
+                                Text(Money.fmt(calculatedTotal, code: Locale.current.currency?.identifier ?? "USD"))
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                    .modifier(CompanySetupCard())
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 32)
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        let item = LineItem(
+                            description: description,
+                            quantity: quantity,
+                            rate: rate,
+                            discount: discount,
+                            discountType: discountType,
+                            isTaxExempt: isTaxExempt
+                        )
+                        onSave(item)
+                        dismiss()
+                    }
+                    .disabled(description.isEmpty)
+                }
+            }
+        }
+        .onAppear {
+            if let existing = existing {
+                description = existing.description
+                quantity = existing.quantity
+                rate = existing.rate
+                discount = existing.discount
+                discountType = existing.discountType
+                isTaxExempt = existing.isTaxExempt
+            }
+        }
+    }
+    
+    private var calculatedTotal: Decimal {
+        let subtotal = quantity * rate
+        let discountAmount = discountType == .percentage ? subtotal * (discount / 100) : discount
+        return max(0, subtotal - discountAmount)
     }
 }
 

@@ -56,7 +56,26 @@ struct LineItem: Codable, Hashable, Identifiable {
     var description: String
     var quantity: Decimal
     var rate: Decimal
-    var total: Decimal { quantity * rate }
+    var discount: Decimal = 0
+    var discountType: DiscountType = .percentage
+    var isTaxExempt: Bool = false
+    var total: Decimal { 
+        let subtotal = quantity * rate
+        let discountAmount = discountType == .percentage ? subtotal * (discount / 100) : discount
+        return max(0, subtotal - discountAmount)
+    }
+}
+
+enum DiscountType: String, Codable, CaseIterable {
+    case percentage = "percentage"
+    case amount = "amount"
+    
+    var displayName: String {
+        switch self {
+        case .percentage: return "Percentage"
+        case .amount: return "Amount"
+        }
+    }
 }
 
 struct Invoice: Codable, Hashable, Identifiable {
