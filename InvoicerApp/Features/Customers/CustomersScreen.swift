@@ -40,6 +40,8 @@ struct CustomersScreen: View {
     @Environment(\.colorScheme) private var scheme
 
     @State private var showAddCustomer = false
+    @State private var showInvoiceCreation = false
+    @State private var showEmptyPaywall = false
     @State private var showContent = false
     @State private var pulseAnimation = false
     @State private var shimmerOffset: CGFloat = -1
@@ -167,6 +169,15 @@ struct CustomersScreen: View {
                 AddCustomerSheet { newCustomer in
                     app.customers.append(newCustomer)
                 }
+            }
+            .fullScreenCover(isPresented: $showInvoiceCreation) {
+                InvoiceCreationFlow(onClose: {
+                    showInvoiceCreation = false
+                })
+                .environmentObject(app)
+            }
+            .sheet(isPresented: $showEmptyPaywall) {
+                EmptyScreen()
             }
         }
         .onAppear {
@@ -301,7 +312,13 @@ struct CustomersScreen: View {
     // MARK: - Helpers
 
     private func onCreateInvoice() {
-        // TODO: open invoice wizard / template picker
+        // если лимит исчерпан и нет подписки — показываем paywall
+        guard app.canCreateInvoice else {
+            showEmptyPaywall = true
+            return
+        }
+        // Открываем полноэкранный флоу создания инвойса
+        showInvoiceCreation = true
     }
 
     private var emptyList: some View {

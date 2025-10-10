@@ -90,6 +90,8 @@ struct ProductsScreen: View {
 
     @State private var showAddProduct = false
     @State private var editingProduct: Product? = nil
+    @State private var showInvoiceCreation = false
+    @State private var showEmptyPaywall = false
     @State private var showContent = false
     @State private var pulseAnimation = false
     @State private var shimmerOffset: CGFloat = -1
@@ -235,6 +237,15 @@ struct ProductsScreen: View {
                     }
                 }
             }
+            .fullScreenCover(isPresented: $showInvoiceCreation) {
+                InvoiceCreationFlow(onClose: {
+                    showInvoiceCreation = false
+                })
+                .environmentObject(app)
+            }
+            .sheet(isPresented: $showEmptyPaywall) {
+                EmptyScreen()
+            }
         }
         .onAppear {
             showContent = true
@@ -248,7 +259,13 @@ struct ProductsScreen: View {
     // MARK: - Helpers
 
     private func onCreateInvoice() {
-        // TODO: open invoice wizard / template picker
+        // если лимит исчерпан и нет подписки — показываем paywall
+        guard app.canCreateInvoice else {
+            showEmptyPaywall = true
+            return
+        }
+        // Открываем полноэкранный флоу создания инвойса
+        showInvoiceCreation = true
     }
 
 
