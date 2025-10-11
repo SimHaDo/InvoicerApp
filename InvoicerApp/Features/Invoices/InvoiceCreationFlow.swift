@@ -516,7 +516,7 @@ struct InvoiceStepView: View {
         }
         .sheet(isPresented: $showShare) {
             if let url = shareURL {
-                ShareSheet(activityItems: [url])
+                ShareSheet(items: [url])
                     .onDisappear {
                         if shouldDismissAfterShare {
                             // Закрываем флоу

@@ -111,16 +111,15 @@ struct InvoiceWizardView: View {
             }
             .navigationTitle("Create Invoice")
             .toolbar {
-                // Нажимаем на "лейбл" – открываем выбор шаблона
                 ToolbarItem(placement: .principal) {
-                    Button { showTemplatePicker = true } label: {
+                    Button(action: { showTemplatePicker = true }) {
                         Label(app.selectedTemplate.name, systemImage: "tag")
                             .labelStyle(.titleAndIcon)
                     }
                     .accessibilityIdentifier("TemplatePickerButton")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { save() } label: {
+                    Button(action: save) {
                         Label("Save", systemImage: "square.and.arrow.down")
                     }
                     .accessibilityIdentifier("SaveInvoiceButton")
@@ -137,10 +136,7 @@ struct InvoiceWizardView: View {
                 if shouldDismissAfterShare { dismiss() }
             }) {
                 if let url = shareURL {
-                    ShareSheet(activityItems: [url]) { _, _, _, _ in
-                        // Пользователь закрыл контроллер шаринга
-                        shouldDismissAfterShare = true
-                    }
+                    ShareSheet(items: [url])
                 }
             }
         }
@@ -221,6 +217,7 @@ struct InvoiceWizardView: View {
 
         app.invoices.append(invoice)
 
+        Task {
         do {
             let url = try PDFService.shared.generatePDF(
                 invoice: invoice,
@@ -230,12 +227,15 @@ struct InvoiceWizardView: View {
                 template: app.selectedTemplate,
                 logo: vm.includeLogo ? app.logoImage : nil
             )
+                await MainActor.run {
             shareURL = url
             shouldDismissAfterShare = false
             showShare = true
+                }
         } catch {
             print("PDF generation error:", error)
             // если что-то пошло не так — просто остаёмся в визарде
+            }
         }
     }
 }
@@ -987,7 +987,7 @@ struct StepClientInfoView: View {
                         .foregroundColor(vm.customer == nil ? .gray : .white)
                         .fontWeight(.semibold)
                     }
-                    .disabled(vm.customer == nil)
+                        .disabled(vm.customer == nil)
                 }
             }
             .padding(.horizontal, 20)
@@ -1321,7 +1321,7 @@ struct StepItemsPricingView: View {
         ScrollView {
             VStack(spacing: 24) {
                 // Header
-                VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
                             Image(systemName: "list.bullet.rectangle")
@@ -1453,7 +1453,7 @@ struct StepItemsPricingView: View {
                 if !vm.items.isEmpty {
                     VStack(alignment: .leading, spacing: 16) {
                         VStack(alignment: .leading, spacing: 8) {
-                            HStack {
+                        HStack {
                                 Image(systemName: "list.bullet")
                                     .foregroundColor(.orange)
                                     .font(.title3)
@@ -1467,7 +1467,7 @@ struct StepItemsPricingView: View {
                         }
                         
                         VStack(spacing: 12) {
-                            ForEach(vm.items) { item in
+                        ForEach(vm.items) { item in
                                 InvoiceItemCard(
                                     item: binding(for: item),
                                     onDelete: { deleteItem(item) }
@@ -1493,7 +1493,7 @@ struct StepItemsPricingView: View {
                 // Navigation Buttons
                 HStack(spacing: 16) {
                     Button(action: prev) {
-                        HStack {
+                HStack {
                             Image(systemName: "chevron.left")
                             Text("Previous")
                         }
@@ -1526,7 +1526,7 @@ struct StepItemsPricingView: View {
                         .foregroundColor(.white)
                         .fontWeight(.semibold)
                     }
-                    .disabled(vm.items.isEmpty)
+                        .disabled(vm.items.isEmpty)
                 }
             }
             .padding(.horizontal, 20)
@@ -1632,8 +1632,8 @@ private struct ProductCard: View {
                 }
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.white)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
                         .fill(
@@ -1667,52 +1667,710 @@ private struct ProductCard: View {
     }
 }
 
-// MARK: - Details (read-only)
+// MARK: - Invoice Details View
 
 struct InvoiceDetailsView: View {
+    @EnvironmentObject private var app: AppState
+    @Environment(\.colorScheme) private var scheme
     let invoice: Invoice
+    
+    @State private var showShareSheet = false
+    @State private var showDeleteAlert = false
+    @State private var showEditAlert = false
+    @State private var pdfURL: URL?
+    @State private var isGeneratingPDF = false
+    
+    private var bindingIndex: Int? {
+        app.invoices.firstIndex(where: { $0.id == invoice.id })
+    }
+    
+    private var binding: Binding<Invoice>? {
+        if let idx = bindingIndex { return $app.invoices[idx] }
+        return nil
+    }
+    
     var body: some View {
+        Group {
+            if let binding = binding {
+                content(invoice: binding)
+            } else {
+                Text("Invoice not found").foregroundStyle(.secondary)
+            }
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button(action: { togglePaymentStatus() }) {
+                        Label(
+                            invoice.status == .paid ? "Mark as Unpaid" : "Mark as Paid",
+                            systemImage: invoice.status == .paid ? "xmark.circle" : "checkmark.circle"
+                        )
+                    }
+                    
+                    Button(action: { showEditAlert = true }) {
+                        Label("Edit Invoice", systemImage: "pencil")
+                    }
+                    
+                    Button(action: { generateAndSharePDF() }) {
+                        Label("Share PDF", systemImage: "square.and.arrow.up")
+                    }
+                    
+                    Divider()
+                    
+                    Button(role: .destructive, action: { showDeleteAlert = true }) {
+                        Label("Delete Invoice", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .foregroundColor(.blue)
+                }
+            }
+        }
+        .alert("Delete Invoice", isPresented: $showDeleteAlert) {
+            Button("Delete", role: .destructive) { deleteInvoice() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Are you sure you want to delete this invoice? This action cannot be undone.")
+        }
+        .alert("Edit Invoice", isPresented: $showEditAlert) {
+            Button("Edit") { /* TODO: Navigate to edit */ }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Invoice editing functionality will be available in a future update.")
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if let pdfURL = pdfURL {
+                ShareSheet(items: [pdfURL])
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func content(invoice: Binding<Invoice>) -> some View {
         ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                // Header Section
+                headerSection(invoice: invoice)
+                
+                // Status & Actions Section
+                statusSection(invoice: invoice)
+                
+                // Company & Customer Info
+                companyCustomerSection(invoice: invoice)
+                
+                // Invoice Details
+                invoiceDetailsSection(invoice: invoice)
+                
+                // Items Section
+                itemsSection(invoice: invoice)
+                
+                // Summary Section
+                summarySection(invoice: invoice)
+                
+                // Payment Methods
+                paymentMethodsSection(invoice: invoice)
+                
+                // PDF Actions
+                pdfActionsSection
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 32)
+        }
+        .onAppear {
+            generatePDFIfNeeded()
+        }
+    }
+    
+    private func headerSection(invoice: Binding<Invoice>) -> some View {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
-                    Text(invoice.company.name).font(.title2).bold()
-                    Spacer()
-                    StatusChip(status: invoice.status)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Invoice #\(invoice.wrappedValue.number)")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                    
+                    Text("Created \(Dates.display.string(from: invoice.wrappedValue.issueDate))")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                 }
-                Text(invoice.customer.name).font(.headline)
+                
+                    Spacer()
+                
+                StatusChip(status: invoice.wrappedValue.status)
+                }
+            
+            if let dueDate = invoice.wrappedValue.dueDate {
                 HStack {
-                    Text("Issue:")
-                    Text(Dates.display.string(from: invoice.issueDate))
+                    Image(systemName: "calendar")
+                        .foregroundColor(.orange)
+                    Text("Due: \(Dates.display.string(from: dueDate))")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
                     Spacer()
-                    Text("Due:")
-                    Text(Dates.display.string(from: invoice.dueDate ?? invoice.issueDate))
-                }
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(invoice.items) { it in
-                        HStack {
-                            Text(it.description)
-                            Spacer()
-                            Text(Money.fmt(it.total, code: invoice.currency))
-                        }
-                        Divider()
+                    
+                    if dueDate < Date() && invoice.wrappedValue.status != .paid {
+                        Text("Overdue")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                Capsule()
+                                    .fill(Color.red)
+                            )
                     }
+                }
+            }
+        }
+        .modifier(CompanySetupCard())
+    }
+    
+    private func statusSection(invoice: Binding<Invoice>) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "info.circle")
+                    .foregroundColor(.blue)
+                    .font(.title3)
+                Text("Invoice Status")
+                    .font(.title3)
+                    .fontWeight(.bold)
+            }
+            
+            HStack {
+                StatusChip(status: invoice.wrappedValue.status)
+                
+                Spacer()
+                
+                Button(action: { togglePaymentStatus() }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: invoice.wrappedValue.status == .paid ? "xmark.circle" : "checkmark.circle")
+                        Text(invoice.wrappedValue.status == .paid ? "Mark Unpaid" : "Mark Paid")
+                    }
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(
+                                invoice.wrappedValue.status == .paid ? 
+                                Color.orange : 
+                                Color.green
+                            )
+                    )
+                }
+            }
+        }
+        .modifier(CompanySetupCard())
+    }
+    
+    private func companyCustomerSection(invoice: Binding<Invoice>) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "building.2")
+                    .foregroundColor(.purple)
+                    .font(.title3)
+                Text("Company & Customer")
+                    .font(.title3)
+                    .fontWeight(.bold)
+            }
+            
+            VStack(spacing: 16) {
+                // Company Info
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("From")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .textCase(.uppercase)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(invoice.wrappedValue.company.name)
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                        
+                        if !invoice.wrappedValue.company.address.oneLine.isEmpty {
+                            Text(invoice.wrappedValue.company.address.oneLine)
+                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        if !invoice.wrappedValue.company.email.isEmpty {
+                            Text(invoice.wrappedValue.company.email)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        if !invoice.wrappedValue.company.phone.isEmpty {
+                            Text(invoice.wrappedValue.company.phone)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                
+                Divider()
+                
+                // Customer Info
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("To")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .textCase(.uppercase)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(invoice.wrappedValue.customer.name)
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                        
+                        if !invoice.wrappedValue.customer.address.oneLine.isEmpty {
+                            Text(invoice.wrappedValue.customer.address.oneLine)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        if !invoice.wrappedValue.customer.email.isEmpty {
+                            Text(invoice.wrappedValue.customer.email)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        if !invoice.wrappedValue.customer.phone.isEmpty {
+                            Text(invoice.wrappedValue.customer.phone)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+            }
+        }
+        .modifier(CompanySetupCard())
+    }
+    
+    private func invoiceDetailsSection(invoice: Binding<Invoice>) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                Image(systemName: "doc.text")
+                    .foregroundColor(.green)
+                    .font(.title3)
+                Text("Invoice Details")
+                    .font(.title3)
+                    .fontWeight(.bold)
+            }
+            
+            VStack(spacing: 12) {
+                detailRow(title: "Invoice Number", value: invoice.wrappedValue.number)
+                detailRow(title: "Issue Date", value: Dates.display.string(from: invoice.wrappedValue.issueDate))
+                
+                if let dueDate = invoice.wrappedValue.dueDate {
+                    detailRow(title: "Due Date", value: Dates.display.string(from: dueDate))
+                }
+                
+                detailRow(title: "Currency", value: invoice.wrappedValue.currency)
+                
+                if let notes = invoice.wrappedValue.paymentNotes, !notes.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Notes")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .textCase(.uppercase)
+                        Text(notes)
+                            .font(.body)
+                            .foregroundColor(.primary)
+                    }
+                }
+            }
+        }
+        .modifier(CompanySetupCard())
+    }
+    
+    private func itemsSection(invoice: Binding<Invoice>) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "list.bullet")
+                    .foregroundColor(.orange)
+                    .font(.title3)
+                Text("Items")
+                    .font(.title3)
+                    .fontWeight(.bold)
+            }
+            
+            if invoice.wrappedValue.items.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "list.bullet.rectangle")
+                        .font(.system(size: 32))
+                        .foregroundColor(.secondary)
+                    Text("No items")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                    Text("This invoice has no items")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+            } else {
+                VStack(spacing: 12) {
+                    ForEach(invoice.wrappedValue.items) { item in
+                        itemRow(item: item, currency: invoice.wrappedValue.currency)
+                    }
+                }
+            }
+        }
+        .modifier(CompanySetupCard())
+    }
+    
+    private func itemRow(item: LineItem, currency: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(item.description.isEmpty ? "Untitled Item" : item.description)
+                    .font(.body)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+                
+                            Spacer()
+                
+                Text(Money.fmt(item.total, code: currency))
+                    .font(.body)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+            }
+            
+            HStack {
+                Text("Qty: \(NSDecimalNumber(decimal: item.quantity).doubleValue, specifier: "%.1f")")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Text("×")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Text(Money.fmt(item.rate, code: currency))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                if item.isTaxExempt {
+                    Text("Tax Exempt")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.green)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule()
+                                .fill(Color.green.opacity(0.1))
+                        )
+                }
+            }
+            
+            if item.discount > 0 {
+                HStack {
+                    Text("Discount: \(NSDecimalNumber(decimal: item.discount).doubleValue, specifier: "%.2f")\(item.discountType == .percentage ? "%" : "")")
+                        .font(.caption)
+                        .foregroundColor(.green)
+                    
+                    Spacer()
+                }
+            }
+        }
+        .padding(.vertical, 8)
+    }
+    
+    private func summarySection(invoice: Binding<Invoice>) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "calculator")
+                    .foregroundColor(.blue)
+                    .font(.title3)
+                Text("Summary")
+                    .font(.title3)
+                    .fontWeight(.bold)
+            }
+            
+            VStack(spacing: 12) {
                     HStack {
                         Text("Subtotal")
+                        .font(.body)
+                        .foregroundColor(.primary)
                         Spacer()
-                        Text(Money.fmt(invoice.subtotal, code: invoice.currency)).bold()
+                    Text(Money.fmt(invoice.wrappedValue.subtotal, code: invoice.wrappedValue.currency))
+                        .font(.body)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                }
+                
+                if invoice.wrappedValue.subtotal > 0 {
+                    HStack {
+                        Text("Tax")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text(Money.fmt(invoice.wrappedValue.subtotal, code: invoice.wrappedValue.currency))
+                            .font(.body)
+                            .fontWeight(.medium)
+                            .foregroundColor(.red)
                     }
                 }
-                .padding(16)
-                .background(RoundedRectangle(cornerRadius: 16).fill(Color.secondary.opacity(0.06)))
-                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.secondary.opacity(0.12)))
+                
+                if invoice.wrappedValue.subtotal > 0 {
+                    HStack {
+                        Text("Discount")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text("-\(Money.fmt(invoice.wrappedValue.subtotal, code: invoice.wrappedValue.currency))")
+                            .font(.body)
+                            .fontWeight(.medium)
+                            .foregroundColor(.green)
+                    }
+                }
+                
+                Divider()
+                
+                HStack {
+                    Text("Total")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Text(Money.fmt(invoice.wrappedValue.subtotal, code: invoice.wrappedValue.currency))
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(.blue)
+                }
             }
-            .padding()
         }
-        .navigationTitle("Invoice \(invoice.number)")
+        .modifier(CompanySetupCard())
     }
+    
+    private func paymentMethodsSection(invoice: Binding<Invoice>) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "creditcard")
+                    .foregroundColor(.purple)
+                    .font(.title3)
+                Text("Payment Methods")
+                    .font(.title3)
+                    .fontWeight(.bold)
+            }
+            
+            if invoice.wrappedValue.paymentMethods.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "creditcard")
+                        .font(.system(size: 32))
+                        .foregroundColor(.secondary)
+                    Text("No payment methods")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                    Text("No payment methods specified for this invoice")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(invoice.wrappedValue.paymentMethods) { method in
+                        paymentMethodRow(method: method)
+                    }
+                }
+            }
+            
+            if let paymentNotes = invoice.wrappedValue.paymentNotes, !paymentNotes.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Payment Notes")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .textCase(.uppercase)
+                    Text(paymentNotes)
+                        .font(.body)
+                        .foregroundColor(.primary)
+                }
+                .padding(.top, 8)
+            }
+        }
+        .modifier(CompanySetupCard())
+    }
+    
+    private func paymentMethodRow(method: PaymentMethod) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon(for: method.type))
+                .foregroundColor(.blue)
+                .frame(width: 20)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(method.type.title)
+                    .font(.body)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+                Text(method.type.subtitle)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+        }
+        .padding(.vertical, 4)
+    }
+    
+    private var pdfActionsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "doc.richtext")
+                    .foregroundColor(.red)
+                    .font(.title3)
+                Text("PDF Document")
+                    .font(.title3)
+                    .fontWeight(.bold)
+            }
+            
+            VStack(spacing: 12) {
+                if isGeneratingPDF {
+                    HStack {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        Text("Generating PDF...")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                } else {
+                    Button(action: { generateAndSharePDF() }) {
+                        HStack {
+                            Image(systemName: "square.and.arrow.up")
+                            Text("Share PDF")
+                        }
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [.blue, .purple],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                        )
+                    }
+                    
+                    Button(action: { generateAndDownloadPDF() }) {
+                        HStack {
+                            Image(systemName: "arrow.down.circle")
+                            Text("Download PDF")
+                        }
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.blue)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.blue.opacity(0.1))
+                        )
+                    }
+                }
+            }
+        }
+        .modifier(CompanySetupCard())
+    }
+    
+    private func detailRow(title: String, value: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.body)
+                .foregroundColor(.secondary)
+            Spacer()
+            Text(value)
+                .font(.body)
+                .fontWeight(.medium)
+                .foregroundColor(.primary)
+        }
+    }
+    
+    private func icon(for type: PaymentMethodType) -> String {
+        switch type {
+        case .bankIBAN: return "building.columns"
+        case .bankUS:   return "banknote"
+        case .paypal:   return "envelope"
+        case .cardLink: return "link"
+        case .crypto:   return "bitcoinsign.circle"
+        case .other:    return "square.and.pencil"
+        }
+    }
+    
+    private func togglePaymentStatus() {
+        guard let binding = binding else { return }
+        binding.wrappedValue.status = binding.wrappedValue.status == .paid ? .draft : .paid
+    }
+    
+    private func deleteInvoice() {
+        guard let idx = bindingIndex else { return }
+        app.invoices.remove(at: idx)
+    }
+    
+    private func generatePDFIfNeeded() {
+        // Generate PDF in background if not already generated
+        Task {
+            await generatePDF()
+        }
+    }
+    
+    private func generateAndSharePDF() {
+        Task {
+            await generatePDF()
+            await MainActor.run {
+                showShareSheet = true
+            }
+        }
+    }
+    
+    private func generateAndDownloadPDF() {
+        Task {
+            await generatePDF()
+            // PDF will be available in pdfURL for download
+        }
+    }
+    
+    @MainActor
+    private func generatePDF() async {
+        isGeneratingPDF = true
+        
+        do {
+            let url = try await PDFService.shared.generatePDF(
+                invoice: invoice,
+                company: invoice.company,
+                customer: invoice.customer,
+                currencyCode: invoice.currency,
+                template: app.selectedTemplate,
+                logo: app.logoImage
+            )
+            pdfURL = url
+        } catch {
+            print("Error generating PDF: \(error)")
+        }
+        
+        isGeneratingPDF = false
+    }
+}
+
+// MARK: - Share Sheet
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 // MARK: - Reusable UI
@@ -2395,13 +3053,13 @@ struct AddEditItemSheet: View {
                                 .fontWeight(.bold)
                         }
                         
-                        VStack(spacing: 8) {
-                            HStack {
+        VStack(spacing: 8) {
+            HStack {
                                 Text("Total:")
                                     .font(.system(size: 16, weight: .medium))
                                     .foregroundColor(.primary)
                                 
-                                Spacer()
+                Spacer()
                                 
                                 Text(Money.fmt(calculatedTotal, code: Locale.current.currency?.identifier ?? "USD"))
                                     .font(.system(size: 16, weight: .bold))
@@ -2475,20 +3133,6 @@ struct DecimalField: View {
     }
 }
 
-// MARK: - ShareSheet wrapper
-
-struct ShareSheet: UIViewControllerRepresentable {
-    let activityItems: [Any]
-    var completion: UIActivityViewController.CompletionWithItemsHandler? = nil
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        let vc = UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
-        vc.completionWithItemsHandler = completion
-        return vc
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}
 
 // MARK: - Custom Payment Components
 
