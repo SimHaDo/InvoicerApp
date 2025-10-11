@@ -17,17 +17,90 @@ private struct FloatingElement: Identifiable {
     var rotation: Double
 }
 
+// MARK: - Sorting Options
+
+enum InvoiceSortOption: String, CaseIterable, Identifiable {
+    case newestFirst = "newest_first"
+    case oldestFirst = "oldest_first"
+    case amountHighToLow = "amount_high_to_low"
+    case amountLowToHigh = "amount_low_to_high"
+    case customerNameAZ = "customer_name_az"
+    case customerNameZA = "customer_name_za"
+    case status = "status"
+    
+    var id: String { rawValue }
+    
+    var title: String {
+        switch self {
+        case .newestFirst: return "Newest First"
+        case .oldestFirst: return "Oldest First"
+        case .amountHighToLow: return "Amount: High to Low"
+        case .amountLowToHigh: return "Amount: Low to High"
+        case .customerNameAZ: return "Customer: A to Z"
+        case .customerNameZA: return "Customer: Z to A"
+        case .status: return "Status"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .newestFirst: return "arrow.down.circle"
+        case .oldestFirst: return "arrow.up.circle"
+        case .amountHighToLow: return "arrow.down.square"
+        case .amountLowToHigh: return "arrow.up.square"
+        case .customerNameAZ: return "textformat.abc"
+        case .customerNameZA: return "textformat.abc"
+        case .status: return "circle.grid.2x2"
+        }
+    }
+}
+
 // MARK: - ViewModel
 
 final class InvoicesVM: ObservableObject {
     @Published var query = ""
+    @Published var sortOption: InvoiceSortOption = .newestFirst
 
     func filtered(_ invoices: [Invoice]) -> [Invoice] {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !q.isEmpty else { return invoices }
-        return invoices.filter {
+        guard !q.isEmpty else { return sorted(invoices) }
+        let filtered = invoices.filter {
             $0.number.lowercased().contains(q) ||
             $0.customer.name.lowercased().contains(q)
+        }
+        return sorted(filtered)
+    }
+    
+    func sorted(_ invoices: [Invoice]) -> [Invoice] {
+        switch sortOption {
+        case .newestFirst:
+            return invoices.sorted { (invoice1: Invoice, invoice2: Invoice) in
+                invoice1.issueDate > invoice2.issueDate
+            }
+        case .oldestFirst:
+            return invoices.sorted { (invoice1: Invoice, invoice2: Invoice) in
+                invoice1.issueDate < invoice2.issueDate
+            }
+        case .amountHighToLow:
+            return invoices.sorted { (invoice1: Invoice, invoice2: Invoice) in
+                invoice1.total > invoice2.total
+            }
+        case .amountLowToHigh:
+            return invoices.sorted { (invoice1: Invoice, invoice2: Invoice) in
+                invoice1.total < invoice2.total
+            }
+        case .customerNameAZ:
+            return invoices.sorted { (invoice1: Invoice, invoice2: Invoice) in
+                invoice1.customer.name < invoice2.customer.name
+            }
+        case .customerNameZA:
+            return invoices.sorted { (invoice1: Invoice, invoice2: Invoice) in
+                invoice1.customer.name > invoice2.customer.name
+            }
+        case .status:
+            return invoices.sorted { (invoice1: Invoice, invoice2: Invoice) in
+                invoice1.status.rawValue < invoice2.status.rawValue
+            }
         }
     }
 
@@ -211,7 +284,46 @@ struct InvoicesScreen: View {
     }
 
     private var searchField: some View {
-        SearchBar(text: $vm.query).padding(.top, 2)
+        HStack(spacing: 12) {
+            SearchBar(text: $vm.query)
+            
+            // Кнопка сортировки
+            Menu {
+                ForEach(InvoiceSortOption.allCases) { option in
+                    Button(action: {
+                        vm.sortOption = option
+                    }) {
+                        HStack {
+                            Image(systemName: option.icon)
+                            Text(option.title)
+                            if vm.sortOption == option {
+                                Spacer()
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: vm.sortOption.icon)
+                        .font(.system(size: 16, weight: .medium))
+                    Text("Sort")
+                        .font(.system(size: 16, weight: .medium))
+                }
+                .foregroundColor(.primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.secondary.opacity(0.1))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                        )
+                )
+            }
+        }
+        .padding(.top, 2)
     }
 
     private var invoiceList: some View {

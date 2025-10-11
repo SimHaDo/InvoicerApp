@@ -1680,6 +1680,8 @@ struct InvoiceDetailsView: View {
     @State private var showEditAlert = false
     @State private var pdfURL: URL?
     @State private var isGeneratingPDF = false
+    @State private var showCustomerNotFoundAlert = false
+    @State private var showPDFLoading = false
     
     private var bindingIndex: Int? {
         app.invoices.firstIndex(where: { $0.id == invoice.id })
@@ -1688,6 +1690,15 @@ struct InvoiceDetailsView: View {
     private var binding: Binding<Invoice>? {
         if let idx = bindingIndex { return $app.invoices[idx] }
         return nil
+    }
+    
+    private func navigateToCustomer() {
+        let customerExists = app.customers.contains { $0.id == invoice.customer.id }
+        if customerExists {
+            // Навигация будет обработана через NavigationLink
+        } else {
+            showCustomerNotFoundAlert = true
+        }
     }
     
     var body: some View {
@@ -1702,12 +1713,26 @@ struct InvoiceDetailsView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    Button(action: { togglePaymentStatus() }) {
-                        Label(
-                            invoice.status == .paid ? "Mark as Unpaid" : "Mark as Paid",
-                            systemImage: invoice.status == .paid ? "xmark.circle" : "checkmark.circle"
-                        )
+                    // Status Actions
+                    if invoice.status != .paid {
+                        Button(action: { togglePaymentStatus() }) {
+                            Label("Mark as Paid", systemImage: "checkmark.circle")
+                        }
                     }
+                    
+                    if invoice.status != .sent {
+                        Button(action: { markAsSent() }) {
+                            Label("Mark as Sent", systemImage: "paperplane.circle")
+                        }
+                    }
+                    
+                    if invoice.status != .draft {
+                        Button(action: { markAsDraft() }) {
+                            Label("Mark as Draft", systemImage: "doc.circle")
+                        }
+                    }
+                    
+                    Divider()
                     
                     Button(action: { showEditAlert = true }) {
                         Label("Edit Invoice", systemImage: "pencil")
@@ -1744,6 +1769,14 @@ struct InvoiceDetailsView: View {
             if let pdfURL = pdfURL {
                 ShareSheet(items: [pdfURL])
             }
+        }
+        .alert("Customer Not Found", isPresented: $showCustomerNotFoundAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("This customer has been deleted and is no longer available. The invoice information is preserved for your records.")
+        }
+        .fullScreenCover(isPresented: $showPDFLoading) {
+            PDFLoadingView()
         }
     }
     
@@ -1841,28 +1874,164 @@ struct InvoiceDetailsView: View {
                     .fontWeight(.bold)
             }
             
-            HStack {
-                StatusChip(status: invoice.wrappedValue.status)
+            VStack(spacing: 16) {
+                HStack {
+                    StatusChip(status: invoice.wrappedValue.status)
+                    Spacer()
+                }
                 
-                Spacer()
-                
-                Button(action: { togglePaymentStatus() }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: invoice.wrappedValue.status == .paid ? "xmark.circle" : "checkmark.circle")
-                        Text(invoice.wrappedValue.status == .paid ? "Mark Unpaid" : "Mark Paid")
-                    }
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(
-                                invoice.wrappedValue.status == .paid ? 
-                                Color.orange : 
-                                Color.green
+                VStack(spacing: 12) {
+                    // Показываем две кнопки в зависимости от текущего статуса
+                    if invoice.wrappedValue.status == .draft {
+                        // Если статус draft, показываем Paid и Sent
+                        Button(action: { 
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                togglePaymentStatus()
+                            }
+                        }) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.title2)
+                                Text("Mark as Paid")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Spacer()
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.green)
+                                    .shadow(color: .green.opacity(0.3), radius: 8, x: 0, y: 4)
                             )
-                    )
+                        }
+                        .scaleEffect(invoice.wrappedValue.status == .paid ? 0.95 : 1.0)
+                        .animation(.spring(response: 0.2, dampingFraction: 0.8), value: invoice.wrappedValue.status)
+                        
+                        Button(action: { 
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                markAsSent()
+                            }
+                        }) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "paperplane.circle.fill")
+                                    .font(.title2)
+                                Text("Mark as Sent")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Spacer()
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.blue)
+                                    .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
+                            )
+                        }
+                        .scaleEffect(invoice.wrappedValue.status == .sent ? 0.95 : 1.0)
+                        .animation(.spring(response: 0.2, dampingFraction: 0.8), value: invoice.wrappedValue.status)
+                        
+                    } else if invoice.wrappedValue.status == .sent {
+                        // Если статус sent, показываем Paid и Draft
+                        Button(action: { 
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                togglePaymentStatus()
+                            }
+                        }) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.title2)
+                                Text("Mark as Paid")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Spacer()
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.green)
+                                    .shadow(color: .green.opacity(0.3), radius: 8, x: 0, y: 4)
+                            )
+                        }
+                        .scaleEffect(invoice.wrappedValue.status == .paid ? 0.95 : 1.0)
+                        .animation(.spring(response: 0.2, dampingFraction: 0.8), value: invoice.wrappedValue.status)
+                        
+                        Button(action: { 
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                markAsDraft()
+                            }
+                        }) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "doc.circle.fill")
+                                    .font(.title2)
+                                Text("Mark as Draft")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Spacer()
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.gray)
+                                    .shadow(color: .gray.opacity(0.3), radius: 8, x: 0, y: 4)
+                            )
+                        }
+                        .scaleEffect(invoice.wrappedValue.status == .draft ? 0.95 : 1.0)
+                        .animation(.spring(response: 0.2, dampingFraction: 0.8), value: invoice.wrappedValue.status)
+                        
+                    } else if invoice.wrappedValue.status == .paid {
+                        // Если статус paid, показываем Sent и Draft
+                        Button(action: { 
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                markAsSent()
+                            }
+                        }) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "paperplane.circle.fill")
+                                    .font(.title2)
+                                Text("Mark as Sent")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Spacer()
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.blue)
+                                    .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
+                            )
+                        }
+                        .scaleEffect(invoice.wrappedValue.status == .sent ? 0.95 : 1.0)
+                        .animation(.spring(response: 0.2, dampingFraction: 0.8), value: invoice.wrappedValue.status)
+                        
+                        Button(action: { 
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                markAsDraft()
+                            }
+                        }) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "doc.circle.fill")
+                                    .font(.title2)
+                                Text("Mark as Draft")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Spacer()
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.gray)
+                                    .shadow(color: .gray.opacity(0.3), radius: 8, x: 0, y: 4)
+                            )
+                        }
+                        .scaleEffect(invoice.wrappedValue.status == .draft ? 0.95 : 1.0)
+                        .animation(.spring(response: 0.2, dampingFraction: 0.8), value: invoice.wrappedValue.status)
+                    }
                 }
             }
         }
@@ -1887,6 +2056,7 @@ struct InvoiceDetailsView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .textCase(.uppercase)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     
                     VStack(alignment: .leading, spacing: 4) {
                         Text(invoice.wrappedValue.company.name)
@@ -1895,7 +2065,7 @@ struct InvoiceDetailsView: View {
                         
                         if !invoice.wrappedValue.company.address.oneLine.isEmpty {
                             Text(invoice.wrappedValue.company.address.oneLine)
-                .font(.subheadline)
+                                .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
                         
@@ -1911,6 +2081,7 @@ struct InvoiceDetailsView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 
                 Divider()
@@ -1921,29 +2092,86 @@ struct InvoiceDetailsView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .textCase(.uppercase)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(invoice.wrappedValue.customer.name)
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                        
-                        if !invoice.wrappedValue.customer.address.oneLine.isEmpty {
-                            Text(invoice.wrappedValue.customer.address.oneLine)
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                    let customerExists = app.customers.contains { $0.id == invoice.wrappedValue.customer.id }
+                    
+                    if customerExists {
+                        NavigationLink(destination: CustomerDetailsView(customerID: invoice.wrappedValue.customer.id)) {
+                            HStack(alignment: .top, spacing: 12) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(invoice.wrappedValue.customer.name)
+                                        .font(.headline)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.primary)
+                                    
+                                    if !invoice.wrappedValue.customer.address.oneLine.isEmpty {
+                                        Text(invoice.wrappedValue.customer.address.oneLine)
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    if !invoice.wrappedValue.customer.email.isEmpty {
+                                        Text(invoice.wrappedValue.customer.email)
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    if !invoice.wrappedValue.customer.phone.isEmpty {
+                                        Text(invoice.wrappedValue.customer.phone)
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                
+                                // Красивая стрелочка
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.blue.opacity(0.6))
+                                    .padding(.top, 2)
+                            }
+                            .contentShape(Rectangle())
                         }
-                        
-                        if !invoice.wrappedValue.customer.email.isEmpty {
-                            Text(invoice.wrappedValue.customer.email)
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                        .buttonStyle(PlainButtonStyle())
+                    } else {
+                        Button(action: { showCustomerNotFoundAlert = true }) {
+                            HStack(alignment: .top, spacing: 12) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(invoice.wrappedValue.customer.name)
+                                        .font(.headline)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.primary)
+                                    
+                                    if !invoice.wrappedValue.customer.address.oneLine.isEmpty {
+                                        Text(invoice.wrappedValue.customer.address.oneLine)
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    if !invoice.wrappedValue.customer.email.isEmpty {
+                                        Text(invoice.wrappedValue.customer.email)
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    if !invoice.wrappedValue.customer.phone.isEmpty {
+                                        Text(invoice.wrappedValue.customer.phone)
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                
+                                // Красивая стрелочка
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.blue.opacity(0.6))
+                                    .padding(.top, 2)
+                            }
+                            .contentShape(Rectangle())
                         }
-                        
-                        if !invoice.wrappedValue.customer.phone.isEmpty {
-                            Text(invoice.wrappedValue.customer.phone)
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
                 }
             }
@@ -2306,20 +2534,6 @@ struct InvoiceDetailsView: View {
                         )
                     }
                     
-                    Button(action: { generateAndDownloadPDF() }) {
-                        HStack {
-                            Image(systemName: "arrow.down.circle")
-                            Text("Download PDF")
-                        }
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.blue)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color.blue.opacity(0.1))
-                        )
-                    }
                 }
             }
         }
@@ -2355,6 +2569,16 @@ struct InvoiceDetailsView: View {
         binding.wrappedValue.status = binding.wrappedValue.status == .paid ? .draft : .paid
     }
     
+    private func markAsSent() {
+        guard let binding = binding else { return }
+        binding.wrappedValue.status = .sent
+    }
+    
+    private func markAsDraft() {
+        guard let binding = binding else { return }
+        binding.wrappedValue.status = .draft
+    }
+    
     private func deleteInvoice() {
         guard let idx = bindingIndex else { return }
         app.invoices.remove(at: idx)
@@ -2368,24 +2592,30 @@ struct InvoiceDetailsView: View {
     }
     
     private func generateAndSharePDF() {
+        showPDFLoading = true
         Task {
             await generatePDF()
             await MainActor.run {
-                showShareSheet = true
+                // Убеждаемся что PDF готов и URL доступен
+                if pdfURL != nil {
+                    showPDFLoading = false
+                    // Небольшая задержка чтобы ShareSheet успел подготовиться
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        showShareSheet = true
+                    }
+                } else {
+                    // Если PDF не сгенерировался, скрываем loading
+                    showPDFLoading = false
+                }
             }
         }
     }
     
-    private func generateAndDownloadPDF() {
-        Task {
-            await generatePDF()
-            // PDF will be available in pdfURL for download
-        }
-    }
     
     @MainActor
     private func generatePDF() async {
         isGeneratingPDF = true
+        pdfURL = nil // Сбрасываем предыдущий URL
         
         do {
             let url = try await PDFService.shared.generatePDF(
@@ -2397,12 +2627,15 @@ struct InvoiceDetailsView: View {
                 logo: app.logoImage
             )
             pdfURL = url
+            print("PDF generated successfully: \(url)")
         } catch {
             print("Error generating PDF: \(error)")
+            pdfURL = nil
         }
         
         isGeneratingPDF = false
     }
+    
 }
 
 // MARK: - Share Sheet
@@ -2415,6 +2648,228 @@ struct ShareSheet: UIViewControllerRepresentable {
     }
     
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+// MARK: - PDF Loading View
+
+struct PDFLoadingView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var logoScale: CGFloat = 0.8
+    @State private var logoOpacity: CGFloat = 0
+    @State private var backgroundOpacity: CGFloat = 0
+    @State private var shimmerOffset: CGFloat = -200
+    @State private var pulseScale: CGFloat = 1.0
+    @State private var glowIntensity: CGFloat = 0
+    @State private var breatheScale: CGFloat = 1.0
+    @State private var textOpacity: CGFloat = 0
+    @State private var progressOpacity: CGFloat = 0
+    @State private var progressWidth: CGFloat = 0
+    
+    var body: some View {
+        ZStack {
+            // Dynamic background
+            LinearGradient(
+                colors: colorScheme == .dark ? [
+                    Color.black,
+                    Color.black.opacity(0.9),
+                    Color.black.opacity(0.8)
+                ] : [
+                    Color.white,
+                    Color.white.opacity(0.95),
+                    Color.white.opacity(0.9)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            .opacity(backgroundOpacity)
+            
+            // Animated background particles
+            ForEach(0..<6, id: \.self) { index in
+                Circle()
+                    .fill(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.05))
+                    .frame(width: CGFloat.random(in: 15...40))
+                    .position(
+                        x: CGFloat.random(in: 0...UIScreen.main.bounds.width),
+                        y: CGFloat.random(in: 0...UIScreen.main.bounds.height)
+                    )
+                    .scaleEffect(pulseScale)
+                    .animation(
+                        Animation.easeInOut(duration: Double.random(in: 2...4))
+                            .repeatForever(autoreverses: true)
+                            .delay(Double(index) * 0.3),
+                        value: pulseScale
+                    )
+            }
+            
+            VStack(spacing: 40) {
+                Spacer()
+                
+                // PDF Icon with animation
+                ZStack {
+                    // Glow effect
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: colorScheme == .dark ? [
+                                    Color.blue.opacity(0.3 * glowIntensity),
+                                    Color.blue.opacity(0.1 * glowIntensity),
+                                    Color.clear
+                                ] : [
+                                    Color.blue.opacity(0.2 * glowIntensity),
+                                    Color.blue.opacity(0.1 * glowIntensity),
+                                    Color.clear
+                                ],
+                                center: .center,
+                                startRadius: 30,
+                                endRadius: 100
+                            )
+                        )
+                        .frame(width: 200, height: 200)
+                        .blur(radius: 15)
+                    
+                    // PDF Icon
+                    Image(systemName: "doc.text.fill")
+                        .font(.system(size: 80, weight: .light))
+                        .foregroundColor(.blue)
+                        .scaleEffect(logoScale * breatheScale)
+                        .opacity(logoOpacity)
+                        .shadow(
+                            color: colorScheme == .dark ? .blue.opacity(0.5) : .blue.opacity(0.3), 
+                            radius: 15, x: 0, y: 0
+                        )
+                        .overlay(
+                            // Shimmer effect
+                            Rectangle()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            Color.clear,
+                                            Color.blue.opacity(0.6),
+                                            Color.clear
+                                        ],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .frame(width: 60, height: 80)
+                                .offset(x: shimmerOffset)
+                                .mask(
+                                    Image(systemName: "doc.text.fill")
+                                        .font(.system(size: 80, weight: .light))
+                                )
+                        )
+                }
+                
+                // Loading text
+                VStack(spacing: 16) {
+                    Text("Preparing...")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(colorScheme == .dark ? .white.opacity(0.9) : .black.opacity(0.8))
+                        .opacity(textOpacity)
+                    
+                    Text("Please wait while we create your invoice")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .opacity(textOpacity)
+                }
+                
+                // Progress bar
+                VStack(spacing: 12) {
+                    HStack {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.1))
+                            .frame(height: 8)
+                            .overlay(
+                                HStack {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [.blue, .blue.opacity(0.7)],
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            )
+                                        )
+                                        .frame(width: progressWidth)
+                                        .animation(.easeInOut(duration: 2.0), value: progressWidth)
+                                    Spacer(minLength: 0)
+                                }
+                            )
+                    }
+                    .frame(width: 200)
+                    .opacity(progressOpacity)
+                }
+                
+                Spacer()
+            }
+        }
+        .onAppear {
+            startProgressiveAnimation()
+        }
+    }
+    
+    private func startProgressiveAnimation() {
+        // Phase 1: Background fade in
+        withAnimation(.easeInOut(duration: 0.8)) {
+            backgroundOpacity = 1.0
+        }
+        
+        // Phase 2: Icon entrance (0.5s delay)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            withAnimation(.easeInOut(duration: 1.0)) {
+                logoScale = 1.0
+                logoOpacity = 1.0
+            }
+        }
+        
+        // Phase 3: Glow effect (1.0s delay)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            withAnimation(.easeInOut(duration: 1.5)) {
+                glowIntensity = 1.0
+            }
+        }
+        
+        // Phase 4: Shimmer effect (1.5s delay)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation(.easeInOut(duration: 2.0)) {
+                shimmerOffset = 200
+            }
+        }
+        
+        // Phase 5: Text appears (2.0s delay)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            withAnimation(.easeInOut(duration: 0.8)) {
+                textOpacity = 1.0
+            }
+        }
+        
+        // Phase 6: Progress bar appears (2.5s delay)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+            withAnimation(.easeInOut(duration: 0.8)) {
+                progressOpacity = 1.0
+            }
+            
+            // Animate progress bar
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                withAnimation(.easeInOut(duration: 2.0)) {
+                    progressWidth = 200
+                }
+            }
+        }
+        
+        // Phase 7: Start breathing animation (3.0s delay)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
+                breatheScale = 1.05
+            }
+        }
+        
+        // Start pulse animation for background particles
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            pulseScale = 1.15
+        }
+    }
 }
 
 // MARK: - Reusable UI

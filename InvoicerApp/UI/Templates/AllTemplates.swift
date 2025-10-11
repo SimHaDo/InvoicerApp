@@ -208,7 +208,7 @@ struct AllGeometricAbstractTemplate: SimpleTemplateRenderer {
 
         // Table (paged)
         let tableTop = billRect.maxY + 14
-        let headers = ["Description", "Qty", "Unit Price", "Discount", "Amount"]
+        let headers = ["Description", "Qty", "Unit Price", "Disc.", "Amount"]
         let specs: [CGFloat] = [0.48, 0.10, 0.12, 0.12, 0.18]
 
         let res = R.drawTablePaged(
@@ -349,7 +349,7 @@ struct AllVintageRetroTemplate: SimpleTemplateRenderer {
 
         // Table
         let tableTop = bill.maxY + 16
-        let headers = ["Description", "Qty", "Unit Price", "Discount", "Amount"]
+        let headers = ["Description", "Qty", "Unit Price", "Disc.", "Amount"]
         let specs: [CGFloat] = [0.50, 0.10, 0.12, 0.12, 0.16]
 
         let res = R.drawTablePaged(
@@ -488,7 +488,7 @@ struct AllBusinessClassicTemplate: SimpleTemplateRenderer {
 
         // Table
         let tableTop = bill.maxY + 14
-        let headers = ["Description", "Quantity", "Unit Price", "Discount", "Amount"]
+        let headers = ["Description", "Qty", "Unit Price", "Disc.", "Amount"]
         let specs: [CGFloat] = [0.48, 0.12, 0.12, 0.12, 0.16]
 
         let res = R.drawTablePaged(
@@ -640,7 +640,7 @@ struct EnterpriseBoldTemplate: SimpleTemplateRenderer {
 
         // Table
         let tableTop = bill.maxY + 20
-        let headers = ["Description", "Quantity", "Unit Price", "Discount", "Amount"]
+        let headers = ["Description", "Qty", "Unit Price", "Disc.", "Amount"]
         let specs: [CGFloat] = [0.45, 0.13, 0.13, 0.13, 0.16]
 
         let res = R.drawTablePaged(
@@ -794,7 +794,7 @@ struct ConsultingElegantTemplate: SimpleTemplateRenderer {
 
         // Table
         let tableTop = bill.maxY + 14
-        let headers = ["Description", "Quantity", "Unit Price", "Discount", "Amount"]
+        let headers = ["Description", "Qty", "Unit Price", "Disc.", "Amount"]
         let specs: [CGFloat] = [0.48, 0.10, 0.12, 0.12, 0.18]
 
         let res = R.drawTablePaged(
@@ -958,7 +958,7 @@ struct AccountingDetailedTemplate: SimpleTemplateRenderer {
 
         // Таблица (пагинация)
         let tableTop = bill.maxY + 18
-        let headers = ["Description", "Quantity", "Unit Price", "Discount", "Total"]
+        let headers = ["Description", "Qty", "Unit Price", "Disc.", "Total"]
         let specs: [CGFloat] = [0.48, 0.12, 0.12, 0.12, 0.16]
 
         let res = R.drawTablePaged(
@@ -1116,7 +1116,7 @@ struct ConsultingProfessionalTemplate: SimpleTemplateRenderer {
 
         // Таблица
         let tableTop = bill.maxY + 16
-        let headers = ["Description", "Quantity", "Unit Price", "Discount", "Total"]
+        let headers = ["Description", "Qty", "Unit Price", "Disc.", "Total"]
         let specs: [CGFloat] = [0.48, 0.12, 0.12, 0.12, 0.16]
 
         let res = R.drawTablePaged(
@@ -1415,7 +1415,7 @@ struct FashionElegantTemplate: SimpleTemplateRenderer {
 
         // Таблица — синяя шапка
         let tableTop = by + 24
-        let headers = ["Sl.", "Description", "Qty", "Rate", "Discount", "Amount"]
+        let headers = ["Sl.", "Description", "Qty", "Rate", "Disc.", "Amount"]
         let widths: [CGFloat] = [40, (right-left) - 40 - 60 - 100 - 100 - 100, 60, 100, 100, 100]
         R.fillRect(context: context, rect: CGRect(x: left, y: tableTop, width: right - left, height: 28), color: primary)
 
@@ -1568,7 +1568,7 @@ struct DesignStudioTemplate: SimpleTemplateRenderer {
         // Таблица
         let tTop: CGFloat = P.top + 230
         R.strokeLine(context: context, from: CGPoint(x: left, y: tTop), to: CGPoint(x: right, y: tTop), color: .lightGray, width: 1)
-        let headers = ["Description", "Quantity", "Unit price (\(currency))", "Discount", "Amount (\(currency))"]
+        let headers = ["Description", "Qty", "Unit price (\(currency))", "Disc.", "Amount (\(currency))"]
         let specs: [CGFloat] = [0.46, 0.12, 0.13, 0.13, 0.16]
 
         let res = R.drawTablePaged(
@@ -1708,7 +1708,7 @@ struct ArtisticBoldTemplate: SimpleTemplateRenderer {
 
         // Таблица — зебра
         let tTop = billBox.maxY + 20
-        let headers = ["Description", "Qty", "Rate", "Discount", "Amount"]
+        let headers = ["Description", "Qty", "Rate", "Disc.", "Amount"]
         let specs: [CGFloat] = [0.48, 0.10, 0.13, 0.13, 0.16]
 
         let res = R.drawTablePaged(
@@ -1846,7 +1846,7 @@ struct CleanModernTemplate: SimpleTemplateRenderer {
 
         // Table (paged)
         let tableTop = bill.maxY + 14
-        let headers = ["Description", "Quantity", "Unit Price", "Discount", "Amount"]
+        let headers = ["Description", "Qty", "Unit Price", "Disc.", "Amount"]
         let specs: [CGFloat] = [0.48, 0.10, 0.12, 0.12, 0.18]
 
         let res = R.drawTablePaged(
@@ -1984,7 +1984,7 @@ struct SimpleMinimalTemplate: SimpleTemplateRenderer {
 
         // Table
         let tableTop = by + 10
-        let headers = ["Item", "Qty", "Rate", "Discount", "Total"]
+        let headers = ["Item", "Qty", "Rate", "Disc.", "Total"]
         let specs: [CGFloat] = [0.50, 0.10, 0.12, 0.12, 0.16]
 
         let res = R.drawTablePaged(
@@ -2134,7 +2134,7 @@ struct FixedCorporateFormalTemplate: SimpleTemplateRenderer {
 
         // Table
         let tableTop = billRect.maxY + 14
-        let headers = ["Description", "Quantity", "Unit Price", "Discount", "Amount"]
+        let headers = ["Description", "Qty", "Unit Price", "Disc.", "Amount"]
         let specs: [CGFloat] = [0.48, 0.10, 0.12, 0.12, 0.18]
 
         let res = R.drawTablePaged(
@@ -2282,7 +2282,7 @@ struct FixedCreativeVibrantTemplate: SimpleTemplateRenderer {
 
         // Table
         let tableTop = by + 12
-        let headers = ["Item", "Qty", "Rate", "Discount", "Total"]
+        let headers = ["Item", "Qty", "Rate", "Disc.", "Total"]
         let specs: [CGFloat] = [0.45, 0.11, 0.12, 0.12, 0.20]
 
         let res = R.drawTablePaged(
@@ -2425,7 +2425,7 @@ struct FixedExecutiveLuxuryTemplate: SimpleTemplateRenderer {
 
         // Table
         let top = bill.maxY + 18
-        let headers = ["Description", "Qty", "Unit Price", "Discount", "Total"]
+        let headers = ["Description", "Qty", "Unit Price", "Disc.", "Total"]
         let specs: [CGFloat] = [0.45, 0.13, 0.13, 0.13, 0.16]
 
         let res = R.drawTablePaged(
@@ -2719,7 +2719,7 @@ struct RealEstateWarmTemplate: SimpleTemplateRenderer {
 
         // Table (paged)
         let tableTop = bill.maxY + 14
-        let headers = ["Description", "Quantity", "Unit Price", "Discount", "Amount"]
+        let headers = ["Description", "Qty", "Unit Price", "Disc.", "Amount"]
         let specs: [CGFloat] = [0.48, 0.10, 0.12, 0.12, 0.18]
 
         let res = R.drawTablePaged(
@@ -2865,7 +2865,7 @@ struct InsuranceTrustTemplate: SimpleTemplateRenderer {
 
         // Table
         let tableTop = bill.maxY + 14
-        let headers = ["Description", "Quantity", "Unit Price", "Discount", "Amount"]
+        let headers = ["Description", "Qty", "Unit Price", "Disc.", "Amount"]
         let specs: [CGFloat] = [0.48, 0.10, 0.12, 0.12, 0.18]
 
         let res = R.drawTablePaged(
@@ -3019,7 +3019,7 @@ struct BankingSecureTemplate: SimpleTemplateRenderer {
 
         // Table
         let tableTop = bill.maxY + 16
-        let headers = ["Description", "Quantity", "Unit Price", "Discount", "Amount"]
+        let headers = ["Description", "Qty", "Unit Price", "Disc.", "Amount"]
         let specs: [CGFloat] = [0.48, 0.10, 0.12, 0.12, 0.18]
 
         let res = R.drawTablePaged(
