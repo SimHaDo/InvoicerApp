@@ -495,11 +495,21 @@ private struct CustomerRow: View {
 
 struct AddCustomerSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var scheme
+    
     @State private var name = ""
     @State private var email = ""
     @State private var phone = ""
+    @State private var organization = ""
+    @State private var status: CustomerStatus = .active
+    @State private var addressLine1 = ""
+    @State private var addressLine2 = ""
+    @State private var city = ""
+    @State private var state = ""
+    @State private var zip = ""
+    @State private var country = ""
     @State private var billingDetails = ""
-    @State private var methods: [PaymentMethod] = []     // ✅
+    @State private var methods: [PaymentMethod] = []
 
     var onSave: (Customer) -> Void
 
@@ -508,35 +518,349 @@ struct AddCustomerSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Basics") {
-                    TextField("Name", text: $name)
-                    TextField("Email", text: $email).textInputAutocapitalization(.never)
-                    TextField("Phone", text: $phone).keyboardType(.phonePad)
-                }
-                Section("Billing details (optional)") {
-                    TextEditor(text: $billingDetails).frame(minHeight: 90)
-                    Text("IBAN/SWIFT, инструкции, PayPal email и пр. — сюда, если нужно общее примечание.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                Section {
-                    PaymentMethodsEditor(methods: $methods)   // ✅ редактор
+        NavigationView {
+            ZStack {
+                backgroundView
+                contentView
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
                 }
             }
-            .navigationTitle("Add Customer")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Save") {
-                        var c = Customer(name: name, email: email, phone: phone)
-                        c.billingDetails = billingDetails.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : billingDetails
-                        c.paymentMethods = methods
-                        onSave(c)
-                        dismiss()
-                    }.disabled(!canSave)
+            .onTapGesture {
+                hideKeyboard()
+            }
+            .simultaneousGesture(
+                DragGesture()
+                    .onChanged { _ in
+                        hideKeyboard()
+                    }
+            )
+        }
+    }
+    
+    private var contentView: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                headerSection
+                basicInfoSection
+                organizationSection
+                addressSection
+                billingSection
+                paymentMethodsSection
+                saveButton
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+    
+    private var headerSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Image(systemName: "person.crop.circle.badge.plus")
+                        .foregroundColor(.blue)
+                        .font(.title2)
+                    Text("Add Customer")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                }
+                Text("Add a new customer to your database")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .modifier(CompanySetupCard())
+    }
+    
+    private var basicInfoSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: "info.circle")
+                        .foregroundColor(.blue)
+                        .font(.title3)
+                    Text("Basic Information")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                }
+                Text("Essential contact details")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            VStack(spacing: 16) {
+                ModernTextField(
+                    title: "Full Name",
+                    text: $name,
+                    icon: "person"
+                )
+
+                ModernTextField(
+                    title: "Email Address",
+                    text: $email,
+                    icon: "envelope"
+                )
+
+                ModernTextField(
+                    title: "Phone Number",
+                    text: $phone,
+                    icon: "phone"
+                )
+            }
+        }
+        .modifier(CompanySetupCard())
+    }
+    
+    private var organizationSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: "building.2")
+                        .foregroundColor(.purple)
+                        .font(.title3)
+                    Text("Organization")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                }
+                Text("Company or organization details")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            VStack(spacing: 16) {
+                ModernTextField(
+                    title: "Organization Name",
+                    text: $organization,
+                    icon: "building.2"
+                )
+                
+                HStack {
+                    Text("Status")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.primary)
+                    
+                    Spacer()
+                    
+                    Picker("Status", selection: $status) {
+                        ForEach(CustomerStatus.allCases) { status in
+                            Text(status.rawValue.capitalized).tag(status)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 120)
                 }
             }
         }
+        .modifier(CompanySetupCard())
+    }
+    
+    private var addressSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: "mappin.and.ellipse")
+                        .foregroundColor(.red)
+                        .font(.title3)
+                    Text("Address")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                }
+                Text("Customer address information")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            VStack(spacing: 16) {
+                ModernTextField(
+                    title: "Address Line 1",
+                    text: $addressLine1,
+                    icon: "location"
+                )
+                
+                ModernTextField(
+                    title: "Address Line 2",
+                    text: $addressLine2,
+                    icon: "location"
+                )
+                
+                HStack(spacing: 12) {
+                    ModernTextField(
+                        title: "City",
+                        text: $city,
+                        icon: "building"
+                    )
+                    
+                    ModernTextField(
+                        title: "State",
+                        text: $state,
+                        icon: "building"
+                    )
+                }
+                
+                HStack(spacing: 12) {
+                    ModernTextField(
+                        title: "ZIP Code",
+                        text: $zip,
+                        icon: "number"
+                    )
+                    
+                    ModernTextField(
+                        title: "Country",
+                        text: $country,
+                        icon: "globe"
+                    )
+                }
+            }
+        }
+        .modifier(CompanySetupCard())
+    }
+    
+    private var billingSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: "doc.text")
+                        .foregroundColor(.green)
+                        .font(.title3)
+                    Text("Billing Details")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                }
+                Text("Additional billing information (optional)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            VStack(spacing: 16) {
+                ModernTextField(
+                    title: "Billing Notes",
+                    text: $billingDetails,
+                    icon: "note.text"
+                )
+            }
+        }
+        .modifier(CompanySetupCard())
+    }
+    
+    private var paymentMethodsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: "creditcard")
+                        .foregroundColor(.orange)
+                        .font(.title3)
+                    Text("Payment Methods")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                }
+                Text("Add payment methods for this customer")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            PaymentMethodsEditor(methods: $methods)
+        }
+        .modifier(CompanySetupCard())
+    }
+    
+    private var saveButton: some View {
+        Button(action: save) {
+            HStack {
+                Image(systemName: "checkmark.circle.fill")
+                Text("Save Customer")
+            }
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(saveButtonBackground)
+        }
+        .disabled(!canSave)
+        .padding(.bottom, 32)
+    }
+    
+    private var saveButtonBackground: some View {
+        RoundedRectangle(cornerRadius: 16)
+            .fill(
+                canSave ?
+                LinearGradient(
+                    colors: [.blue, .purple],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ) :
+                LinearGradient(
+                    colors: [.gray, .gray],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+    }
+    
+    private var backgroundView: some View {
+        Group {
+            if scheme == .light {
+                ZStack {
+                    // Основной градиент
+                    LinearGradient(
+                        colors: [Color.white, Color(white: 0.97), Color(white: 0.95)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    
+                    // Радиальный градиент
+                    RadialGradient(
+                        colors: [Color.white, Color(white: 0.96), .clear],
+                        center: .topLeading,
+                        startRadius: 24,
+                        endRadius: 520
+                    )
+                    .blendMode(.screen)
+                }
+            } else {
+                ZStack {
+                    // Основной градиент для темной темы
+                    LinearGradient(
+                        colors: [Color.black, Color.black.opacity(0.92)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    
+                    // Радиальный градиент
+                    RadialGradient(
+                        colors: [Color.white.opacity(0.08), .clear],
+                        center: .topLeading,
+                        startRadius: 24,
+                        endRadius: 520
+                    )
+                    .blendMode(.screen)
+                }
+            }
+        }
+        .ignoresSafeArea()
+    }
+
+    private func save() {
+        var c = Customer(name: name, email: email, phone: phone)
+        c.organization = organization.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : organization
+        c.status = status
+        c.address.line1 = addressLine1
+        c.address.line2 = addressLine2
+        c.address.city = city
+        c.address.state = state
+        c.address.zip = zip
+        c.address.country = country
+        c.billingDetails = billingDetails.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : billingDetails
+        c.paymentMethods = methods
+        onSave(c)
+        dismiss()
+    }
+    
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
