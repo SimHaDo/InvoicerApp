@@ -115,6 +115,59 @@ final class BaseRenderer {
     func subtotal(_ items: [LineItem]) -> Decimal {
         items.reduce(0) { $0 + $1.total }
     }
+    
+    // MARK: - Invoice Totals Helper
+    /// Рисует полную сводку с налогами и скидками
+    func drawInvoiceTotals(
+        context: CGContext,
+        invoice: Invoice,
+        currency: String,
+        x: CGFloat,
+        y: CGFloat,
+        width: CGFloat,
+        font: UIFont = .systemFont(ofSize: 11),
+        accent: UIColor = .systemBlue
+    ) -> CGFloat {
+        var currentY = y
+        
+        // Subtotal
+        self.draw(self.text("Subtotal", font: font, color: .black),
+               in: CGRect(x: x, y: currentY, width: width/2, height: 16))
+        self.draw(self.text(self.cur(invoice.subtotal, code: currency), font: font, color: .black),
+               in: CGRect(x: x + width/2, y: currentY, width: width/2, height: 16), align: .right)
+        currentY += 18
+        
+        // Tax (если есть)
+        if invoice.taxAmount > 0 {
+            self.draw(self.text("Tax", font: font, color: .black),
+                   in: CGRect(x: x, y: currentY, width: width/2, height: 16))
+            self.draw(self.text(self.cur(invoice.taxAmount, code: currency), font: font, color: .black),
+                   in: CGRect(x: x + width/2, y: currentY, width: width/2, height: 16), align: .right)
+            currentY += 18
+        }
+        
+        // Discount (если есть)
+        if invoice.calculatedDiscountAmount > 0 {
+            self.draw(self.text("Discount", font: font, color: .black),
+                   in: CGRect(x: x, y: currentY, width: width/2, height: 16))
+            self.draw(self.text("-\(self.cur(invoice.calculatedDiscountAmount, code: currency))", font: font, color: .black),
+                   in: CGRect(x: x + width/2, y: currentY, width: width/2, height: 16), align: .right)
+            currentY += 18
+        }
+        
+        // Separator line
+        self.strokeLine(context: context, from: CGPoint(x: x, y: currentY + 4), to: CGPoint(x: x + width, y: currentY + 4), color: accent, width: 1)
+        currentY += 8
+        
+        // Total
+        self.draw(self.text("TOTAL", font: .systemFont(ofSize: font.pointSize + 2, weight: .semibold), color: .black),
+               in: CGRect(x: x, y: currentY, width: width/2, height: 18))
+        self.draw(self.text(self.cur(invoice.total, code: currency), font: .systemFont(ofSize: font.pointSize + 2, weight: .semibold), color: .black),
+               in: CGRect(x: x + width/2, y: currentY, width: width/2, height: 18), align: .right)
+        currentY += 22
+        
+        return currentY
+    }
 
     // MARK: Пакетная таблица с пагинацией (повтор шапки, безопасные поля)
     /// Рисует таблицу, возвращает:
@@ -175,10 +228,14 @@ final class BaseRenderer {
                 rowBg(i, CGRect(x: left, y: y, width: width, height: rowH))
             }
             // значения по колонкам
+            let itemDiscountAmount = item.discountType == .percentage ? 
+                (item.quantity * item.rate) * (item.discount / 100) : 
+                item.discount
             let vals = [
                 item.description,
                 "\(item.quantity)",
                 cur(item.rate,  code: currencyCode),
+                item.discount > 0 ? cur(itemDiscountAmount, code: currencyCode) : "",
                 cur(item.total, code: currencyCode)
             ]
             for c in 0..<xs.count {

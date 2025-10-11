@@ -75,7 +75,7 @@ struct InvoiceCard: View {
                         .font(.caption)
                         .foregroundStyle(scheme == .dark ? UI.darkSecondaryText : .secondary)
                     Spacer()
-                    Text(Money.fmt(invoice.subtotal, code: invoice.currency))
+                    Text(Money.fmt(invoice.total, code: invoice.currency))
                         .bold()
                         .foregroundColor(scheme == .dark ? UI.darkText : .primary)
                 } 

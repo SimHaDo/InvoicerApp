@@ -208,8 +208,8 @@ struct AllGeometricAbstractTemplate: SimpleTemplateRenderer {
 
         // Table (paged)
         let tableTop = billRect.maxY + 14
-        let headers = ["Description", "Qty", "Unit Price", "Amount"]
-        let specs: [CGFloat] = [0.58, 0.12, 0.14, 0.16]
+        let headers = ["Description", "Qty", "Unit Price", "Discount", "Amount"]
+        let specs: [CGFloat] = [0.48, 0.10, 0.12, 0.12, 0.18]
 
         let res = R.drawTablePaged(
             context: context, page: page,
@@ -246,7 +246,7 @@ struct AllGeometricAbstractTemplate: SimpleTemplateRenderer {
 
         let totalBar = CGRect(x: tx, y: tTop, width: totalsW, height: 40)
         R.fillRect(context: context, rect: totalBar, color: accent)
-        let total = subtotal
+        let total = invoice.total
         R.draw(R.text("TOTAL", font: .systemFont(ofSize: 15, weight: .bold), color: .white),
                in: CGRect(x: totalBar.minX + 10, y: totalBar.minY + 10, width: 90, height: 20))
         R.draw(R.text(R.cur(total, code: currency), font: .systemFont(ofSize: 15, weight: .bold), color: .white),
@@ -349,8 +349,8 @@ struct AllVintageRetroTemplate: SimpleTemplateRenderer {
 
         // Table
         let tableTop = bill.maxY + 16
-        let headers = ["Description", "Qty", "Unit Price", "Amount"]
-        let specs: [CGFloat] = [0.60, 0.12, 0.14, 0.14]
+        let headers = ["Description", "Qty", "Unit Price", "Discount", "Amount"]
+        let specs: [CGFloat] = [0.50, 0.10, 0.12, 0.12, 0.16]
 
         let res = R.drawTablePaged(
             context: context, page: page,
@@ -387,7 +387,7 @@ struct AllVintageRetroTemplate: SimpleTemplateRenderer {
 
         let totalBar = CGRect(x: tx, y: ty, width: totalsW, height: 56)
         R.fillRect(context: context, rect: totalBar, color: accent)
-        let total = subtotal
+        let total = invoice.total
         R.draw(R.text("TOTAL", font: .systemFont(ofSize: 18, weight: .bold), color: .white),
                in: CGRect(x: totalBar.minX + 10, y: totalBar.minY + 16, width: 80, height: 22))
         R.draw(R.text(R.cur(total, code: currency), font: .systemFont(ofSize: 18, weight: .bold), color: .white),
@@ -488,8 +488,8 @@ struct AllBusinessClassicTemplate: SimpleTemplateRenderer {
 
         // Table
         let tableTop = bill.maxY + 14
-        let headers = ["Description", "Quantity", "Unit Price", "Amount"]
-        let specs: [CGFloat] = [0.58, 0.14, 0.14, 0.14]
+        let headers = ["Description", "Quantity", "Unit Price", "Discount", "Amount"]
+        let specs: [CGFloat] = [0.48, 0.12, 0.12, 0.12, 0.16]
 
         let res = R.drawTablePaged(
             context: context, page: page,
@@ -529,7 +529,7 @@ struct AllBusinessClassicTemplate: SimpleTemplateRenderer {
 
         let totalBar = CGRect(x: tx, y: ty, width: totalsW, height: 50)
         R.fillRect(context: context, rect: totalBar, color: primary)
-        let total = subtotal
+        let total = invoice.total
         R.draw(R.text("TOTAL", font: .systemFont(ofSize: 16, weight: .bold), color: .white),
                in: CGRect(x: totalBar.minX + 10, y: totalBar.minY + 12, width: 80, height: 22))
         R.draw(R.text(R.cur(total, code: currency), font: .systemFont(ofSize: 16, weight: .bold), color: .white),
@@ -640,8 +640,8 @@ struct EnterpriseBoldTemplate: SimpleTemplateRenderer {
 
         // Table
         let tableTop = bill.maxY + 20
-        let headers = ["Description", "Quantity", "Unit Price", "Amount"]
-        let specs: [CGFloat] = [0.55, 0.15, 0.15, 0.15]
+        let headers = ["Description", "Quantity", "Unit Price", "Discount", "Amount"]
+        let specs: [CGFloat] = [0.45, 0.13, 0.13, 0.13, 0.16]
 
         let res = R.drawTablePaged(
             context: context, page: page,
@@ -681,7 +681,7 @@ struct EnterpriseBoldTemplate: SimpleTemplateRenderer {
 
         let totalBar = CGRect(x: tx, y: ty, width: totalsW, height: 68)
         R.fillRect(context: context, rect: totalBar, color: accent)
-        let total = subtotal
+        let total = invoice.total
         R.draw(R.text("TOTAL", font: .systemFont(ofSize: 20, weight: .black), color: .white),
                in: CGRect(x: totalBar.minX + 12, y: totalBar.minY + 22, width: 100, height: 24))
         R.draw(R.text(R.cur(total, code: currency), font: .systemFont(ofSize: 20, weight: .black), color: .white),
@@ -794,8 +794,8 @@ struct ConsultingElegantTemplate: SimpleTemplateRenderer {
 
         // Table
         let tableTop = bill.maxY + 14
-        let headers = ["Description", "Quantity", "Unit Price", "Amount"]
-        let specs: [CGFloat] = [0.58, 0.12, 0.14, 0.16]
+        let headers = ["Description", "Quantity", "Unit Price", "Discount", "Amount"]
+        let specs: [CGFloat] = [0.48, 0.10, 0.12, 0.12, 0.18]
 
         let res = R.drawTablePaged(
             context: context, page: page,
@@ -819,26 +819,28 @@ struct ConsultingElegantTemplate: SimpleTemplateRenderer {
         guard res.hasMore == false else { return }
 
         // Totals
-        let subtotal = R.subtotal(invoice.items)
         let totalsW: CGFloat = 190
         let tx = right - totalsW
         var ty = R.placeBlock(below: res.lastY + 10, desiredHeight: 70, page: page, safeBottom: P.bottom)
 
-        R.draw(R.text("Subtotal", font: .systemFont(ofSize: 11, weight: .regular), color: .black),
-               in: CGRect(x: tx, y: ty, width: 92, height: 16))
-        R.draw(R.text(R.cur(subtotal, code: currency), font: .systemFont(ofSize: 11, weight: .semibold), color: .black),
-               in: CGRect(x: tx + 92, y: ty, width: 98, height: 16))
-        ty += 18
+        // Draw detailed totals with taxes and discounts
+        ty = R.drawInvoiceTotals(
+            context: context,
+            invoice: invoice,
+            currency: currency,
+            x: tx,
+            y: ty,
+            width: totalsW,
+            font: .systemFont(ofSize: 11),
+            accent: accent
+        )
 
-        R.strokeLine(context: context, from: CGPoint(x: tx, y: ty + 4), to: CGPoint(x: right, y: ty + 4), color: accent, width: 1)
-        ty += 8
-
+        // Total bar with final amount
         let totalBar = CGRect(x: tx, y: ty, width: totalsW, height: 50)
         R.fillRect(context: context, rect: totalBar, color: accent)
-        let total = subtotal
         R.draw(R.text("TOTAL", font: .systemFont(ofSize: 18, weight: .medium), color: .white),
                in: CGRect(x: totalBar.minX + 10, y: totalBar.minY + 14, width: 80, height: 22))
-        R.draw(R.text(R.cur(total, code: currency), font: .systemFont(ofSize: 18, weight: .medium), color: .white),
+        R.draw(R.text(R.cur(invoice.total, code: currency), font: .systemFont(ofSize: 18, weight: .medium), color: .white),
                in: CGRect(x: totalBar.minX + 92, y: totalBar.minY + 14, width: 88, height: 22))
 
         // Payment info / Notes
@@ -956,8 +958,8 @@ struct AccountingDetailedTemplate: SimpleTemplateRenderer {
 
         // Таблица (пагинация)
         let tableTop = bill.maxY + 18
-        let headers = ["Description", "Quantity", "Unit Price", "Total"]
-        let specs: [CGFloat] = [0.58, 0.14, 0.14, 0.14]
+        let headers = ["Description", "Quantity", "Unit Price", "Discount", "Total"]
+        let specs: [CGFloat] = [0.48, 0.12, 0.12, 0.12, 0.16]
 
         let res = R.drawTablePaged(
             context: context, page: page,
@@ -981,23 +983,27 @@ struct AccountingDetailedTemplate: SimpleTemplateRenderer {
         guard !res.hasMore else { return }
 
         // ИТОГИ (справа)
-        let subtotal = R.subtotal(invoice.items)
         let totalsW: CGFloat = 190
         let tx = right - totalsW
         var ty = R.placeBlock(below: res.lastY + 12, desiredHeight: 70, page: page, safeBottom: P.bottom)
 
-        R.draw(R.text("Subtotal", font: .systemFont(ofSize: 12, weight: .regular), color: .black),
-               in: CGRect(x: tx, y: ty, width: 100, height: 18))
-        R.draw(R.text(R.cur(subtotal, code: currency), font: .systemFont(ofSize: 12, weight: .semibold), color: .black),
-               in: CGRect(x: tx + 100, y: ty, width: 90, height: 18))
-        ty += 20
+        // Draw detailed totals with taxes and discounts
+        ty = R.drawInvoiceTotals(
+            context: context,
+            invoice: invoice,
+            currency: currency,
+            x: tx,
+            y: ty,
+            width: totalsW,
+            font: .systemFont(ofSize: 12),
+            accent: accent
+        )
 
         let totalBar = CGRect(x: tx, y: ty, width: totalsW, height: 50)
         R.fillRect(context: context, rect: totalBar, color: accent)
-        let total = subtotal
         R.draw(R.text("TOTAL", font: .systemFont(ofSize: 17, weight: .semibold), color: .white),
                in: CGRect(x: totalBar.minX + 10, y: totalBar.minY + 14, width: 80, height: 22))
-        R.draw(R.text(R.cur(total, code: currency), font: .systemFont(ofSize: 17, weight: .semibold), color: .white),
+        R.draw(R.text(R.cur(invoice.total, code: currency), font: .systemFont(ofSize: 17, weight: .semibold), color: .white),
                in: CGRect(x: totalBar.minX + 90, y: totalBar.minY + 14, width: 90, height: 22))
 
         // Левый столбец: Payment Instructions / Notes
@@ -1110,8 +1116,8 @@ struct ConsultingProfessionalTemplate: SimpleTemplateRenderer {
 
         // Таблица
         let tableTop = bill.maxY + 16
-        let headers = ["Description", "Quantity", "Unit Price", "Total"]
-        let specs: [CGFloat] = [0.58, 0.14, 0.14, 0.14]
+        let headers = ["Description", "Quantity", "Unit Price", "Discount", "Total"]
+        let specs: [CGFloat] = [0.48, 0.12, 0.12, 0.12, 0.16]
 
         let res = R.drawTablePaged(
             context: context, page: page,
@@ -1135,23 +1141,27 @@ struct ConsultingProfessionalTemplate: SimpleTemplateRenderer {
         guard !res.hasMore else { return }
 
         // Totals (справа)
-        let subtotal = R.subtotal(invoice.items)
         let totalsW: CGFloat = 180
         let tx = right - totalsW
         var ty = R.placeBlock(below: res.lastY + 10, desiredHeight: 70, page: page, safeBottom: P.bottom)
 
-        R.draw(R.text("Subtotal", font: .systemFont(ofSize: 11, weight: .regular), color: .black),
-               in: CGRect(x: tx, y: ty, width: 90, height: 18))
-        R.draw(R.text(R.cur(subtotal, code: currency), font: .systemFont(ofSize: 11, weight: .semibold), color: .black),
-               in: CGRect(x: tx + 90, y: ty, width: 90, height: 18))
-        ty += 18
+        // Draw detailed totals with taxes and discounts
+        ty = R.drawInvoiceTotals(
+            context: context,
+            invoice: invoice,
+            currency: currency,
+            x: tx,
+            y: ty,
+            width: totalsW,
+            font: .systemFont(ofSize: 11),
+            accent: accent
+        )
 
         let totalBar = CGRect(x: tx, y: ty, width: totalsW, height: 50)
         R.fillRect(context: context, rect: totalBar, color: accent)
-        let total = subtotal
         R.draw(R.text("TOTAL", font: .systemFont(ofSize: 16, weight: .semibold), color: .white),
                in: CGRect(x: totalBar.minX + 10, y: totalBar.minY + 14, width: 80, height: 20))
-        R.draw(R.text(R.cur(total, code: currency), font: .systemFont(ofSize: 16, weight: .semibold), color: .white),
+        R.draw(R.text(R.cur(invoice.total, code: currency), font: .systemFont(ofSize: 16, weight: .semibold), color: .white),
                in: CGRect(x: totalBar.minX + 92, y: totalBar.minY + 14, width: 78, height: 20))
 
         // Левый столбец: Payment Instructions / Notes
@@ -1273,8 +1283,8 @@ struct PhotographyCleanTemplate: SimpleTemplateRenderer {
 
         // Таблица (пагинация)
         let tTop = blockTop + 82
-        let headers = ["QTY", "DESCRIPTION", "UNIT PRICE", "AMOUNT"]
-        let specs: [CGFloat] = [0.12, 0.58, 0.15, 0.15]
+        let headers = ["QTY", "DESCRIPTION", "UNIT PRICE", "DISCOUNT", "AMOUNT"]
+        let specs: [CGFloat] = [0.10, 0.48, 0.13, 0.13, 0.16]
 
         let res = R.drawTablePaged(
             context: context, page: page,
@@ -1405,8 +1415,8 @@ struct FashionElegantTemplate: SimpleTemplateRenderer {
 
         // Таблица — синяя шапка
         let tableTop = by + 24
-        let headers = ["Sl.", "Description", "Qty", "Rate", "Amount"]
-        let widths: [CGFloat] = [50, (right-left) - 50 - 80 - 120 - 120, 80, 120, 120]
+        let headers = ["Sl.", "Description", "Qty", "Rate", "Discount", "Amount"]
+        let widths: [CGFloat] = [40, (right-left) - 40 - 60 - 100 - 100 - 100, 60, 100, 100, 100]
         R.fillRect(context: context, rect: CGRect(x: left, y: tableTop, width: right - left, height: 28), color: primary)
 
         var x = left
@@ -1433,24 +1443,34 @@ struct FashionElegantTemplate: SimpleTemplateRenderer {
             R.draw(R.text(R.cur(it.rate, code: currency), font: .systemFont(ofSize: 12), color: .black),
                    in: CGRect(x: x, y: rowY + 6, width: widths[3] - 8, height: 16), align: .right)
             x += widths[3]
-            R.draw(R.text(R.cur(it.total, code: currency), font: .systemFont(ofSize: 12, weight: .semibold), color: .black),
+            let itemDiscountAmount = it.discountType == .percentage ? 
+                (it.quantity * it.rate) * (it.discount / 100) : 
+                it.discount
+            R.draw(R.text(it.discount > 0 ? R.cur(itemDiscountAmount, code: currency) : "", font: .systemFont(ofSize: 12), color: .black),
                    in: CGRect(x: x, y: rowY + 6, width: widths[4] - 8, height: 16), align: .right)
+            x += widths[4]
+            R.draw(R.text(R.cur(it.total, code: currency), font: .systemFont(ofSize: 12, weight: .semibold), color: .black),
+                   in: CGRect(x: x, y: rowY + 6, width: widths[5] - 8, height: 16), align: .right)
             rowY += 28
         }
         R.strokeLine(context: context, from: CGPoint(x: left, y: rowY), to: CGPoint(x: right, y: rowY), color: .lightGray, width: 1)
 
         // Сводка справа
-        let subtotal = R.subtotal(invoice.items)
         let boxX = right - 260
-        R.draw(R.text("Subtotal", font: .systemFont(ofSize: 12), color: .black),
-               in: CGRect(x: boxX, y: rowY + 12, width: 120, height: 18))
-        R.draw(R.text(R.cur(subtotal, code: currency), font: .systemFont(ofSize: 12), color: .black),
-               in: CGRect(x: right - 120, y: rowY + 12, width: 120, height: 18), align: .right)
-
-        R.draw(R.text("Total", font: .systemFont(ofSize: 14, weight: .semibold), color: .black),
-               in: CGRect(x: boxX, y: rowY + 36, width: 120, height: 20))
-        R.draw(R.text(R.cur(subtotal, code: currency), font: .systemFont(ofSize: 14, weight: .semibold), color: .black),
-               in: CGRect(x: right - 120, y: rowY + 36, width: 120, height: 20), align: .right)
+        let boxY = rowY + 12
+        let boxWidth: CGFloat = 260
+        
+        // Draw detailed totals with taxes and discounts
+        R.drawInvoiceTotals(
+            context: context,
+            invoice: invoice,
+            currency: currency,
+            x: boxX,
+            y: boxY,
+            width: boxWidth,
+            font: .systemFont(ofSize: 12),
+            accent: .lightGray
+        )
 
         R.strokeLine(context: context, from: CGPoint(x: boxX, y: rowY + 62), to: CGPoint(x: right, y: rowY + 62), color: .lightGray, width: 1)
 
@@ -1520,7 +1540,7 @@ struct DesignStudioTemplate: SimpleTemplateRenderer {
             invoice.number,
             df.string(from: invoice.issueDate),
             df.string(from: due),
-            R.cur(R.subtotal(invoice.items), code: currency)
+            R.cur(invoice.total, code: currency)
         ]
         let cardW = (right - left) / 4 - 6
         for i in 0..<4 {
@@ -1548,8 +1568,8 @@ struct DesignStudioTemplate: SimpleTemplateRenderer {
         // Таблица
         let tTop: CGFloat = P.top + 230
         R.strokeLine(context: context, from: CGPoint(x: left, y: tTop), to: CGPoint(x: right, y: tTop), color: .lightGray, width: 1)
-        let headers = ["Description", "Quantity", "Unit price (\(currency))", "Amount (\(currency))"]
-        let specs: [CGFloat] = [0.56, 0.14, 0.15, 0.15]
+        let headers = ["Description", "Quantity", "Unit price (\(currency))", "Discount", "Amount (\(currency))"]
+        let specs: [CGFloat] = [0.46, 0.12, 0.13, 0.13, 0.16]
 
         let res = R.drawTablePaged(
             context: context, page: page,
@@ -1576,12 +1596,11 @@ struct DesignStudioTemplate: SimpleTemplateRenderer {
         guard !res.hasMore else { return }
 
         // Итоговая тёмная плашка TOTAL справа
-        let total = R.subtotal(invoice.items)
         let totalBox = CGRect(x: right - 260, y: res.lastY + 12, width: 260, height: 46)
         R.fillRect(context: context, rect: totalBox, color: UIColor(white: 0.2, alpha: 1))
         R.draw(R.text("TOTAL DUE (\(currency))", font: .systemFont(ofSize: 11, weight: .semibold), color: .white),
                in: CGRect(x: totalBox.minX + 12, y: totalBox.minY + 8, width: 150, height: 14))
-        R.draw(R.text(R.cur(total, code: currency), font: .systemFont(ofSize: 16, weight: .bold), color: .white),
+        R.draw(R.text(R.cur(invoice.total, code: currency), font: .systemFont(ofSize: 16, weight: .bold), color: .white),
                in: CGRect(x: totalBox.minX + 12, y: totalBox.minY + 22, width: totalBox.width - 24, height: 18), align: .right)
 
         // Инструкции/заметки слева
@@ -1689,8 +1708,8 @@ struct ArtisticBoldTemplate: SimpleTemplateRenderer {
 
         // Таблица — зебра
         let tTop = billBox.maxY + 20
-        let headers = ["Description", "Qty", "Rate", "Amount"]
-        let specs: [CGFloat] = [0.58, 0.12, 0.15, 0.15]
+        let headers = ["Description", "Qty", "Rate", "Discount", "Amount"]
+        let specs: [CGFloat] = [0.48, 0.10, 0.13, 0.13, 0.16]
 
         let res = R.drawTablePaged(
             context: context, page: page,
@@ -1723,12 +1742,11 @@ struct ArtisticBoldTemplate: SimpleTemplateRenderer {
         guard !res.hasMore else { return }
 
         // Карточка TOTAL справа
-        let total = R.subtotal(invoice.items)
         let totalCard = CGRect(x: right - 240, y: res.lastY + 12, width: 240, height: 60)
         R.fillRect(context: context, rect: totalCard, color: primary)
         R.draw(R.text("TOTAL", font: .systemFont(ofSize: 13, weight: .bold), color: .white),
                in: CGRect(x: totalCard.minX + 12, y: totalCard.minY + 12, width: 100, height: 18))
-        R.draw(R.text(R.cur(total, code: currency), font: .systemFont(ofSize: 17, weight: .black), color: .white),
+        R.draw(R.text(R.cur(invoice.total, code: currency), font: .systemFont(ofSize: 17, weight: .black), color: .white),
                in: CGRect(x: totalCard.minX + 12, y: totalCard.minY + 30, width: totalCard.width - 24, height: 22), align: .right)
 
         // Инструкции/заметки слева
@@ -1828,8 +1846,8 @@ struct CleanModernTemplate: SimpleTemplateRenderer {
 
         // Table (paged)
         let tableTop = bill.maxY + 14
-        let headers = ["Description", "Quantity", "Unit Price", "Amount"]
-        let specs: [CGFloat] = [0.58, 0.12, 0.14, 0.16]
+        let headers = ["Description", "Quantity", "Unit Price", "Discount", "Amount"]
+        let specs: [CGFloat] = [0.48, 0.10, 0.12, 0.12, 0.18]
 
         let res = R.drawTablePaged(
             context: context, page: page,
@@ -1856,26 +1874,27 @@ struct CleanModernTemplate: SimpleTemplateRenderer {
         guard res.hasMore == false else { return }
 
         // Totals (safe placement)
-        let subtotal = R.subtotal(invoice.items)
         let totalsW: CGFloat = 220
         let tx = right - totalsW
         var ty = R.placeBlock(below: res.lastY + 10, desiredHeight: 72, page: page, safeBottom: P.bottom)
 
-        R.draw(R.text("Subtotal", font: .systemFont(ofSize: 11, weight: .regular), color: .black),
-               in: CGRect(x: tx, y: ty, width: 110, height: 16))
-        R.draw(R.text(R.cur(subtotal, code: currency), font: .systemFont(ofSize: 11, weight: .semibold), color: .black),
-               in: CGRect(x: tx + 110, y: ty, width: 110, height: 16))
-        ty += 18
-
-        R.strokeLine(context: context, from: CGPoint(x: tx, y: ty + 4), to: CGPoint(x: right, y: ty + 4), color: accent, width: 1)
-        ty += 10
+        // Draw detailed totals with taxes and discounts
+        ty = R.drawInvoiceTotals(
+            context: context,
+            invoice: invoice,
+            currency: currency,
+            x: tx,
+            y: ty,
+            width: totalsW,
+            font: .systemFont(ofSize: 11),
+            accent: accent
+        )
 
         let totalBar = CGRect(x: tx, y: ty, width: totalsW, height: 44)
         R.fillRect(context: context, rect: totalBar, color: accent)
-        let total = subtotal
         R.draw(R.text("TOTAL", font: .systemFont(ofSize: 16, weight: .bold), color: .white),
                in: CGRect(x: totalBar.minX + 10, y: totalBar.minY + 10, width: 80, height: 22))
-        R.draw(R.text(R.cur(total, code: currency), font: .systemFont(ofSize: 16, weight: .bold), color: .white),
+        R.draw(R.text(R.cur(invoice.total, code: currency), font: .systemFont(ofSize: 16, weight: .bold), color: .white),
                in: CGRect(x: totalBar.minX + 96, y: totalBar.minY + 10, width: 110, height: 22))
 
         // Payment Info / Notes (left column)
@@ -1965,8 +1984,8 @@ struct SimpleMinimalTemplate: SimpleTemplateRenderer {
 
         // Table
         let tableTop = by + 10
-        let headers = ["Item", "Qty", "Rate", "Total"]
-        let specs: [CGFloat] = [0.60, 0.12, 0.14, 0.14]
+        let headers = ["Item", "Qty", "Rate", "Discount", "Total"]
+        let specs: [CGFloat] = [0.50, 0.10, 0.12, 0.12, 0.16]
 
         let res = R.drawTablePaged(
             context: context, page: page,
@@ -1991,26 +2010,27 @@ struct SimpleMinimalTemplate: SimpleTemplateRenderer {
         guard res.hasMore == false else { return }
 
         // Totals
-        let subtotal = R.subtotal(invoice.items)
         let totalsW: CGFloat = 180
         let tx = right - totalsW
         var ty = R.placeBlock(below: res.lastY + 8, desiredHeight: 56, page: page, safeBottom: P.bottom)
 
-        R.draw(R.text("Subtotal", font: .systemFont(ofSize: 10, weight: .light), color: .gray),
-               in: CGRect(x: tx, y: ty, width: 90, height: 16))
-        R.draw(R.text(R.cur(subtotal, code: currency), font: .systemFont(ofSize: 10, weight: .regular), color: .black),
-               in: CGRect(x: tx + 90, y: ty, width: 90, height: 16))
-        ty += 14
-
-        R.strokeLine(context: context, from: CGPoint(x: tx, y: ty + 4), to: CGPoint(x: right, y: ty + 4), color: accent, width: 0.6)
-        ty += 8
+        // Draw detailed totals with taxes and discounts
+        ty = R.drawInvoiceTotals(
+            context: context,
+            invoice: invoice,
+            currency: currency,
+            x: tx,
+            y: ty,
+            width: totalsW,
+            font: .systemFont(ofSize: 10),
+            accent: accent
+        )
 
         let totalBar = CGRect(x: tx, y: ty, width: totalsW, height: 36)
         R.fillRect(context: context, rect: totalBar, color: accent)
-        let total = subtotal
         R.draw(R.text("TOTAL", font: .systemFont(ofSize: 14, weight: .medium), color: .white),
                in: CGRect(x: totalBar.minX + 8, y: totalBar.minY + 8, width: 80, height: 18))
-        R.draw(R.text(R.cur(total, code: currency), font: .systemFont(ofSize: 14, weight: .medium), color: .white),
+        R.draw(R.text(R.cur(invoice.total, code: currency), font: .systemFont(ofSize: 14, weight: .medium), color: .white),
                in: CGRect(x: totalBar.minX + 88, y: totalBar.minY + 8, width: 84, height: 18))
 
         // Payment / Notes
@@ -2114,8 +2134,8 @@ struct FixedCorporateFormalTemplate: SimpleTemplateRenderer {
 
         // Table
         let tableTop = billRect.maxY + 14
-        let headers = ["Description", "Quantity", "Unit Price", "Amount"]
-        let specs: [CGFloat] = [0.58, 0.12, 0.14, 0.16]
+        let headers = ["Description", "Quantity", "Unit Price", "Discount", "Amount"]
+        let specs: [CGFloat] = [0.48, 0.10, 0.12, 0.12, 0.18]
 
         let res = R.drawTablePaged(
             context: context, page: page,
@@ -2155,7 +2175,7 @@ struct FixedCorporateFormalTemplate: SimpleTemplateRenderer {
 
         let totalBar = CGRect(x: tx, y: ty, width: totalsW, height: 46)
         R.fillRect(context: context, rect: totalBar, color: primary)
-        let total = subtotal
+        let total = invoice.total
         R.draw(R.text("TOTAL", font: .systemFont(ofSize: 16, weight: .bold), color: .white),
                in: CGRect(x: totalBar.minX + 10, y: totalBar.minY + 10, width: 90, height: 22))
         R.draw(R.text(R.cur(total, code: currency), font: .systemFont(ofSize: 16, weight: .bold), color: .white),
@@ -2262,8 +2282,8 @@ struct FixedCreativeVibrantTemplate: SimpleTemplateRenderer {
 
         // Table
         let tableTop = by + 12
-        let headers = ["Item", "Qty", "Rate", "Total"]
-        let specs: [CGFloat] = [0.55, 0.13, 0.14, 0.18]
+        let headers = ["Item", "Qty", "Rate", "Discount", "Total"]
+        let specs: [CGFloat] = [0.45, 0.11, 0.12, 0.12, 0.20]
 
         let res = R.drawTablePaged(
             context: context, page: page,
@@ -2305,7 +2325,7 @@ struct FixedCreativeVibrantTemplate: SimpleTemplateRenderer {
 
         let totalBar = CGRect(x: tx, y: ty, width: totalsW, height: 40)
         R.fillRect(context: context, rect: totalBar, color: accent)
-        let total = subtotal
+        let total = invoice.total
         R.draw(R.text("TOTAL", font: .systemFont(ofSize: 15, weight: .bold), color: .white),
                in: CGRect(x: totalBar.minX + 10, y: totalBar.minY + 9, width: 90, height: 20))
         R.draw(R.text(R.cur(total, code: currency), font: .systemFont(ofSize: 15, weight: .bold), color: .white),
@@ -2405,8 +2425,8 @@ struct FixedExecutiveLuxuryTemplate: SimpleTemplateRenderer {
 
         // Table
         let top = bill.maxY + 18
-        let headers = ["Description", "Qty", "Unit Price", "Total"]
-        let specs: [CGFloat] = [0.55, 0.15, 0.15, 0.15]
+        let headers = ["Description", "Qty", "Unit Price", "Discount", "Total"]
+        let specs: [CGFloat] = [0.45, 0.13, 0.13, 0.13, 0.16]
 
         let res = R.drawTablePaged(
             context: context, page: page,
@@ -2448,7 +2468,7 @@ struct FixedExecutiveLuxuryTemplate: SimpleTemplateRenderer {
 
         let bar = CGRect(x: tx, y: ty, width: totalsW, height: 48)
         R.fillRect(context: context, rect: bar, color: accent)
-        let total = subtotal
+        let total = invoice.total
         R.draw(R.text("TOTAL", font: .systemFont(ofSize: 16, weight: .bold), color: .white),
                in: CGRect(x: bar.minX + 10, y: bar.minY + 12, width: 90, height: 22))
         R.draw(R.text(R.cur(total, code: currency), font: .systemFont(ofSize: 16, weight: .bold), color: .white),
@@ -2592,7 +2612,7 @@ struct FixedTechModernTemplate: SimpleTemplateRenderer {
 
         let bar = CGRect(x: tx, y: ty, width: totalsW, height: 40)
         R.fillRect(context: context, rect: bar, color: accent)
-        let total = subtotal
+        let total = invoice.total
         R.draw(R.text("TOTAL", font: .systemFont(ofSize: 16, weight: .bold), color: .white),
                in: CGRect(x: bar.minX + 10, y: bar.minY + 8, width: 90, height: 20))
         R.draw(R.text(R.cur(total, code: currency), font: .systemFont(ofSize: 16, weight: .bold), color: .white),
@@ -2699,8 +2719,8 @@ struct RealEstateWarmTemplate: SimpleTemplateRenderer {
 
         // Table (paged)
         let tableTop = bill.maxY + 14
-        let headers = ["Description", "Quantity", "Unit Price", "Amount"]
-        let specs: [CGFloat] = [0.58, 0.12, 0.14, 0.16]
+        let headers = ["Description", "Quantity", "Unit Price", "Discount", "Amount"]
+        let specs: [CGFloat] = [0.48, 0.10, 0.12, 0.12, 0.18]
 
         let res = R.drawTablePaged(
             context: context, page: page,
@@ -2740,7 +2760,7 @@ struct RealEstateWarmTemplate: SimpleTemplateRenderer {
 
         let bar = CGRect(x: tx, y: ty, width: totalsW, height: 44)
         R.fillRect(context: context, rect: bar, color: accent)
-        let total = subtotal
+        let total = invoice.total
         R.draw(R.text("TOTAL", font: .systemFont(ofSize: 16, weight: .semibold), color: .white),
                in: CGRect(x: bar.minX + 10, y: bar.minY + 10, width: 90, height: 22))
         R.draw(R.text(R.cur(total, code: currency), font: .systemFont(ofSize: 16, weight: .semibold), color: .white),
@@ -2845,8 +2865,8 @@ struct InsuranceTrustTemplate: SimpleTemplateRenderer {
 
         // Table
         let tableTop = bill.maxY + 14
-        let headers = ["Description", "Quantity", "Unit Price", "Amount"]
-        let specs: [CGFloat] = [0.58, 0.12, 0.14, 0.16]
+        let headers = ["Description", "Quantity", "Unit Price", "Discount", "Amount"]
+        let specs: [CGFloat] = [0.48, 0.10, 0.12, 0.12, 0.18]
 
         let res = R.drawTablePaged(
             context: context, page: page,
@@ -2870,26 +2890,27 @@ struct InsuranceTrustTemplate: SimpleTemplateRenderer {
         guard res.hasMore == false else { return }
 
         // Totals
-        let subtotal = R.subtotal(invoice.items)
         let totalsW: CGFloat = 220
         let tx = right - totalsW
         var ty = R.placeBlock(below: res.lastY + 10, desiredHeight: 74, page: page, safeBottom: P.bottom)
 
-        R.draw(R.text("Subtotal", font: .systemFont(ofSize: 11, weight: .regular), color: .black),
-               in: CGRect(x: tx, y: ty, width: 110, height: 16))
-        R.draw(R.text(R.cur(subtotal, code: currency), font: .systemFont(ofSize: 11, weight: .semibold), color: .black),
-               in: CGRect(x: tx + 110, y: ty, width: 110, height: 16))
-        ty += 18
-
-        R.strokeLine(context: context, from: CGPoint(x: tx, y: ty + 4), to: CGPoint(x: right, y: ty + 4), color: accent, width: 1)
-        ty += 8
+        // Draw detailed totals with taxes and discounts
+        ty = R.drawInvoiceTotals(
+            context: context,
+            invoice: invoice,
+            currency: currency,
+            x: tx,
+            y: ty,
+            width: totalsW,
+            font: .systemFont(ofSize: 11),
+            accent: accent
+        )
 
         let bar = CGRect(x: tx, y: ty, width: totalsW, height: 46)
         R.fillRect(context: context, rect: bar, color: accent)
-        let total = subtotal
         R.draw(R.text("TOTAL", font: .systemFont(ofSize: 16, weight: .bold), color: .white),
                in: CGRect(x: bar.minX + 10, y: bar.minY + 10, width: 90, height: 20))
-        R.draw(R.text(R.cur(total, code: currency), font: .systemFont(ofSize: 16, weight: .bold), color: .white),
+        R.draw(R.text(R.cur(invoice.total, code: currency), font: .systemFont(ofSize: 16, weight: .bold), color: .white),
                in: CGRect(x: bar.minX + 102, y: bar.minY + 10, width: 108, height: 20))
 
         // Payment / Notes
@@ -2998,8 +3019,8 @@ struct BankingSecureTemplate: SimpleTemplateRenderer {
 
         // Table
         let tableTop = bill.maxY + 16
-        let headers = ["Description", "Quantity", "Unit Price", "Amount"]
-        let specs: [CGFloat] = [0.58, 0.12, 0.14, 0.16]
+        let headers = ["Description", "Quantity", "Unit Price", "Discount", "Amount"]
+        let specs: [CGFloat] = [0.48, 0.10, 0.12, 0.12, 0.18]
 
         let res = R.drawTablePaged(
             context: context, page: page,
@@ -3039,7 +3060,7 @@ struct BankingSecureTemplate: SimpleTemplateRenderer {
 
         let bar = CGRect(x: tx, y: ty, width: totalsW, height: 48)
         R.fillRect(context: context, rect: bar, color: accent)
-        let total = subtotal
+        let total = invoice.total
         R.draw(R.text("TOTAL", font: .systemFont(ofSize: 16, weight: .bold), color: .white),
                in: CGRect(x: bar.minX + 10, y: bar.minY + 12, width: 90, height: 22))
         R.draw(R.text(R.cur(total, code: currency), font: .systemFont(ofSize: 16, weight: .bold), color: .white),

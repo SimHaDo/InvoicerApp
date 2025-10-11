@@ -303,8 +303,16 @@ private struct ModernTemplate: Template {
             ty += 20
         }
         row("Subtotal", Money.fmt(invoice.subtotal, code: currency))
-        row("Tax", "—")
-        row("Total", Money.fmt(invoice.subtotal, code: currency), bold: true)
+        
+        if invoice.taxAmount > 0 {
+            row("Tax", Money.fmt(invoice.taxAmount, code: currency))
+        }
+        
+        if invoice.calculatedDiscountAmount > 0 {
+            row("Discount", "-\(Money.fmt(invoice.calculatedDiscountAmount, code: currency))")
+        }
+        
+        row("Total", Money.fmt(invoice.total, code: currency), bold: true)
 
         // ✅ Используем invoice.paymentMethods и invoice.paymentNotes
         let afterPayments = PaymentBlock.draw(on: ctx,
@@ -358,16 +366,50 @@ private struct MinimalTemplate: Template {
         let after = ItemsTable().draw(context: ctx, yStart: y0+48, invoice: invoice, currency: currency, theme: theme)
 
         let f = UIFont.systemFont(ofSize: 12, weight: .semibold)
-        ctx.draw(text: "TOTAL",
-                 in: CGRect(x: r.width-36-240, y: after+10, width: 120, height: 20),
-                 font: f, color: theme.subtleText)
+        var totalY = after + 10
+        
+        // Subtotal
+        ctx.draw(text: "Subtotal",
+                 in: CGRect(x: r.width-36-240, y: totalY, width: 120, height: 20),
+                 font: UIFont.systemFont(ofSize: 12), color: theme.subtleText)
         ctx.draw(text: Money.fmt(invoice.subtotal, code: currency),
-                 in: CGRect(x: r.width-36-120, y: after+10, width: 120, height: 20),
+                 in: CGRect(x: r.width-36-120, y: totalY, width: 120, height: 20),
+                 font: UIFont.systemFont(ofSize: 12), color: .label, alignment: .right)
+        totalY += 20
+        
+        // Tax
+        if invoice.taxAmount > 0 {
+            ctx.draw(text: "Tax",
+                     in: CGRect(x: r.width-36-240, y: totalY, width: 120, height: 20),
+                     font: UIFont.systemFont(ofSize: 12), color: theme.subtleText)
+            ctx.draw(text: Money.fmt(invoice.taxAmount, code: currency),
+                     in: CGRect(x: r.width-36-120, y: totalY, width: 120, height: 20),
+                     font: UIFont.systemFont(ofSize: 12), color: .label, alignment: .right)
+            totalY += 20
+        }
+        
+        // Discount
+        if invoice.calculatedDiscountAmount > 0 {
+            ctx.draw(text: "Discount",
+                     in: CGRect(x: r.width-36-240, y: totalY, width: 120, height: 20),
+                     font: UIFont.systemFont(ofSize: 12), color: theme.subtleText)
+            ctx.draw(text: "-\(Money.fmt(invoice.calculatedDiscountAmount, code: currency))",
+                     in: CGRect(x: r.width-36-120, y: totalY, width: 120, height: 20),
+                     font: UIFont.systemFont(ofSize: 12), color: .label, alignment: .right)
+            totalY += 20
+        }
+        
+        // Total
+        ctx.draw(text: "TOTAL",
+                 in: CGRect(x: r.width-36-240, y: totalY, width: 120, height: 20),
+                 font: f, color: theme.subtleText)
+        ctx.draw(text: Money.fmt(invoice.total, code: currency),
+                 in: CGRect(x: r.width-36-120, y: totalY, width: 120, height: 20),
                  font: f, color: .label, alignment: .right)
 
         _ = PaymentBlock.draw(on: ctx,
                               page: r,
-                              yStart: after + 36,
+                              yStart: totalY + 20,
                               theme: theme,
                               methods: invoice.paymentMethods,
                               notes: invoice.paymentNotes)
@@ -404,22 +446,50 @@ private struct ClassicTemplate: Template {
         let after = ItemsTable().draw(context: ctx, yStart: 170, invoice: invoice, currency: currency, theme: theme)
 
         let f = UIFont.systemFont(ofSize: 12)
+        var totalY = after + 8
+        
+        // Subtotal
         ctx.draw(text: "Subtotal:",
-                 in: CGRect(x: r.width-36-200, y: after+8, width: 100, height: 18),
+                 in: CGRect(x: r.width-36-200, y: totalY, width: 100, height: 18),
                  font: f, color: .secondaryLabel)
         ctx.draw(text: Money.fmt(invoice.subtotal, code: currency),
-                 in: CGRect(x: r.width-36-100, y: after+8, width: 100, height: 18),
+                 in: CGRect(x: r.width-36-100, y: totalY, width: 100, height: 18),
                  font: f, color: .label, alignment: .right)
+        totalY += 20
+        
+        // Tax
+        if invoice.taxAmount > 0 {
+            ctx.draw(text: "Tax:",
+                     in: CGRect(x: r.width-36-200, y: totalY, width: 100, height: 18),
+                     font: f, color: .secondaryLabel)
+            ctx.draw(text: Money.fmt(invoice.taxAmount, code: currency),
+                     in: CGRect(x: r.width-36-100, y: totalY, width: 100, height: 18),
+                     font: f, color: .label, alignment: .right)
+            totalY += 20
+        }
+        
+        // Discount
+        if invoice.calculatedDiscountAmount > 0 {
+            ctx.draw(text: "Discount:",
+                     in: CGRect(x: r.width-36-200, y: totalY, width: 100, height: 18),
+                     font: f, color: .secondaryLabel)
+            ctx.draw(text: "-\(Money.fmt(invoice.calculatedDiscountAmount, code: currency))",
+                     in: CGRect(x: r.width-36-100, y: totalY, width: 100, height: 18),
+                     font: f, color: .label, alignment: .right)
+            totalY += 20
+        }
+        
+        // Total
         ctx.draw(text: "Total:",
-                 in: CGRect(x: r.width-36-200, y: after+28, width: 100, height: 18),
+                 in: CGRect(x: r.width-36-200, y: totalY, width: 100, height: 18),
                  font: .systemFont(ofSize: 12, weight: .semibold), color: .label)
-        ctx.draw(text: Money.fmt(invoice.subtotal, code: currency),
-                 in: CGRect(x: r.width-36-100, y: after+28, width: 100, height: 18),
+        ctx.draw(text: Money.fmt(invoice.total, code: currency),
+                 in: CGRect(x: r.width-36-100, y: totalY, width: 100, height: 18),
                  font: .systemFont(ofSize: 12, weight: .semibold), color: .label, alignment: .right)
 
         _ = PaymentBlock.draw(on: ctx,
                               page: r,
-                              yStart: after + 56,
+                              yStart: totalY + 20,
                               theme: theme,
                               methods: invoice.paymentMethods,
                               notes: invoice.paymentNotes)

@@ -43,18 +43,6 @@ final class InvoiceWizardVM: ObservableObject {
     @Published var discountType: DiscountType = .percentage
     @Published var isDiscountEnabled: Bool = false
 
-    enum TaxType: String, CaseIterable, Identifiable {
-        case percentage = "percentage"
-        case amount = "amount"
-        
-        var id: String { rawValue }
-        var displayName: String {
-            switch self {
-            case .percentage: return "Percentage"
-            case .amount: return "Amount"
-            }
-        }
-    }
 
     var subtotal: Decimal { items.map { $0.total }.reduce(0, +) }
     
@@ -214,6 +202,19 @@ struct InvoiceWizardView: View {
         // Применяем реквизиты и заметки, выбранные на шаге Payment Details
         invoice.paymentMethods = resolvedPaymentMethods()
         invoice.paymentNotes = vm.paymentNotes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : vm.paymentNotes
+        
+        // Применяем tax и discount настройки
+        print("🔍 InvoiceWizardVM Tax settings: rate=\(vm.taxRate), type=\(vm.taxType)")
+        print("🔍 InvoiceWizardVM Discount settings: enabled=\(vm.isDiscountEnabled), value=\(vm.discountValue), type=\(vm.discountType)")
+        
+        invoice.taxRate = vm.taxRate
+        invoice.taxType = vm.taxType
+        invoice.discountValue = vm.discountValue
+        invoice.discountType = vm.discountType
+        invoice.isDiscountEnabled = vm.isDiscountEnabled
+        
+        print("🔍 InvoiceWizardVM Invoice tax amount: \(invoice.taxAmount)")
+        print("🔍 InvoiceWizardVM Invoice discount amount: \(invoice.calculatedDiscountAmount)")
 
         app.invoices.append(invoice)
 
@@ -2093,41 +2094,84 @@ struct InvoiceDetailsView: View {
             }
             
             VStack(spacing: 12) {
-                    HStack {
-                        Text("Subtotal")
+                // Показываем детализацию по каждому товару
+                ForEach(invoice.wrappedValue.items) { item in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text(item.description.isEmpty ? "Untitled Item" : item.description)
+                                .font(.body)
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text(Money.fmt(item.total, code: invoice.wrappedValue.currency))
+                                .font(.body)
+                                .fontWeight(.medium)
+                                .foregroundColor(.primary)
+                        }
+                        
+                        // Показываем скидку на товар, если есть
+                        if item.discount > 0 {
+                            HStack {
+                                Text("Item Discount (\(NSDecimalNumber(decimal: item.discount).doubleValue, specifier: "%.1f")\(item.discountType == .percentage ? "%" : ""))")
+                                    .font(.caption)
+                                    .foregroundColor(.green)
+                                Spacer()
+                                let itemSubtotal = item.quantity * item.rate
+                                let itemDiscountAmount = item.discountType == .percentage ? itemSubtotal * (item.discount / 100) : item.discount
+                                Text("-\(Money.fmt(itemDiscountAmount, code: invoice.wrappedValue.currency))")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.green)
+                            }
+                        }
+                    }
+                }
+                
+                Divider()
+                
+                HStack {
+                    Text("Subtotal")
                         .font(.body)
                         .foregroundColor(.primary)
-                        Spacer()
+                    Spacer()
                     Text(Money.fmt(invoice.wrappedValue.subtotal, code: invoice.wrappedValue.currency))
                         .font(.body)
                         .fontWeight(.medium)
                         .foregroundColor(.primary)
                 }
                 
-                if invoice.wrappedValue.subtotal > 0 {
-                    HStack {
-                        Text("Tax")
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text(Money.fmt(invoice.wrappedValue.subtotal, code: invoice.wrappedValue.currency))
-                            .font(.body)
-                            .fontWeight(.medium)
-                            .foregroundColor(.red)
-                    }
+                // Subtotal
+                HStack {
+                    Text("Subtotal")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(Money.fmt(invoice.wrappedValue.subtotal, code: invoice.wrappedValue.currency))
+                        .font(.body)
+                        .fontWeight(.medium)
                 }
                 
-                if invoice.wrappedValue.subtotal > 0 {
-                    HStack {
-                        Text("Discount")
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text("-\(Money.fmt(invoice.wrappedValue.subtotal, code: invoice.wrappedValue.currency))")
-                            .font(.body)
-                            .fontWeight(.medium)
-                            .foregroundColor(.green)
-                    }
+                // Tax (всегда показываем для отладки)
+                HStack {
+                    Text("Tax")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(Money.fmt(invoice.wrappedValue.taxAmount, code: invoice.wrappedValue.currency))
+                        .font(.body)
+                        .fontWeight(.medium)
+                        .foregroundColor(invoice.wrappedValue.taxAmount > 0 ? .red : .secondary)
+                }
+                
+                // Discount (всегда показываем для отладки)
+                HStack {
+                    Text("Discount")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text("-\(Money.fmt(invoice.wrappedValue.calculatedDiscountAmount, code: invoice.wrappedValue.currency))")
+                        .font(.body)
+                        .fontWeight(.medium)
+                        .foregroundColor(invoice.wrappedValue.calculatedDiscountAmount > 0 ? .green : .secondary)
                 }
                 
                 Divider()
@@ -2138,7 +2182,7 @@ struct InvoiceDetailsView: View {
                         .fontWeight(.bold)
                         .foregroundColor(.primary)
                     Spacer()
-                    Text(Money.fmt(invoice.wrappedValue.subtotal, code: invoice.wrappedValue.currency))
+                    Text(Money.fmt(invoice.wrappedValue.total, code: invoice.wrappedValue.currency))
                         .font(.title3)
                         .fontWeight(.bold)
                         .foregroundColor(.blue)
@@ -2732,7 +2776,7 @@ private struct TaxSection: View {
                     Spacer()
                     
                     Picker("Type", selection: $vm.taxType) {
-                        ForEach(InvoiceWizardVM.TaxType.allCases, id: \.self) { type in
+                        ForEach(TaxType.allCases, id: \.self) { type in
                             Text(type.displayName).tag(type)
                         }
                     }
@@ -2749,20 +2793,19 @@ private struct TaxSection: View {
                     icon: "percent"
                 )
                 
-                if vm.taxAmount > 0 {
-                    HStack {
-                        Text("Tax Amount:")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.secondary)
-                        
-                        Spacer()
-                        
-                        Text(Money.fmt(vm.taxAmount, code: vm.currency))
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.red)
-                    }
-                    .padding(.top, 8)
+                // Debug: Always show tax calculation
+                HStack {
+                    Text("Tax Amount (Rate: \(NSDecimalNumber(decimal: vm.taxRate).doubleValue, specifier: "%.1f")%):")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                    
+                    Spacer()
+                    
+                    Text(Money.fmt(vm.taxAmount, code: vm.currency))
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.red)
                 }
+                .padding(.top, 8)
             }
         }
     }
@@ -2825,20 +2868,19 @@ private struct DiscountSection: View {
                             icon: "percent"
                         )
                         
-                        if vm.calculatedDiscountAmount > 0 {
-                            HStack {
-                                Text("Discount Amount:")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(.secondary)
-                                
-                                Spacer()
-                                
-                                Text(Money.fmt(vm.calculatedDiscountAmount, code: vm.currency))
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(.green)
-                            }
-                            .padding(.top, 8)
+                        // Debug: Always show discount calculation
+                        HStack {
+                            Text("Discount Amount (Enabled: \(vm.isDiscountEnabled ? "Yes" : "No"), Value: \(NSDecimalNumber(decimal: vm.discountValue).doubleValue, specifier: "%.1f")%):")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.secondary)
+                            
+                            Spacer()
+                            
+                            Text(Money.fmt(vm.calculatedDiscountAmount, code: vm.currency))
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.green)
                         }
+                        .padding(.top, 8)
                     }
                     .transition(.opacity.combined(with: .move(edge: .top)))
                 }
@@ -2884,34 +2926,30 @@ private struct SummarySection: View {
                         .foregroundColor(.primary)
                 }
                 
-                // Tax
-                if vm.taxAmount > 0 {
-                    HStack {
-                        Text("Tax")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.secondary)
-                        
-                        Spacer()
-                        
-                        Text(Money.fmt(vm.taxAmount, code: vm.currency))
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.red)
-                    }
+                // Tax (всегда показываем для отладки)
+                HStack {
+                    Text("Tax")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.secondary)
+                    
+                    Spacer()
+                    
+                    Text(Money.fmt(vm.taxAmount, code: vm.currency))
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(vm.taxAmount > 0 ? .red : .secondary)
                 }
                 
-                // Discount
-                if vm.calculatedDiscountAmount > 0 {
-                    HStack {
-                        Text("Discount")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.secondary)
-                        
-                        Spacer()
-                        
-                        Text("-\(Money.fmt(vm.calculatedDiscountAmount, code: vm.currency))")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.green)
-                    }
+                // Discount (всегда показываем для отладки)
+                HStack {
+                    Text("Discount")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.secondary)
+                    
+                    Spacer()
+                    
+                    Text("-\(Money.fmt(vm.calculatedDiscountAmount, code: vm.currency))")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(vm.calculatedDiscountAmount > 0 ? .green : .secondary)
                 }
                 
                 Divider()

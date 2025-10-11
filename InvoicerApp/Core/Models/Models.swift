@@ -78,6 +78,18 @@ enum DiscountType: String, Codable, CaseIterable {
     }
 }
 
+enum TaxType: String, Codable, CaseIterable {
+    case percentage = "percentage"
+    case amount = "amount"
+    
+    var displayName: String {
+        switch self {
+        case .percentage: return "Percentage"
+        case .amount: return "Amount"
+        }
+    }
+}
+
 struct Invoice: Codable, Hashable, Identifiable {
     enum Status: String, Codable, CaseIterable, Identifiable {
         case draft, sent, paid, overdue
@@ -97,10 +109,43 @@ struct Invoice: Codable, Hashable, Identifiable {
     // NEW: реквизиты и заметки, выбранные в визарде
     var paymentMethods: [PaymentMethod] = []
     var paymentNotes: String? = nil
+    
+    // Tax and Discount fields
+    var taxRate: Decimal = 0
+    var taxType: TaxType = .percentage
+    var discountValue: Decimal = 0
+    var discountType: DiscountType = .percentage
+    var isDiscountEnabled: Bool = false
 
     var subtotal: Decimal { items.map(\.total).reduce(0, +) }
+    
+    var taxableAmount: Decimal {
+        items.filter { !$0.isTaxExempt }.map { $0.total }.reduce(0, +)
+    }
+    
+    var taxAmount: Decimal {
+        if taxType == .percentage {
+            return taxableAmount * (taxRate / 100)
+        } else {
+            return taxRate
+        }
+    }
+    
+    var calculatedDiscountAmount: Decimal {
+        if !isDiscountEnabled { return 0 }
+        if discountType == .percentage {
+            return subtotal * (discountValue / 100)
+        } else {
+            return discountValue
+        }
+    }
+    
+    var total: Decimal {
+        subtotal + taxAmount - calculatedDiscountAmount
+    }
+    
     var totalPaid: Decimal = 0
-    var totalDue: Decimal { max(0, subtotal - totalPaid) }
+    var totalDue: Decimal { max(0, total - totalPaid) }
 }
 struct InvoiceTemplate: Hashable, Identifiable { let id = UUID(); let name: String; let summary: String; let tags: [String]; let isPremium: Bool }
 

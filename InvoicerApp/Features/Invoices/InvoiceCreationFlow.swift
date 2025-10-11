@@ -598,6 +598,19 @@ struct InvoiceStepView: View {
         // Применяем реквизиты и заметки, выбранные на шаге Payment Details
         invoice.paymentMethods = resolvedPaymentMethods()
         invoice.paymentNotes = vm.paymentNotes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : vm.paymentNotes
+        
+        // Применяем tax и discount настройки
+        print("🔍 Tax settings: rate=\(vm.taxRate), type=\(vm.taxType)")
+        print("🔍 Discount settings: enabled=\(vm.isDiscountEnabled), value=\(vm.discountValue), type=\(vm.discountType)")
+        
+        invoice.taxRate = vm.taxRate
+        invoice.taxType = vm.taxType
+        invoice.discountValue = vm.discountValue
+        invoice.discountType = vm.discountType
+        invoice.isDiscountEnabled = vm.isDiscountEnabled
+        
+        print("🔍 Invoice tax amount: \(invoice.taxAmount)")
+        print("🔍 Invoice discount amount: \(invoice.calculatedDiscountAmount)")
 
         print("✅ Invoice created, adding to app.invoices...")
         app.invoices.append(invoice)

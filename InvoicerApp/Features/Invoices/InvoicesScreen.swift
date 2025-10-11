@@ -32,11 +32,11 @@ final class InvoicesVM: ObservableObject {
     }
 
     func totalOutstanding(_ invoices: [Invoice]) -> Decimal {
-        invoices.filter { $0.status != .paid }.map(\.subtotal).reduce(0, +)
+        invoices.filter { $0.status != .paid }.map(\.total).reduce(0, +)
     }
 
     func totalPaid(_ invoices: [Invoice]) -> Decimal {
-        invoices.filter { $0.status == .paid }.map(\.subtotal).reduce(0, +)
+        invoices.filter { $0.status == .paid }.map(\.total).reduce(0, +)
     }
 }
 
