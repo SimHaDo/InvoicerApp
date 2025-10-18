@@ -8,6 +8,7 @@
 // MARK: - InvoicerApp.swift
 import SwiftUI
 import RevenueCat
+import StoreKit
 
 @main
 struct InvoicerApp: App {
@@ -39,7 +40,20 @@ struct InvoicerApp: App {
         // Настраиваем делегат для получения обновлений
         Purchases.shared.delegate = subscriptionManager
         
+        // Проверяем настройки устройства
+        print("🔍 Device settings check:")
+        print("🔍 Can make payments: \(SKPaymentQueue.canMakePayments())")
+        
+        // Устанавливаем пользователя (если нужно)
+        do {
+            let customerInfo = try await Purchases.shared.customerInfo()
+            print("✅ RevenueCat initialized for user: \(customerInfo.originalAppUserId)")
+            print("✅ User is anonymous: \(customerInfo.originalAppUserId == "$RCAnonymousID")")
+        } catch {
+            print("❌ RevenueCat initialization error: \(error)")
+        }
+        
         // Включаем автоматическое восстановление покупок
-        try? await Purchases.shared.restorePurchases()
+        _ = try? await Purchases.shared.restorePurchases()
     }
 }

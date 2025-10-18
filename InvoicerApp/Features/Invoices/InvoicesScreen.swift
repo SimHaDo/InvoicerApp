@@ -225,32 +225,35 @@ struct InvoicesScreen: View {
             }
             Spacer()
             
-            // App Logo (справа от заголовка, выровнен по центру)
-            Image("AppLogo")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 160, height: 80)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .if(scheme == .dark) { view in
-                    view.colorInvert()
-                }
-                .shadow(
-                    color: scheme == .dark ? UI.darkAccent.opacity(0.4) : .black.opacity(0.2), 
-                    radius: 8, 
-                    y: 4
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(
-                            scheme == .dark ? UI.darkAccent.opacity(0.3) : Color.clear,
-                            lineWidth: 1
-                        )
-                )
+            // App Logo (только на больших экранах)
+            if UIScreen.main.bounds.width >= 430 {
+                Image("AppLogo")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 160, height: 80)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .if(scheme == .dark) { view in
+                        view.colorInvert()
+                    }
+                    .shadow(
+                        color: scheme == .dark ? UI.darkAccent.opacity(0.4) : .black.opacity(0.2), 
+                        radius: 8, 
+                        y: 4
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(
+                                scheme == .dark ? UI.darkAccent.opacity(0.3) : Color.clear,
+                                lineWidth: 1
+                            )
+                    )
+            }
             
             if subscriptionManager.isPro { 
                 PremiumBadge()
             }
         }
+        .frame(height: 100)
     }
 
     private var headerCard: some View {

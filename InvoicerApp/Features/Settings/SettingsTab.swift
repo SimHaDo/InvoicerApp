@@ -239,6 +239,7 @@ private struct MyInfoCard: View {
 
 private struct AccountCard: View {
     @EnvironmentObject private var app: AppState
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @Environment(\.colorScheme) private var scheme
     
     var body: some View {
@@ -271,17 +272,23 @@ private struct AccountCard: View {
                     
                     HStack(spacing: 6) {
                         Circle()
-                            .fill(app.isPremium ? Color.green : Color.orange)
+                            .fill(subscriptionManager.isPro ? Color.green : Color.orange)
                             .frame(width: 8, height: 8)
                         
-                        Text(app.isPremium ? "Active" : "Free")
+                        Text(subscriptionManager.isPro ? "Active" : "Free")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(app.isPremium ? .green : .orange)
+                            .foregroundColor(subscriptionManager.isPro ? .green : .orange)
+                        
+                        if subscriptionManager.isPro {
+                            Text("Premium")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
                     }
                     }
 
                 Button {
-                        Task { try? await SubscriptionManager.shared.restorePurchases() }
+                        Task { try? await subscriptionManager.restorePurchases() }
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "arrow.clockwise")

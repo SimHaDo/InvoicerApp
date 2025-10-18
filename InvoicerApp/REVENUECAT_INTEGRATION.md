@@ -151,3 +151,4 @@ print("✅ Subscription status updated: isPro = \(isPro)")
 
 Все компоненты работают вместе для обеспечения полноценной системы подписок через RevenueCat.
 
+

@@ -217,6 +217,7 @@ final class AnalyticsVM: ObservableObject {
 
 struct AnalyticsScreen: View {
     @EnvironmentObject private var app: AppState
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @StateObject private var vm = AnalyticsVM()
     @Environment(\.colorScheme) private var scheme
     
@@ -250,7 +251,7 @@ struct AnalyticsScreen: View {
                         headerView
                         
                         // Timeframe Selector (Premium)
-                        if vm.isPremium {
+                        if subscriptionManager.isPro {
                             timeframeSelector
                         }
                         
@@ -258,9 +259,9 @@ struct AnalyticsScreen: View {
                         freeMetricsSection
                         
                         // Premium Metrics
-                if vm.isPremium {
+                        if subscriptionManager.isPro {
                             premiumMetricsSection
-                } else {
+                        } else {
                             premiumUpgradeSection
                         }
                     }
@@ -271,7 +272,8 @@ struct AnalyticsScreen: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .sheet(isPresented: $showPaywall) {
-            // PaywallScreen would go here
+            PaywallScreen(onClose: { showPaywall = false })
+                .environmentObject(subscriptionManager)
         }
         .onAppear {
             showContent = true
@@ -303,7 +305,7 @@ struct AnalyticsScreen: View {
             }
             Spacer()
             
-                    if !vm.isPremium {
+                    if !subscriptionManager.isPro {
                 Button(action: { showPaywall = true }) {
                     HStack(spacing: 6) {
                         Image(systemName: "crown.fill")

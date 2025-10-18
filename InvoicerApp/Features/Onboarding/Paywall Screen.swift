@@ -80,6 +80,18 @@ struct PaywallScreen: View {
                                 .padding(.horizontal, 20)
                                 .padding(.top, 8)
                         }
+                        
+                        // Debug button for testing
+                        #if DEBUG
+                        Button("Refresh Status") {
+                            Task {
+                                await subscriptionManager.checkSubscriptionStatus()
+                            }
+                        }
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.blue)
+                        .padding(.top, 8)
+                        #endif
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
@@ -93,6 +105,14 @@ struct PaywallScreen: View {
                 // Устанавливаем месячный план по умолчанию
                 if let monthly = monthlyPackage {
                     selectedPackage = monthly
+                }
+            }
+        }
+        .onChange(of: subscriptionManager.isPro) { isPro in
+            // Автоматически закрываем paywall при активации подписки
+            if isPro {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    onClose()
                 }
             }
         }
@@ -185,7 +205,12 @@ struct PaywallScreen: View {
                 Task {
                     do {
                         try await subscriptionManager.purchase(package: package)
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                        
+                        // Проверяем статус подписки после покупки
+                        await subscriptionManager.checkSubscriptionStatus()
+                        
+                        // Ждем немного и закрываем paywall
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                             onClose()
                         }
                     } catch {
