@@ -117,11 +117,12 @@ final class InvoicesVM: ObservableObject {
 
 struct InvoicesScreen: View {
     @EnvironmentObject private var app: AppState
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @StateObject private var vm = InvoicesVM()
     @Environment(\.colorScheme) private var scheme
 
     @State private var showInvoiceCreation = false // Unified state for full-screen flow
-    @State private var showEmptyPaywall = false
+    @State private var showPaywall = false
     @State private var floatingElements: [FloatingElement] = []
 
     var body: some View {
@@ -163,7 +164,7 @@ struct InvoicesScreen: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(trailing: Button(action: onNewInvoice) {
-                Image(systemName: app.canCreateInvoice ? "plus.circle.fill" : "lock.circle")
+                Image(systemName: subscriptionManager.isPro ? "plus.circle.fill" : "lock.circle")
                     .imageScale(.large)
             })
         }
@@ -176,9 +177,12 @@ struct InvoicesScreen: View {
                 })
                     .environmentObject(app)
             }
-            // Paywall-заглушка
-            .sheet(isPresented: $showEmptyPaywall) {
-                EmptyScreen()
+            // Paywall
+            .sheet(isPresented: $showPaywall) {
+                PaywallScreen(onClose: {
+                    showPaywall = false
+                })
+                .environmentObject(subscriptionManager)
             }
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NavigateToMyInfo"))) { _ in
                 // Close the invoice creation flow when navigating to MyInfo
@@ -190,9 +194,9 @@ struct InvoicesScreen: View {
     // MARK: - Actions
 
     private func onNewInvoice() {
-        // если лимит исчерпан и нет подписки — показываем paywall
-        guard app.canCreateInvoice else {
-            showEmptyPaywall = true
+        // если нет подписки — показываем paywall
+        guard subscriptionManager.isPro else {
+            showPaywall = true
             return
         }
         // Открываем полноэкранный флоу создания инвойса
@@ -243,25 +247,29 @@ struct InvoicesScreen: View {
                         )
                 )
             
-            if app.isPremium { 
-                ProBadge()
+            if subscriptionManager.isPro { 
+                PremiumBadge()
             }
         }
     }
 
     private var headerCard: some View {
         Group {
-            if app.isPremium {
-                // карточка быстрого создания (если у тебя уже есть реальная реализация — она подставится)
+            if subscriptionManager.isPro {
+                // карточка быстрого создания
                 QuickCreateCard(newAction: onNewInvoice)
                     .padding(.top, 2)
             } else {
-                FreePlanCardCompact(                    // ← карточка Free/Upgrade возвращена
-                    remaining: app.remainingFreeInvoices,
-                    onUpgrade: { showEmptyPaywall = true },
-                    onCreate: onNewInvoice
-                )
-                .padding(.top, 2)
+                PremiumFeatureView(
+                    isPremium: subscriptionManager.isPro,
+                    title: "Unlimited Invoices",
+                    description: "Create unlimited professional invoices with premium templates and advanced features.",
+                    icon: "doc.richtext.fill",
+                    onUpgrade: { showPaywall = true }
+                ) {
+                    QuickCreateCard(newAction: onNewInvoice)
+                        .padding(.top, 2)
+                }
             }
         }
     }
@@ -348,15 +356,13 @@ struct InvoicesScreen: View {
                     )
                 VStack(spacing: 10) {
                     Button(action: onNewInvoice) {
-                        Image(systemName: app.canCreateInvoice ? "plus.circle" : "lock.circle")
+                        Image(systemName: subscriptionManager.isPro ? "plus.circle" : "lock.circle")
                             .font(.system(size: 36))
                     }
                     Text("No invoices yet").font(.headline)
-                    Text(app.isPremium
+                    Text(subscriptionManager.isPro
                          ? "Create your first invoice to get started"
-                         : app.remainingFreeInvoices > 0
-                            ? "You can create \(app.remainingFreeInvoices) free invoice."
-                            : "Free limit reached. Upgrade to create more.")
+                         : "Upgrade to Pro to create unlimited invoices")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 }
@@ -365,41 +371,22 @@ struct InvoicesScreen: View {
             .frame(maxWidth: .infinity, minHeight: 150)
 
             // CTA снизу с новым дизайном
-            if !app.isPremium {
-                if app.remainingFreeInvoices == 0 {
-                    Button(action: { showEmptyPaywall = true }) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "crown.fill")
-                                .font(.system(size: 16, weight: .semibold))
-                            Text("Upgrade to Create Invoice")
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color.primary)
-                                .shadow(color: Color.black.opacity(0.2), radius: 12, y: 6)
-                        )
-                        .foregroundColor(scheme == .light ? .white : .black)
+            if !subscriptionManager.isPro {
+                Button(action: { showPaywall = true }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Upgrade to Create Invoice")
+                            .font(.system(size: 16, weight: .semibold))
                     }
-                } else {
-                    Button(action: onNewInvoice) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "doc.badge.plus")
-                                .font(.system(size: 16, weight: .semibold))
-                            Text("Create Invoice (\(app.remainingFreeInvoices) left)")
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color.primary)
-                                .shadow(color: Color.black.opacity(0.2), radius: 12, y: 6)
-                        )
-                        .foregroundColor(scheme == .light ? .white : .black)
-                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.primary)
+                            .shadow(color: Color.black.opacity(0.2), radius: 12, y: 6)
+                    )
+                    .foregroundColor(scheme == .light ? .white : .black)
                 }
             }
         }
@@ -514,117 +501,3 @@ struct InvoicesScreen: View {
 
 // MARK: - Small UI pieces used here
 
-struct FreePlanCardCompact: View {
-    @Environment(\.colorScheme) private var scheme
-    let remaining: Int
-    var onUpgrade: () -> Void
-    var onCreate: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 10) {
-                Image(systemName: "crown")
-                Text("Free Plan").bold()
-                Spacer()
-                Text(remaining > 0 ? "\(remaining) free left" : "Limit reached")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            if remaining > 0 {
-                HStack(spacing: 16) {
-                    Button(action: onCreate) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "doc.badge.plus")
-                                .font(.system(size: 16, weight: .semibold))
-                            Text("Create Invoice")
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color.primary)
-                                .shadow(color: Color.black.opacity(0.2), radius: 12, y: 6)
-                        )
-                        .foregroundColor(scheme == .light ? .white : .black)
-                    }
-
-                    Button(action: onUpgrade) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "crown")
-                                .font(.system(size: 16, weight: .semibold))
-                            Text("Upgrade")
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(scheme == .light ? Color.black.opacity(0.05) : Color.white.opacity(0.1))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .stroke(Color.primary.opacity(0.2), lineWidth: 1)
-                                )
-                        )
-                        .foregroundColor(.primary)
-                    }
-                }
-            } else {
-                Button(action: onUpgrade) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "crown.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                        Text("Upgrade to Create Invoice")
-                            .font(.system(size: 16, weight: .semibold))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color.primary)
-                            .shadow(color: Color.black.opacity(0.2), radius: 12, y: 6)
-                    )
-                    .foregroundColor(scheme == .light ? .white : .black)
-                }
-            }
-
-            HStack(spacing: 20) {
-                Label("Unlimited invoices", systemImage: "checkmark")
-                Label("Premium templates", systemImage: "checkmark")
-                Label("Advanced features", systemImage: "checkmark")
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .padding(.top, 4)
-        }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.secondary.opacity(0.15))
-        )
-    }
-}
-
-struct EmptyScreen: View {
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 16) {
-                Image(systemName: "crown.fill").font(.largeTitle)
-                Text("Subscription Coming Soon").font(.title3).bold()
-                Text("Upgrade to create unlimited invoices and unlock premium features.")
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-                Button("Close") { }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.black))
-                    .foregroundStyle(.white)
-            }
-            .padding()
-            .navigationTitle("Upgrade")
-            .navigationBarTitleDisplayMode(.inline)
-        }
-    }
-}

@@ -281,7 +281,7 @@ private struct AccountCard: View {
                     }
 
                 Button {
-                        Task { try? await SubscriptionManager.shared.restore() }
+                        Task { try? await SubscriptionManager.shared.restorePurchases() }
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "arrow.clockwise")

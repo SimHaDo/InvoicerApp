@@ -10,6 +10,7 @@ import UIKit
 
 struct RootContainer: View {
     @EnvironmentObject private var app: AppState
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @State private var showTemplatePicker = false
     @State private var showLoadingScreen = true
 
@@ -28,10 +29,12 @@ struct RootContainer: View {
             } else if app.hasCompletedOnboarding {
                 RootTabView()
                     .environmentObject(app)
+                    .environmentObject(subscriptionManager)
             } else {
                 // ✅ Используем объединённый экран онбординга с пейволлом
                 OnboardingView()
                     .environmentObject(app)
+                    .environmentObject(subscriptionManager)
             }
         }
         .onChange(of: app.selectedTemplate.id) { _ in

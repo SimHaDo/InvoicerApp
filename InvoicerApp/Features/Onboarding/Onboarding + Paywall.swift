@@ -23,6 +23,7 @@ struct Particle: Identifiable {
 
 struct OnboardingView: View {
     @EnvironmentObject private var app: AppState
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @Environment(\.openURL) private var openURL
     @Environment(\.colorScheme) private var scheme
 
@@ -86,6 +87,7 @@ struct OnboardingView: View {
                     .tag(2)
 
                     PaywallScreen(onClose: finishOnboarding)
+                        .environmentObject(subscriptionManager)
                         .tag(3)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
@@ -99,7 +101,7 @@ struct OnboardingView: View {
                         .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2), value: appear)
 
                     FooterLinks(
-                        onRestore: { Task { try? await SubscriptionManager.shared.restore() } },
+                        onRestore: { Task { try? await subscriptionManager.restorePurchases() } },
                         onPrivacy: { openURL(privacyURL) },
                         onTerms:   { openURL(termsURL) }
                     )

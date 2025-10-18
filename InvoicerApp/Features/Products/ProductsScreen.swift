@@ -85,6 +85,7 @@ final class ProductsVM: ObservableObject {
 // MARK: - Screen
 struct ProductsScreen: View {
     @EnvironmentObject private var app: AppState
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @StateObject private var vm = ProductsVM()
     @Environment(\.colorScheme) private var scheme
 
@@ -244,7 +245,8 @@ struct ProductsScreen: View {
                 .environmentObject(app)
             }
             .sheet(isPresented: $showEmptyPaywall) {
-                EmptyScreen()
+                PaywallScreen(onClose: { showEmptyPaywall = false })
+                    .environmentObject(subscriptionManager)
             }
         }
         .onAppear {
