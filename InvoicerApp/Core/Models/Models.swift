@@ -26,6 +26,7 @@ struct Company: Codable, Hashable, Identifiable {
     var phone = ""
     var address = Address()
     var website: String? = nil
+    var logoData: Data? = nil
 }
 
 // Customers

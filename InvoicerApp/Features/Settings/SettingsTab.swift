@@ -57,29 +57,35 @@ struct SettingsTab: View {
                             .opacity(showContent ? 1 : 0)
                             .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.4), value: showContent)
                         
+                        // Sync Card
+                        SyncCard()
+                            .scaleEffect(showContent ? 1.0 : 0.9)
+                            .opacity(showContent ? 1 : 0)
+                            .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.5), value: showContent)
+                        
                         // Data Card
                         DataCard()
                             .scaleEffect(showContent ? 1.0 : 0.9)
                             .opacity(showContent ? 1 : 0)
-                            .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.5), value: showContent)
+                            .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.6), value: showContent)
                         
                         // Support Card
                         SupportCard()
                             .scaleEffect(showContent ? 1.0 : 0.9)
                             .opacity(showContent ? 1 : 0)
-                            .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.6), value: showContent)
+                            .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.7), value: showContent)
                         
                         // Legal Card
                         LegalCard()
                             .scaleEffect(showContent ? 1.0 : 0.9)
                             .opacity(showContent ? 1 : 0)
-                            .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.7), value: showContent)
+                            .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.8), value: showContent)
                         
                         // About Card
                         AboutCard()
                             .scaleEffect(showContent ? 1.0 : 0.9)
                             .opacity(showContent ? 1 : 0)
-                            .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.8), value: showContent)
+                            .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.9), value: showContent)
                     }
                     .adaptiveContent()
                     .padding(.top, 16)
@@ -580,6 +586,92 @@ private struct LegalCard: View {
                 )
                 .shadow(color: Color.black.opacity(scheme == .light ? 0.05 : 0.2), radius: 8, y: 4)
         )
+    }
+}
+
+private struct SyncCard: View {
+    @Environment(\.colorScheme) private var scheme
+    @StateObject private var coreDataAdapter = CoreDataAdapter.shared
+    @State private var showingSyncSettings = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 12) {
+                Image(systemName: "icloud.fill")
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundColor(.primary)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("iCloud Sync")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.primary)
+                    
+                    Text("Sync data across devices")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                
+                Spacer()
+            }
+            
+            VStack(spacing: 12) {
+                // Sync status
+                HStack {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(coreDataAdapter.isCloudKitAvailable ? Color.green : Color.red)
+                            .frame(width: 8, height: 8)
+                        
+                        Text(coreDataAdapter.isCloudKitAvailable ? "Connected" : "Not Connected")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(coreDataAdapter.isCloudKitAvailable ? .green : .red)
+                    }
+                    
+                    Spacer()
+                    
+                    if let lastSync = coreDataAdapter.lastSyncDate {
+                        Text("Last sync: \(lastSync, style: .relative)")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Button {
+                    showingSyncSettings = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "gear")
+                            .font(.system(size: 14, weight: .medium))
+                        Text("Manage Sync")
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(scheme == .light ? Color.black.opacity(0.05) : Color.white.opacity(0.1))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.primary.opacity(0.2), lineWidth: 1)
+                            )
+                    )
+                    .foregroundColor(.primary)
+                }
+            }
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(scheme == .light ? Color.black.opacity(0.02) : Color.white.opacity(0.05))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                )
+                .shadow(color: Color.black.opacity(scheme == .light ? 0.05 : 0.2), radius: 8, y: 4)
+        )
+        .navigationDestination(isPresented: $showingSyncSettings) {
+            SyncSettingsView()
+        }
     }
 }
 

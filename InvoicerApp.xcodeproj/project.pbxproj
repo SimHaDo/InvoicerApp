@@ -14,9 +14,22 @@
 		C0A54AE02E88D5CC0068E0BF /* InvoicerApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = InvoicerApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C09228552EA87649009C6BA9 /* Exceptions for "InvoicerApp" folder in "InvoicerApp" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = C0A54ADF2E88D5CC0068E0BF /* InvoicerApp */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		C0A54AE22E88D5CC0068E0BF /* InvoicerApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C09228552EA87649009C6BA9 /* Exceptions for "InvoicerApp" folder in "InvoicerApp" target */,
+			);
 			path = InvoicerApp;
 			sourceTree = "<group>";
 		};
@@ -258,12 +271,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = InvoicerApp/InvoicerApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"InvoicerApp/Preview Content\"";
 				DEVELOPMENT_TEAM = 6X8WAF952V;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = InvoicerApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Invoice Maker PRO";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Invoice Maker PRO needs access to your camera to take photos for your company logo and invoice attachments.";
@@ -295,12 +310,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = InvoicerApp/InvoicerApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"InvoicerApp/Preview Content\"";
 				DEVELOPMENT_TEAM = 6X8WAF952V;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = InvoicerApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Invoice Maker PRO";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Invoice Maker PRO needs access to your camera to take photos for your company logo and invoice attachments.";

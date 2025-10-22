@@ -38,6 +38,11 @@ final class AppState: ObservableObject {
         didSet { 
             print("AppState: Logo data changed, saving...")
             Storage.saveLogo(logoData)
+            // Also update company logo in Core Data
+            if var company = company {
+                company.logoData = logoData
+                self.company = company
+            }
         }
     }
     var logoImage: UIImage? {
@@ -57,35 +62,39 @@ final class AppState: ObservableObject {
     var canCreateInvoice: Bool { isPremium || remainingFreeInvoices > 0 }
 
     @Published var company: Company? {
-        didSet { Storage.save(company, key: .company) }
+        didSet { 
+            if let company = company {
+                coreDataAdapter.saveCompany(company)
+            }
+        }
     }
 
-    @Published var customers: [Customer] =
-        Storage.load([Customer].self, key: .customers, fallback: Mock.customers) {
+    @Published var customers: [Customer] = [] {
         didSet { 
             print("AppState: Saving \(customers.count) customers")
-            Storage.save(customers, key: .customers) 
+            coreDataAdapter.saveCustomers(customers)
         }
     }
 
-    @Published var products: [Product] =
-        Storage.load([Product].self, key: .products, fallback: Mock.products) {
+    @Published var products: [Product] = [] {
         didSet { 
             print("AppState: Saving \(products.count) products")
-            Storage.save(products, key: .products) 
+            coreDataAdapter.saveProducts(products)
         }
     }
 
-    @Published var invoices: [Invoice] =
-        Storage.load([Invoice].self, key: .invoices, fallback: []) {
-        didSet { Storage.save(invoices, key: .invoices) }
+    @Published var invoices: [Invoice] = [] {
+        didSet { 
+            coreDataAdapter.saveInvoices(invoices)
+        }
     }
 
     // MARK: Settings (persisted)
 
-    @Published var settings: AppSettings =
-        Storage.load(AppSettings.self, key: .settings, fallback: .init()) {
-        didSet { Storage.save(settings, key: .settings) }
+    @Published var settings: AppSettings = AppSettings() {
+        didSet { 
+            coreDataAdapter.saveAppSettings(settings)
+        }
     }
 
     func saveSettings() {
@@ -124,6 +133,7 @@ final class AppState: ObservableObject {
     // MARK: Internals
 
     private var cancellables = Set<AnyCancellable>()
+    private let coreDataAdapter = CoreDataAdapter.shared
 
     // MARK: Init
 
@@ -155,17 +165,19 @@ final class AppState: ObservableObject {
             .store(in: &cancellables)
 
         // слушаем внешние изменения iCloud KVS
-        // Temporarily disabled CloudSync to avoid entitlement errors
-        // NotificationCenter.default.addObserver(
-        //     forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
-        //     object: NSUbiquitousKeyValueStore.default,
-        //     queue: .main
-        // ) { [weak self] _ in
-        //     // Класс @MainActor, поэтому вызываем на мейне безопасно
-        //     Task { @MainActor in self?.pullFromCloud() }
-        // }
+        NotificationCenter.default.addObserver(
+            forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
+            object: NSUbiquitousKeyValueStore.default,
+            queue: .main
+        ) { [weak self] _ in
+            // Класс @MainActor, поэтому вызываем на мейне безопасно
+            Task { @MainActor in self?.pullFromCloud() }
+        }
 
-        // CloudSync.shared.synchronize()
+        CloudSync.shared.synchronize()
+        
+        // Setup Core Data with CloudKit
+        setupCoreDataSync()
     }
 
     // MARK: Cloud sync (KVS)
@@ -210,5 +222,81 @@ final class AppState: ObservableObject {
     func persistProFlag(_ value: Bool) {
         UserDefaults.standard.set(value, forKey: PrefKey.isProSubscription)
         CloudSync.shared.set(value, for: .isProSubscriber)
+    }
+    
+    // MARK: Core Data + CloudKit Sync
+    
+    private func setupCoreDataSync() {
+        print("AppState: Setting up Core Data sync...")
+        
+        // Migrate existing data from UserDefaults to Core Data
+        print("AppState: Migrating data from UserDefaults to Core Data...")
+        coreDataAdapter.migrateFromUserDefaults()
+        
+        // Load data from Core Data
+        print("AppState: Loading data from Core Data...")
+        loadDataFromCoreData()
+        
+        // Listen to Core Data changes
+        coreDataAdapter.$isCloudKitAvailable
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isAvailable in
+                print("AppState: CloudKit available: \(isAvailable)")
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func loadDataFromCoreData() {
+        print("AppState: Starting to load data from Core Data...")
+        
+        // Load company
+        if let company = coreDataAdapter.fetchCompany() {
+            print("AppState: Loaded company from Core Data: \(company.name)")
+            self.company = company
+            // Update logo data from company
+            if let logoData = company.logoData {
+                print("AppState: Loaded logo data from company")
+                self.logoData = logoData
+            }
+        } else {
+            print("AppState: No company found in Core Data")
+        }
+        
+        // Load customers
+        let customers = coreDataAdapter.fetchCustomers()
+        print("AppState: Loaded \(customers.count) customers from Core Data")
+        self.customers = customers
+        
+        // Load products
+        let products = coreDataAdapter.fetchProducts()
+        print("AppState: Loaded \(products.count) products from Core Data")
+        self.products = products
+        
+        // Load invoices
+        let invoices = coreDataAdapter.fetchInvoices()
+        print("AppState: Loaded \(invoices.count) invoices from Core Data")
+        self.invoices = invoices
+        
+        // Load settings
+        if let settings = coreDataAdapter.fetchAppSettings() {
+            print("AppState: Loaded app settings from Core Data")
+            self.settings = settings
+        } else {
+            print("AppState: No app settings found in Core Data")
+        }
+        
+        print("AppState: Completed loading from Core Data - \(self.customers.count) customers, \(self.products.count) products, \(self.invoices.count) invoices")
+    }
+    
+    func syncToCloud() {
+        // Core Data automatically syncs with CloudKit
+        // Just save the context
+        coreDataAdapter.forceSync()
+    }
+    
+    func syncFromCloud() {
+        // Core Data automatically pulls from CloudKit
+        // Reload data from Core Data
+        loadDataFromCoreData()
     }
 }

@@ -14,14 +14,14 @@ final class CloudSync {
     private let store = NSUbiquitousKeyValueStore.default
 
     private init() {
-        // Temporarily disabled to avoid entitlement errors
-        // NotificationCenter.default.addObserver(
-        //     forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
-        //     object: store, queue: .main
-        // ) { _ in
-        //     // Только подтягиваем изменения — подписчики слушают свои нотификации.
-        // }
-        // store.synchronize()
+        // Enable CloudKit notifications
+        NotificationCenter.default.addObserver(
+            forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
+            object: store, queue: .main
+        ) { _ in
+            // Только подтягиваем изменения — подписчики слушают свои нотификации.
+        }
+        store.synchronize()
     }
 
     enum Key: String {
