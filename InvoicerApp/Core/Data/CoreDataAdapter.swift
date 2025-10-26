@@ -9,6 +9,7 @@ import Foundation
 import CoreData
 import SwiftUI
 import Combine
+import UIKit
 
 /// Адаптер для интеграции Core Data с существующим AppState
 @MainActor
@@ -297,11 +298,14 @@ final class CoreDataAdapter: ObservableObject {
                 existingCompany.country = company.address.country
                 existingCompany.logoData = company.logoData
                 existingCompany.lastModified = Date()
+                print("CoreDataAdapter: Updated existing company with logo data: \(company.logoData?.count ?? 0) bytes")
             } else {
                 // Create new
-                _ = convertToCoreDataCompany(company)
+                let newCompany = convertToCoreDataCompany(company)
+                print("CoreDataAdapter: Created new company with logo data: \(company.logoData?.count ?? 0) bytes")
             }
             coreDataStack.save()
+            print("CoreDataAdapter: Company saved successfully")
         } catch {
             print("Error saving company: \(error)")
         }
@@ -478,5 +482,49 @@ final class CoreDataAdapter: ObservableObject {
     
     func forceSync() {
         coreDataStack.forceSync()
+    }
+    
+    /// Принудительная синхронизация логотипа компании
+    func syncCompanyLogo(_ logoData: Data?) {
+        guard let company = fetchCompany() else {
+            print("CoreDataAdapter: No company found to sync logo")
+            return
+        }
+        
+        // Check logo size (CloudKit has limits on binary data)
+        if let logoData = logoData {
+            let maxSize = 10 * 1024 * 1024 // 10MB limit for CloudKit
+            if logoData.count > maxSize {
+                print("CoreDataAdapter: Warning - Logo size (\(logoData.count) bytes) exceeds CloudKit limit (\(maxSize) bytes)")
+                // Try to compress the image
+                if let image = UIImage(data: logoData),
+                   let compressedData = image.jpegData(compressionQuality: 0.5) {
+                    print("CoreDataAdapter: Compressed logo from \(logoData.count) to \(compressedData.count) bytes")
+                    var updatedCompany = company
+                    updatedCompany.logoData = compressedData
+                    saveCompany(updatedCompany)
+                } else {
+                    print("CoreDataAdapter: Failed to compress logo, skipping sync")
+                    return
+                }
+            } else {
+                var updatedCompany = company
+                updatedCompany.logoData = logoData
+                saveCompany(updatedCompany)
+            }
+        } else {
+            var updatedCompany = company
+            updatedCompany.logoData = nil
+            saveCompany(updatedCompany)
+        }
+        
+        // Force sync to CloudKit
+        forceSync()
+        print("CoreDataAdapter: Company logo synced to CloudKit: \(logoData?.count ?? 0) bytes")
+    }
+    
+    /// Проверка статуса синхронизации CloudKit
+    func checkCloudKitSyncStatus() async -> Bool {
+        return await coreDataStack.isCloudKitAvailable()
     }
 }

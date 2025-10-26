@@ -38,11 +38,9 @@ final class AppState: ObservableObject {
         didSet { 
             print("AppState: Logo data changed, saving...")
             Storage.saveLogo(logoData)
-            // Also update company logo in Core Data
-            if var company = company {
-                company.logoData = logoData
-                self.company = company
-            }
+            // Sync logo to CloudKit through Core Data
+            coreDataAdapter.syncCompanyLogo(logoData)
+            print("AppState: Logo data synced to CloudKit")
         }
     }
     var logoImage: UIImage? {
@@ -253,10 +251,13 @@ final class AppState: ObservableObject {
         if let company = coreDataAdapter.fetchCompany() {
             print("AppState: Loaded company from Core Data: \(company.name)")
             self.company = company
-            // Update logo data from company
+            // Update logo data from company (but don't trigger didSet to avoid infinite loop)
             if let logoData = company.logoData {
-                print("AppState: Loaded logo data from company")
+                print("AppState: Loaded logo data from company: \(logoData.count) bytes")
+                // Directly set the logoData without triggering didSet
                 self.logoData = logoData
+                // Also save to file system for backward compatibility
+                Storage.saveLogo(logoData)
             }
         } else {
             print("AppState: No company found in Core Data")

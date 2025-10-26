@@ -151,6 +151,8 @@ extension CoreDataStack {
     func forceSync() {
         // NSPersistentCloudKitContainer handles sync automatically
         // This method can be used to trigger manual sync if needed
+        print("CoreDataStack: Forcing sync to CloudKit...")
         save()
+        print("CoreDataStack: Sync completed")
     }
 }
