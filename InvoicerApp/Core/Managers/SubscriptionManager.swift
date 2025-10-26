@@ -95,9 +95,26 @@ final class SubscriptionManager: NSObject, ObservableObject {
             print("✅ Current user: \(currentCustomerInfo.originalAppUserId)")
             print("✅ User is anonymous: \(currentCustomerInfo.originalAppUserId == "$RCAnonymousID")")
             
+            // Check if user already has active subscription
+            let hasActiveSubscription = currentCustomerInfo.entitlements.active.keys.contains(entitlementID)
+            print("🔍 User has active subscription: \(hasActiveSubscription)")
+            
+            if hasActiveSubscription {
+                print("⚠️ User already has active subscription - trial may not be available")
+            }
+            
             // Check product availability
             print("🔍 Product ID: \(package.storeProduct.productIdentifier)")
             print("🔍 Product price: \(package.storeProduct.localizedPriceString)")
+            
+            // Check for trial period
+            if let introDiscount = package.storeProduct.introductoryDiscount {
+                print("🔍 Introductory discount found: \(introDiscount.price)")
+                print("🔍 Trial period: \(introDiscount.subscriptionPeriod.value) \(introDiscount.subscriptionPeriod.unit)")
+                print("🔍 Trial type: \(introDiscount.paymentMode)")
+            } else {
+                print("⚠️ No introductory discount found for product: \(package.storeProduct.productIdentifier)")
+            }
             
             // Check StoreKit settings
             if #available(iOS 15.0, *) {

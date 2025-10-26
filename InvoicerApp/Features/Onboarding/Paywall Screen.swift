@@ -14,9 +14,6 @@ struct PaywallScreen: View {
     @Environment(\.colorScheme) private var scheme
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @State private var selectedPackage: Package?
-    @State private var showContent = false
-    @State private var pulseAnimation = false
-    @State private var shimmerOffset: CGFloat = -1
     @State private var floatingElements: [FloatingElement] = []
     
     // Маппинг пакетов RevenueCat на наши планы
@@ -48,10 +45,10 @@ struct PaywallScreen: View {
     var body: some View {
         GeometryReader { geometry in
             let isSmallScreen = geometry.size.height < 700
-            let logoSize: CGFloat = isSmallScreen ? 50 : 60
-            let titleSize: CGFloat = isSmallScreen ? 24 : 28
-            let subtitleSize: CGFloat = isSmallScreen ? 13 : 15
-            let spacing: CGFloat = isSmallScreen ? 12 : 18
+            let logoSize: CGFloat = isSmallScreen ? 40 : 50
+            let titleSize: CGFloat = isSmallScreen ? 20 : 24
+            let subtitleSize: CGFloat = isSmallScreen ? 12 : 14
+            let spacing: CGFloat = isSmallScreen ? 8 : 12
             
             ZStack {
                 // Background
@@ -74,24 +71,12 @@ struct PaywallScreen: View {
                         // Error message
                         if let errorMessage = subscriptionManager.errorMessage {
                             Text(errorMessage)
-                                .font(.system(size: 14, weight: .medium))
+                                .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(.red)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 20)
                                 .padding(.top, 8)
                         }
-                        
-                        // Debug button for testing
-                        #if DEBUG
-                        Button("Refresh Status") {
-                            Task {
-                                await subscriptionManager.checkSubscriptionStatus()
-                            }
-                        }
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.blue)
-                        .padding(.top, 8)
-                        #endif
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
@@ -102,8 +87,10 @@ struct PaywallScreen: View {
         .onAppear {
             Task {
                 await subscriptionManager.loadOfferings()
-                // Устанавливаем месячный план по умолчанию
-                if let monthly = monthlyPackage {
+                // Устанавливаем недельный план с пробной версией по умолчанию
+                if let weekly = weeklyPackage {
+                    selectedPackage = weekly
+                } else if let monthly = monthlyPackage {
                     selectedPackage = monthly
                 }
             }
@@ -128,7 +115,14 @@ struct PaywallScreen: View {
                 .aspectRatio(contentMode: .fit)
                 .frame(width: logoSize, height: logoSize)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
-                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                .if(scheme == .dark) { view in
+                    view.colorInvert()
+                }
+                .shadow(
+                    color: scheme == .dark ? UI.darkAccent.opacity(0.4) : .black.opacity(0.1), 
+                    radius: 8, 
+                    y: 4
+                )
             
             // Title
             Text("Unlock Premium Features")
@@ -164,7 +158,7 @@ struct PaywallScreen: View {
                 RevenueCatPlanRow(
                     package: weekly,
                     title: "Weekly",
-                    tagText: "3-day free",
+                    tagText: "3-day free trial",
                     selected: selectedPackage?.identifier == weekly.identifier,
                     delay: 0.0
                 )
@@ -224,48 +218,35 @@ struct PaywallScreen: View {
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                             .scaleEffect(0.8)
                     } else {
-                        Text("Start with Pro")
-                            .font(.system(size: 18, weight: .bold))
+                        // Show different text based on selected package
+                        if selectedPackage?.identifier == "$rc_weekly" {
+                            Text("Start Free Trial")
+                                .font(.system(size: 16, weight: .bold))
+                        } else {
+                            Text("Start with Pro")
+                                .font(.system(size: 16, weight: .bold))
+                        }
                     }
                 }
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
-                .frame(height: 56)
+                .frame(height: 48)
                 .background(
-                    LinearGradient(
-                        colors: [.blue, .purple],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.accentColor)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
+                .shadow(color: Color.accentColor.opacity(0.3), radius: 4, x: 0, y: 2)
             }
             .disabled(subscriptionManager.isLoading || selectedPackage == nil)
-            .scaleEffect(pulseAnimation ? 1.05 : 1.0)
-            .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: pulseAnimation)
-            .onAppear {
-                pulseAnimation = true
-            }
             
-            // Restore Button
+            // Maybe Later Button
             Button {
-                Task {
-                    do {
-                        try await subscriptionManager.restorePurchases()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            onClose()
-                        }
-                    } catch {
-                        // Ошибка обрабатывается в SubscriptionManager
-                    }
-                }
+                onClose()
             } label: {
-                Text("Restore Purchases")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.blue)
+                Text("Maybe Later")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.secondary)
             }
-            .disabled(subscriptionManager.isLoading)
         }
     }
     
@@ -396,14 +377,36 @@ struct RevenueCatPlanRow: View {
                         }
                     }
                     
-                    Text(package.storeProduct.localizedPriceString)
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.primary)
-                    
-                    if let period = package.storeProduct.subscriptionPeriod {
-                        Text(period.localizedDescription)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.secondary)
+                    // Price and trial information
+                    VStack(alignment: .leading, spacing: 2) {
+                        // Show trial information for weekly plan
+                        if package.identifier == "$rc_weekly" {
+                            Text("3-day free trial")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.green)
+                        }
+                        
+                        // Show price with trial context for weekly plan
+                        if package.identifier == "$rc_weekly" {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("Free for 3 days")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.green)
+                                Text("then \(package.storeProduct.localizedPriceString)/week")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.secondary)
+                            }
+                        } else {
+                            Text(package.storeProduct.localizedPriceString)
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundColor(.primary)
+                        }
+                        
+                        if let period = package.storeProduct.subscriptionPeriod {
+                            Text(period.localizedDescription)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
                 
