@@ -36,7 +36,7 @@ struct OnboardingView: View {
     private let privacyURL = URL(string: "https://simhado.github.io/invoice-maker-pro-site/privacy.html")!
     private let termsURL   = URL(string: "https://simhado.github.io/invoice-maker-pro-site/terms.html")!
     
-    // Анимационные таймеры
+    // Animation timers
     @State private var pulseAnimation = false
     @State private var shimmerOffset: CGFloat = -1
 
@@ -44,7 +44,7 @@ struct OnboardingView: View {
         ZStack {
             backgroundView
             
-            // Частицы для эффекта
+            // Particles for effect
             ForEach(particles) { particle in
                 Circle()
                     .fill(LinearGradient(colors: [.blue.opacity(0.6), .purple.opacity(0.4)], startPoint: .topLeading, endPoint: .bottomTrailing))
@@ -57,7 +57,7 @@ struct OnboardingView: View {
             }
 
             VStack(spacing: 0) {
-                // Контент страниц с улучшенными анимациями
+                // Page content with improved animations
                 TabView(selection: $page) {
                     OBPage(
                         title: "Create pro invoices in minutes",
@@ -92,7 +92,7 @@ struct OnboardingView: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
 
-                // Dots + Footer с улучшенными анимациями
+                // Dots + Footer with improved animations
                 VStack(spacing: 28) {
                     FancyDots(count: 4, index: page)
                         .padding(.top, 8)
@@ -109,13 +109,13 @@ struct OnboardingView: View {
                 .padding(.bottom, 32)
             }
 
-            // Плавающая кнопка Next / Continue с улучшенными эффектами
+            // Floating Next / Continue button with improved effects
             if page < 3 {
                 FAB(isLast: page == 3, showCelebration: showCelebration) {
                     let h = UIImpactFeedbackGenerator(style: .medium)
                     h.impactOccurred()
                     
-                    // Переход между страницами
+                    // Page transition
                     page += 1
                     createParticles()
                 }
@@ -128,20 +128,20 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: Background (Light / Dark) с улучшенными эффектами
+    // MARK: Background (Light / Dark) with improved effects
 
     private var backgroundView: some View {
         Group {
             if scheme == .light {
                 ZStack {
-                    // Основной градиент
+                    // Main gradient
                     LinearGradient(
                         colors: [Color.white, Color(white: 0.97), Color(white: 0.95)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                     
-                    // Радиальный градиент с анимацией
+                    // Radial gradient with animation
                     RadialGradient(
                         colors: [Color.white, Color(white: 0.96), .clear],
                         center: .topLeading,
@@ -150,7 +150,7 @@ struct OnboardingView: View {
                     )
                     .blendMode(.screen)
                     
-                    // Анимированный shimmer эффект
+                    // Animated shimmer effect
                     LinearGradient(
                         colors: [.clear, Color.white.opacity(0.3), .clear],
                         startPoint: .leading,
@@ -159,7 +159,7 @@ struct OnboardingView: View {
                     .offset(x: shimmerOffset * 400)
                     .blendMode(.overlay)
                     
-                    // Плавающие световые пятна
+                    // Floating light spots
                     ForEach(0..<3, id: \.self) { i in
                         Circle()
                             .fill(Color.primary.opacity(0.05))
@@ -180,7 +180,7 @@ struct OnboardingView: View {
                 }
             } else {
                 ZStack {
-                    // Основной градиент для темной темы
+                    // Main gradient для темной темы
                     LinearGradient(
                         colors: [Color.black, Color.black.opacity(0.92)],
                         startPoint: .topLeading,
@@ -196,7 +196,7 @@ struct OnboardingView: View {
                     )
                     .blendMode(.overlay)
                     
-                    // Анимированный shimmer эффект для темной темы
+                    // Animated shimmer effect для темной темы
                     LinearGradient(
                         colors: [.clear, Color.white.opacity(0.1), .clear],
                         startPoint: .leading,
@@ -205,7 +205,7 @@ struct OnboardingView: View {
                     .offset(x: shimmerOffset * 400)
                     .blendMode(.overlay)
                     
-                    // Плавающие световые пятна для темной темы
+                    // Floating light spots для темной темы
                     ForEach(0..<3, id: \.self) { i in
                         Circle()
                             .fill(Color.primary.opacity(0.08))
@@ -229,7 +229,7 @@ struct OnboardingView: View {
         .ignoresSafeArea()
     }
     
-    // MARK: Анимационные функции
+    // MARK: Animation functions
     
     private func createParticles() {
         let newParticles = (0..<8).map { _ in
@@ -248,7 +248,7 @@ struct OnboardingView: View {
         
         particles.append(contentsOf: newParticles)
         
-        // Удаляем частицы через 2 секунды
+        // Remove particles after 2 seconds
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             particles.removeAll { particle in
                 newParticles.contains { $0.id == particle.id }
@@ -268,11 +268,11 @@ struct OnboardingView: View {
         let n = UINotificationFeedbackGenerator()
         n.notificationOccurred(.success)
         
-        // Создаем эффект празднования
+        // Create celebration effect
         showCelebration = true
         createParticles()
         
-        // Задержка перед завершением онбординга
+        // Delay before completing onboarding
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
             app.markOnboardingCompleted()
         }

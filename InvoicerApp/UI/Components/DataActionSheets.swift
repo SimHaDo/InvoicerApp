@@ -137,7 +137,7 @@ struct ExportConfirmationView: View {
                             } else {
                                 Button {
                                     Task {
-                                        // Создаем опции экспорта
+                                        // Create export options
                                         let exportOptions = ExportOptions(
                                             format: selectedFormat,
                                             includeCustomers: includeCustomers,
@@ -148,14 +148,14 @@ struct ExportConfirmationView: View {
                                             includeSettings: includeSettings
                                         )
                                         
-                                        // Создаем новый DataManager для каждого экспорта
+                                        // Create new DataManager for each export
                                         let freshDataManager = DataManager()
                                         
                                         if let url = await freshDataManager.exportAllData(appState: app, options: exportOptions) {
-                                            // Увеличиваем задержку для правильной обработки файла системой
-                                            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 секунда
+                                            // Increase delay for proper file processing by system
+                                            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
                                             
-                                            // Проверяем, что файл все еще существует
+                                            // Check that file still exists
                                             let fileExists = FileManager.default.fileExists(atPath: url.path)
                                             guard fileExists else {
                                                 await MainActor.run {
@@ -165,19 +165,19 @@ struct ExportConfirmationView: View {
                                                 return
                                             }
                                             
-                                            // Показываем UIActivityViewController напрямую
+                                            // Show UIActivityViewController directly
                                             await MainActor.run {
                                                 let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)
                                                 
-                                                // Находим root view controller
+                                                // Find root view controller
                                                 if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                                                    let window = windowScene.windows.first,
                                                    let rootVC = window.rootViewController {
                                                     
-                                                    // Если rootVC - это UINavigationController, берем topViewController
+                                                    // If rootVC is UINavigationController, get topViewController
                                                     let presentingVC = (rootVC as? UINavigationController)?.topViewController ?? rootVC
                                                     
-                                                    // Показываем activityVC
+                                                    // Show activityVC
                                                     presentingVC.present(activityVC, animated: true)
                                                 }
                                             }
@@ -225,7 +225,7 @@ struct ExportConfirmationView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            // Сброс всех состояний при открытии
+            // Reset all states when opening
             isReady = false
             showingAlert = false
             alertMessage = ""
@@ -238,7 +238,7 @@ struct ExportConfirmationView: View {
             print("- Payment Methods: \(app.paymentMethods.count)")
             print("- Company: \(app.company?.name ?? "nil")")
             
-            // Задержка для правильной инициализации EnvironmentObject
+            // Delay for proper EnvironmentObject initialization
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 isReady = true
             }

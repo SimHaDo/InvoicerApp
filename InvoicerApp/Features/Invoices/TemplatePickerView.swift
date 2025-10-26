@@ -79,7 +79,7 @@ struct TemplatePickerView: View {
                 .navigationBarBackButtonHidden(true)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
-                        // Показываем кнопку Back только если есть элементы в навигационном стэке
+                        // Show Back button only if there are elements in navigation stack
                         if navigationPath.count > 0 {
                             Button("Back") {
                                 navigationPath.removeLast()
@@ -90,7 +90,7 @@ struct TemplatePickerView: View {
                     
                     ToolbarItem(placement: .topBarTrailing) {
                         Button(action: { 
-                            // Полностью очищаем стэк и закрываем флоу
+                            // Completely clear stack and close flow
                             navigationPath = NavigationPath()
                             dismiss()
                         }) {
@@ -109,7 +109,7 @@ struct TemplatePickerView: View {
                             onSelect(completeTemplate)
                         },
                         onClose: {
-                            // Полностью очищаем стэк и закрываем флоу
+                            // Completely clear stack and close flow
                             navigationPath = NavigationPath()
                             dismiss()
                         }
@@ -126,7 +126,7 @@ struct TemplatePickerView: View {
                 .navigationBarBackButtonHidden(true)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
-                        // Показываем кнопку Back только если есть элементы в навигационном стэке
+                        // Show Back button only if there are elements in navigation stack
                         if navigationPath.count > 0 {
                             Button("Back") {
                                 navigationPath.removeLast()
@@ -137,7 +137,7 @@ struct TemplatePickerView: View {
                     
                     ToolbarItem(placement: .topBarTrailing) {
                         Button(action: { 
-                            // Полностью очищаем стэк и закрываем флоу
+                            // Completely clear stack and close flow
                             navigationPath = NavigationPath()
                             dismiss()
                         }) {
@@ -156,7 +156,7 @@ struct TemplatePickerView: View {
                             onSelect(completeTemplate)
                         },
                         onClose: {
-                            // Полностью очищаем стэк и закрываем флоу
+                            // Completely clear stack and close flow
                             navigationPath = NavigationPath()
                             dismiss()
                         }
@@ -187,7 +187,7 @@ struct TemplatePickerView: View {
                 guard let url = urls.first else { return }
                 do {
                     let data = try Data(contentsOf: url)
-                    app.logoData = data // Это автоматически сохранит только один логотип
+                    app.logoData = data // This will automatically save only one logo
                 } catch {
                     print("Error loading file: \(error)")
                 }
@@ -255,7 +255,7 @@ struct TemplatePickerView: View {
             }
         )
         .onAppear {
-            // Устанавливаем showContent только один раз при первом появлении
+            // Set showContent only once on first appearance
             if !showContent {
                 showContent = true
             }
@@ -267,10 +267,10 @@ struct TemplatePickerView: View {
     
     private var contentView: some View {
         ZStack {
-            // Анимированный фон
+            // Animated background
             backgroundView
             
-            // Плавающие элементы
+            // Floating elements
             ForEach(floatingElements) { element in
                 Circle()
                     .fill(Color.primary.opacity(0.05))
@@ -283,7 +283,7 @@ struct TemplatePickerView: View {
             }
             
             VStack(spacing: 0) {
-                // Header с логотипом
+                // Header with logo
                 headerLogo
                 
                 // Search and Filters
@@ -573,7 +573,7 @@ struct TemplatePickerView: View {
                         showPhotosPicker = true
                     }
                 } else {
-                    // Если разрешение не дано, показываем алерт с переходом в настройки
+                    // If permission not granted, show alert with settings redirect
                     permissionType = .photoLibrary
                     showPermissionAlert = true
                 }
@@ -1433,14 +1433,14 @@ extension TemplatePickerView {
         Group {
             if scheme == .light {
                 ZStack {
-                    // Основной градиент
+                    // Main gradient
                     LinearGradient(
                         colors: [Color.white, Color(white: 0.97), Color(white: 0.95)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                     
-                    // Радиальный градиент с анимацией
+                    // Radial gradient with animation
                     RadialGradient(
                         colors: [Color.white, Color(white: 0.96), .clear],
                         center: .topLeading,
@@ -1449,7 +1449,7 @@ extension TemplatePickerView {
                     )
                     .blendMode(.screen)
                     
-                    // Анимированный shimmer эффект
+                    // Animated shimmer effect
                     LinearGradient(
                         colors: [.clear, Color.white.opacity(0.3), .clear],
                         startPoint: .leading,
@@ -1458,7 +1458,7 @@ extension TemplatePickerView {
                     .offset(x: shimmerOffset * 400)
                     .blendMode(.overlay)
                     
-                    // Плавающие световые пятна
+                    // Floating light spots
                     ForEach(0..<3, id: \.self) { i in
                         Circle()
                             .fill(Color.primary.opacity(0.05))
@@ -1479,7 +1479,7 @@ extension TemplatePickerView {
                 }
             } else {
                 ZStack {
-                    // Основной градиент для темной темы
+                    // Main gradient для темной темы
                     LinearGradient(
                         colors: [Color.black, Color.black.opacity(0.92)],
                         startPoint: .topLeading,
@@ -1495,7 +1495,7 @@ extension TemplatePickerView {
                     )
                     .blendMode(.screen)
                     
-                    // Анимированный shimmer эффект для темной темы
+                    // Animated shimmer effect для темной темы
                     LinearGradient(
                         colors: [.clear, Color.white.opacity(0.1), .clear],
                         startPoint: .leading,
@@ -1504,7 +1504,7 @@ extension TemplatePickerView {
                     .offset(x: shimmerOffset * 400)
                     .blendMode(.overlay)
                     
-                    // Плавающие световые пятна для темной темы
+                    // Floating light spots для темной темы
                     ForEach(0..<3, id: \.self) { i in
                         Circle()
                             .fill(Color.primary.opacity(0.08))

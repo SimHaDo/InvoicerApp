@@ -128,10 +128,10 @@ struct InvoicesScreen: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Анимированный фон
+                // Animated background
                 backgroundView()
                 
-                // Плавающие элементы (статичные)
+                // Floating elements (static)
                 ForEach(floatingElements) { element in
                     Circle()
                         .fill(
@@ -194,12 +194,12 @@ struct InvoicesScreen: View {
     // MARK: - Actions
 
     private func onNewInvoice() {
-        // если нет подписки — показываем paywall
+        // if no subscription - show paywall
         guard subscriptionManager.isPro else {
             showPaywall = true
             return
         }
-        // Открываем полноэкранный флоу создания инвойса
+        // Open full-screen invoice creation flow
         showInvoiceCreation = true
     }
 
@@ -225,7 +225,7 @@ struct InvoicesScreen: View {
             }
             Spacer()
             
-            // App Logo (только на больших экранах)
+            // App Logo (only on large screens)
             if UIScreen.main.bounds.width >= 430 {
                 Image("AppLogo")
                     .resizable()
@@ -259,7 +259,7 @@ struct InvoicesScreen: View {
     private var headerCard: some View {
         Group {
             if subscriptionManager.isPro {
-                // карточка быстрого создания
+                // quick creation card
                 QuickCreateCard(newAction: onNewInvoice)
                     .padding(.top, 2)
             } else {
@@ -298,7 +298,7 @@ struct InvoicesScreen: View {
         HStack(spacing: 12) {
             SearchBar(text: $vm.query)
             
-            // Кнопка сортировки
+            // Sort button
             Menu {
                 ForEach(InvoiceSortOption.allCases) { option in
                     Button(action: {
@@ -341,7 +341,7 @@ struct InvoicesScreen: View {
         VStack(spacing: 10) {
             ForEach(vm.filtered(app.invoices)) { inv in
                 NavigationLink { InvoiceDetailsView(invoice: inv) } label: {
-                    InvoiceCard(invoice: inv) // твоя карточка счета
+                    InvoiceCard(invoice: inv) // your invoice card
                 }
             }
         }
@@ -373,7 +373,7 @@ struct InvoicesScreen: View {
             }
             .frame(maxWidth: .infinity, minHeight: 150)
 
-            // CTA снизу с новым дизайном
+            // Bottom CTA with new design
             if !subscriptionManager.isPro {
                 Button(action: { showPaywall = true }) {
                     HStack(spacing: 8) {
@@ -402,14 +402,14 @@ struct InvoicesScreen: View {
         Group {
             if scheme == .light {
                 ZStack {
-                    // Основной градиент
+                    // Main gradient
                     LinearGradient(
                         colors: [Color.white, Color(white: 0.97), Color(white: 0.95)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                     
-                    // Радиальный градиент с анимацией
+                    // Radial gradient with animation
                     RadialGradient(
                         colors: [Color.white, Color(white: 0.96), .clear],
                         center: .topLeading,
@@ -418,7 +418,7 @@ struct InvoicesScreen: View {
                     )
                     .blendMode(.screen)
                     
-                    // Статичный shimmer эффект
+                    // Static shimmer effect
                     LinearGradient(
                         colors: [.clear, Color.white.opacity(0.1), .clear],
                         startPoint: .leading,
@@ -426,7 +426,7 @@ struct InvoicesScreen: View {
                     )
                     .blendMode(.overlay)
                     
-                    // Плавающие световые пятна (статичные)
+                    // Floating light spots (static)
                     ForEach(0..<3, id: \.self) { i in
                         Circle()
                             .fill(Color.primary.opacity(0.05))
@@ -440,14 +440,14 @@ struct InvoicesScreen: View {
                 }
             } else {
                 ZStack {
-                    // Основной градиент для темной темы
+                    // Main gradient для темной темы
                     LinearGradient(
                         colors: [UI.darkBackground, UI.darkGradientStart, UI.darkGradientEnd],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                     
-                    // Радиальный градиент с акцентным цветом
+                    // Radial gradient with accent color
                     RadialGradient(
                         colors: [UI.darkAccent.opacity(0.15), UI.darkAccentSecondary.opacity(0.08), .clear],
                         center: .topLeading,
@@ -456,7 +456,7 @@ struct InvoicesScreen: View {
                     )
                     .blendMode(.screen)
                     
-                    // Статичный shimmer эффект для темной темы
+                    // Static shimmer effect для темной темы
                     LinearGradient(
                         colors: [.clear, UI.darkAccent.opacity(0.1), .clear],
                         startPoint: .leading,
@@ -464,7 +464,7 @@ struct InvoicesScreen: View {
                     )
                     .blendMode(.overlay)
                     
-                    // Плавающие световые пятна для темной темы (статичные)
+                    // Floating light spots for dark theme (static)
                     ForEach(0..<3, id: \.self) { i in
                         Circle()
                             .fill(

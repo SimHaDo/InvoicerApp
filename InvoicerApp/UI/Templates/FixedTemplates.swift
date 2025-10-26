@@ -26,7 +26,7 @@ protocol SimpleTemplateRenderer {
 
 final class BaseRenderer {
 
-    // Поля страницы (под A4 595×842 pt; ок и для Letter)
+    // Page margins (for A4 595×842 pt; ok for Letter too)
     struct Insets {
         let top: CGFloat = 36
         let left: CGFloat = 32
@@ -35,7 +35,7 @@ final class BaseRenderer {
     }
     let insets = Insets()
 
-    // Форматтеры
+    // Formatters
     static let money: NumberFormatter = {
         let f = NumberFormatter()
         f.numberStyle = .currency
@@ -49,14 +49,14 @@ final class BaseRenderer {
         return f
     }()
 
-    // Валюта
+    // Currency
     func cur(_ amount: Decimal, code: String) -> String {
         BaseRenderer.money.currencyCode = code
         let ns = amount as NSDecimalNumber
         return BaseRenderer.money.string(from: ns) ?? "\(code) \(ns.doubleValue)"
     }
 
-    // Типографика
+    // Typography
     func text(_ string: String, font: UIFont, color: UIColor, kern: CGFloat = 0.2) -> NSAttributedString {
         NSAttributedString(string: string, attributes: [
             .font: font,
@@ -73,7 +73,7 @@ final class BaseRenderer {
         m.draw(with: rect, options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil)
     }
 
-    // Примитивы
+    // Primitives
     func strokeLine(context: CGContext, from: CGPoint, to: CGPoint, color: UIColor, width: CGFloat = 1) {
         context.setStrokeColor(color.cgColor)
         context.setLineWidth(width)
@@ -105,19 +105,19 @@ final class BaseRenderer {
         }
     }
 
-    // Пропорциональные колонки
+    // Proportional columns
     func columns(totalWidth: CGFloat, specs: [CGFloat]) -> [CGFloat] {
         let sum = specs.reduce(0, +)
         return specs.map { totalWidth * ($0 / sum) }
     }
 
-    // Подсчёт
+    // Calculation
     func subtotal(_ items: [LineItem]) -> Decimal {
         items.reduce(0) { $0 + $1.total }
     }
     
     // MARK: - Invoice Totals Helper
-    /// Рисует полную сводку с налогами и скидками
+    /// Draws full summary with taxes and discounts
     func drawInvoiceTotals(
         context: CGContext,
         invoice: Invoice,
@@ -137,7 +137,7 @@ final class BaseRenderer {
                in: CGRect(x: x + width/2, y: currentY, width: width/2, height: 16), align: .right)
         currentY += 18
         
-        // Tax (если есть)
+        // Tax (if any)
         if invoice.taxAmount > 0 {
             self.draw(self.text("Tax", font: font, color: .black),
                    in: CGRect(x: x, y: currentY, width: width/2, height: 16))
@@ -146,7 +146,7 @@ final class BaseRenderer {
             currentY += 18
         }
         
-        // Discount (если есть)
+        // Discount (if any)
         if invoice.calculatedDiscountAmount > 0 {
             self.draw(self.text("Discount", font: font, color: .black),
                    in: CGRect(x: x, y: currentY, width: width/2, height: 16))
@@ -169,10 +169,10 @@ final class BaseRenderer {
         return currentY
     }
 
-    // MARK: Пакетная таблица с пагинацией (повтор шапки, безопасные поля)
-    /// Рисует таблицу, возвращает:
-    /// - lastY: нижняя Y после последней нарисованной строки
-    /// - drawn: сколько строк отрисовано
+    // MARK: Batch table with pagination (repeat header, safe margins)
+    /// Draws table, returns:
+    /// - lastY: bottom Y after last drawn row
+    /// - drawn: how many rows drawn
     /// - hasMore: остались ли элементы (нужно продолжение на след. странице)
     ///
     /// Внешний код может вызвать этот же шаблон на следующей странице, передав `Array(items.dropFirst(drawn))`.

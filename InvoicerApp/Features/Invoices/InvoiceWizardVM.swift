@@ -31,10 +31,10 @@ final class InvoiceWizardVM: ObservableObject {
         }
     }
     @Published var paymentChoice: PaymentChoice = .saved
-    @Published var selectedSaved: Set<UUID> = []              // выбранные из app.paymentMethods
-    @Published var customMethods: [PaymentMethod] = []        // кастомные для этого инвойса
-    @Published var paymentNotes: String = ""                  // дополнительные примечания (на инвойсе)
-    @Published var includeLogo: Bool = true                   // включить логотип в инвойс
+    @Published var selectedSaved: Set<UUID> = []              // selected from app.paymentMethods
+    @Published var customMethods: [PaymentMethod] = []        // custom for this invoice
+    @Published var paymentNotes: String = ""                  // additional notes (on invoice)
+    @Published var includeLogo: Bool = true                   // include logo in invoice
 
     // Tax and Discount state
     @Published var taxRate: Decimal = 0
@@ -115,8 +115,8 @@ struct InvoiceWizardView: View {
             }
             .fullScreenCover(isPresented: $showTemplatePicker) {
                 TemplatePickerView { selected in
-                    app.selectedTemplate = selected      // сохраняем выбор
-                    showTemplatePicker = false           // закрываем ТОЛЬКО пикер
+                    app.selectedTemplate = selected      // save selection
+                    showTemplatePicker = false           // close ONLY picker
                 }
             }
             .onAppear(perform: configureFromAppState)
@@ -145,7 +145,7 @@ struct InvoiceWizardView: View {
     }
 
     private func configureFromAppState() {
-        // если пришли из кнопок "быстрого старта"
+        // if came from "quick start" buttons
         var jumped = false
         if vm.customer == nil, let pre = app.preselectedCustomer {
             vm.customer = pre
@@ -168,7 +168,7 @@ struct InvoiceWizardView: View {
         }
     }
 
-    // Собираем финальный список реквизитов на основе выбора на шаге
+    // Collect final payment methods list based on step selection
     private func resolvedPaymentMethods() -> [PaymentMethod] {
         switch vm.paymentChoice {
         case .none:
@@ -199,11 +199,11 @@ struct InvoiceWizardView: View {
             items: vm.items
         )
 
-        // Применяем реквизиты и заметки, выбранные на шаге Payment Details
+        // Apply payment methods and notes selected on Payment Details step
         invoice.paymentMethods = resolvedPaymentMethods()
         invoice.paymentNotes = vm.paymentNotes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : vm.paymentNotes
         
-        // Применяем tax и discount настройки
+        // Apply tax and discount settings
         print("🔍 InvoiceWizardVM Tax settings: rate=\(vm.taxRate), type=\(vm.taxType)")
         print("🔍 InvoiceWizardVM Discount settings: enabled=\(vm.isDiscountEnabled), value=\(vm.discountValue), type=\(vm.discountType)")
         
@@ -235,7 +235,7 @@ struct InvoiceWizardView: View {
                 }
         } catch {
             print("PDF generation error:", error)
-            // если что-то пошло не так — просто остаёмся в визарде
+            // if something went wrong - just stay in wizard
             }
         }
     }
@@ -762,13 +762,13 @@ struct StepCompanyInfoView: View {
             }
         }
         .onTapGesture {
-            // Закрываем клавиатуру при тапе на ScrollView
+            // Close keyboard when tapping ScrollView
             hideKeyboard()
         }
         .simultaneousGesture(
             DragGesture()
                 .onChanged { _ in
-                    // Закрываем клавиатуру при скролле
+                    // Close keyboard when scrolling
                     hideKeyboard()
                 }
         )
@@ -995,13 +995,13 @@ struct StepClientInfoView: View {
             .padding(.bottom, 32)
         }
         .onTapGesture {
-            // Закрываем клавиатуру при тапе на ScrollView
+            // Close keyboard when tapping ScrollView
             hideKeyboard()
         }
         .simultaneousGesture(
             DragGesture()
                 .onChanged { _ in
-                    // Закрываем клавиатуру при скролле
+                    // Close keyboard when scrolling
                     hideKeyboard()
                 }
         )
@@ -1230,7 +1230,7 @@ struct StepPaymentDetailsView: View {
         }
         .sheet(isPresented: $showAddSheet) {
             AddEditPaymentMethodSheet { new in
-                // если мы в режиме saved — добавляем в сохранённые и сразу отмечаем выбранным
+                // if in saved mode - add to saved and immediately mark as selected
                 if vm.paymentChoice == .saved {
                     app.paymentMethods.append(new)
                     app.savePaymentMethods()
@@ -1249,13 +1249,13 @@ struct StepPaymentDetailsView: View {
             }
         }
         .onTapGesture {
-            // Закрываем клавиатуру при тапе на ScrollView
+            // Close keyboard when tapping ScrollView
             hideKeyboard()
         }
         .simultaneousGesture(
             DragGesture()
                 .onChanged { _ in
-                    // Закрываем клавиатуру при скролле
+                    // Close keyboard when scrolling
                     hideKeyboard()
                 }
         )
@@ -1695,7 +1695,7 @@ struct InvoiceDetailsView: View {
     private func navigateToCustomer() {
         let customerExists = app.customers.contains { $0.id == invoice.customer.id }
         if customerExists {
-            // Навигация будет обработана через NavigationLink
+            // Navigation will be handled through NavigationLink
         } else {
             showCustomerNotFoundAlert = true
         }

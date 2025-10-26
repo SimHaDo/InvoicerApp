@@ -100,7 +100,7 @@ final class AppState: ObservableObject {
         objectWillChange.send()
     }
 
-    // proxy для совместимости
+    // proxy for compatibility
     var paymentMethods: [PaymentMethod] {
         get { settings.paymentMethods }
         set { settings.paymentMethods = newValue; saveSettings() }
@@ -124,7 +124,7 @@ final class AppState: ObservableObject {
     @Published var subscription: SubscriptionState = .freeViewOnly
     @Published var currency: String = Locale.current.currency?.identifier ?? "USD"
 
-    /// Онбординг завершён?
+    /// Is onboarding completed?
     @Published var hasCompletedOnboarding: Bool =
         UserDefaults.standard.bool(forKey: PrefKey.hasCompletedOnboarding)
 
@@ -140,19 +140,19 @@ final class AppState: ObservableObject {
         self.company = Storage.load(Company?.self, key: .company, fallback: nil)
         print("AppState: Loaded \(customers.count) customers, \(products.count) products")
 
-        // выбранный шаблон — сначала iCloud, затем локаль
+        // selected template - first iCloud, then local
         if let id = CloudSync.shared.string(.selectedTemplateID)
             ?? UserDefaults.standard.string(forKey: PrefKey.selectedTemplateID),
            let found = TemplateCatalog.all.first(where: { $0.id == id }) {
             selectedTemplate = CompleteInvoiceTemplate(template: found, theme: TemplateCatalog.themes.first!)
         }
 
-        // про-флаг — iCloud / локаль
+        // pro flag - iCloud / local
         let proKVS = CloudSync.shared.bool(.isProSubscriber) // CloudSync.bool -> Bool
         let proUD  = UserDefaults.standard.bool(forKey: PrefKey.isProSubscription)
         self.isPremium = proUD || proKVS
 
-        // подписки от менеджера подписок
+        // subscriptions from subscription manager
         SubscriptionManager.shared.$isPro
             .receive(on: DispatchQueue.main)
             .sink { [weak self] val in
@@ -162,13 +162,13 @@ final class AppState: ObservableObject {
             }
             .store(in: &cancellables)
 
-        // слушаем внешние изменения iCloud KVS
+        // listen to external iCloud KVS changes
         NotificationCenter.default.addObserver(
             forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
             object: NSUbiquitousKeyValueStore.default,
             queue: .main
         ) { [weak self] _ in
-            // Класс @MainActor, поэтому вызываем на мейне безопасно
+            // Class is @MainActor, so we can call on main safely
             Task { @MainActor in self?.pullFromCloud() }
         }
 
@@ -176,6 +176,16 @@ final class AppState: ObservableObject {
         
         // Setup Core Data with CloudKit
         setupCoreDataSync()
+        
+        // Auto sync from CloudKit when app becomes active
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            print("AppState: App became active, auto-pulling from CloudKit...")
+            self?.syncFromCloud()
+        }
     }
 
     // MARK: Cloud sync (KVS)

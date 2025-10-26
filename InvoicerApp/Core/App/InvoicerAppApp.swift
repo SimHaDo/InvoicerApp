@@ -17,34 +17,34 @@ struct InvoicerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            // Контейнер сам решает, что показать: онбординг или табы
+            // Container decides what to show: onboarding or tabs
             RootContainer()
                 .environmentObject(app)
                 .environmentObject(subscriptionManager)
                 .task {
-                    // Инициализируем RevenueCat
+                    // Initialize RevenueCat
                     await initializeRevenueCat()
-                    // Обновляем статус подписки на старте
+                    // Update subscription status on startup
                     await subscriptionManager.checkSubscriptionStatus()
-                    // Явный sync KVS (на всякий случай)
+                    // Explicit KVS sync (just in case)
                     CloudSync.shared.synchronize()
                 }
         }
     }
     
     private func initializeRevenueCat() async {
-        // Инициализируем RevenueCat с вашим SDK ключом
-        Purchases.logLevel = .debug // Для разработки
+        // Initialize RevenueCat with your SDK key
+        Purchases.logLevel = .debug // For development
         Purchases.configure(withAPIKey: "appl_JGiIBARoOJHTuWxhsyMmLdHaoMM")
         
-        // Настраиваем делегат для получения обновлений
+        // Setup delegate for receiving updates
         Purchases.shared.delegate = subscriptionManager
         
-        // Проверяем настройки устройства
+        // Check device settings
         print("🔍 Device settings check:")
         print("🔍 Can make payments: \(SKPaymentQueue.canMakePayments())")
         
-        // Устанавливаем пользователя (если нужно)
+        // Set user (if needed)
         do {
             let customerInfo = try await Purchases.shared.customerInfo()
             print("✅ RevenueCat initialized for user: \(customerInfo.originalAppUserId)")
@@ -53,7 +53,7 @@ struct InvoicerApp: App {
             print("❌ RevenueCat initialization error: \(error)")
         }
         
-        // Включаем автоматическое восстановление покупок
+        // Enable automatic purchase restoration
         _ = try? await Purchases.shared.restorePurchases()
     }
 }

@@ -27,13 +27,13 @@ final class SubscriptionManager: NSObject, ObservableObject {
     // MARK: - Initialization
     override init() {
         super.init()
-        // Синхронизируем с iCloud для кроссплатформенности
+        // Sync with iCloud for cross-platform compatibility
         isPro = CloudSync.shared.bool(.isProSubscriber)
     }
 
     // MARK: - Public Methods
     
-    /// Проверяет статус подписки
+    /// Checks subscription status
     func checkSubscriptionStatus() async {
         isLoading = true
         errorMessage = nil
@@ -44,31 +44,31 @@ final class SubscriptionManager: NSObject, ObservableObject {
             print("✅ Active entitlements: \(customerInfo.entitlements.active.keys)")
             updateSubscriptionStatus(from: customerInfo)
         } catch {
-            errorMessage = "Ошибка при проверке статуса подписки: \(error.localizedDescription)"
+            errorMessage = "Error checking subscription status: \(error.localizedDescription)"
             print("❌ RevenueCat error: \(error)")
         }
         
         isLoading = false
     }
     
-    /// Загружает доступные предложения
+    /// Loads available offerings
     func loadOfferings() async {
         do {
             let offerings = try await Purchases.shared.offerings()
             self.offerings = offerings
         } catch {
-            errorMessage = "Ошибка при загрузке предложений: \(error.localizedDescription)"
+            errorMessage = "Error loading offerings: \(error.localizedDescription)"
             print("❌ RevenueCat offerings error: \(error)")
         }
     }
     
-    /// Принудительно авторизует пользователя (если он анонимный)
+    /// Forces user authorization (if anonymous)
     func ensureUserAuthenticated() async {
         do {
             let customerInfo = try await Purchases.shared.customerInfo()
             if customerInfo.originalAppUserId == "$RCAnonymousID" {
                 print("🔍 User is anonymous, attempting to authenticate...")
-                // Попробуем восстановить покупки для авторизации
+                // Try to restore purchases for authorization
                 _ = try await Purchases.shared.restorePurchases()
                 print("✅ Authentication attempt completed")
             } else {
@@ -79,27 +79,27 @@ final class SubscriptionManager: NSObject, ObservableObject {
         }
     }
     
-    /// Покупает пакет подписки
+    /// Purchases subscription package
     func purchase(package: Package) async throws {
         isLoading = true
         errorMessage = nil
         
         do {
-            // Проверяем статус StoreKit
+            // Check StoreKit status
             print("🔍 Checking StoreKit status...")
             
-            // Убеждаемся, что пользователь авторизован
+            // Ensure user is authenticated
             await ensureUserAuthenticated()
             
             let currentCustomerInfo = try await Purchases.shared.customerInfo()
             print("✅ Current user: \(currentCustomerInfo.originalAppUserId)")
             print("✅ User is anonymous: \(currentCustomerInfo.originalAppUserId == "$RCAnonymousID")")
             
-            // Проверяем доступность продукта
+            // Check product availability
             print("🔍 Product ID: \(package.storeProduct.productIdentifier)")
             print("🔍 Product price: \(package.storeProduct.localizedPriceString)")
             
-            // Проверяем настройки StoreKit
+            // Check StoreKit settings
             if #available(iOS 15.0, *) {
                 _ = StoreKit.Transaction.currentEntitlements
                 print("🔍 StoreKit entitlements available")
@@ -112,10 +112,10 @@ final class SubscriptionManager: NSObject, ObservableObject {
             print("   - Transaction: \(transaction?.description ?? "nil")")
             print("   - User cancelled: \(userCancelled)")
             
-            // Обновляем статус подписки
+            // Update subscription status
             updateSubscriptionStatus(from: purchaseCustomerInfo)
             
-            // Дополнительно проверяем статус через небольшую задержку
+            // Additionally check status after a short delay
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 Task {
                     await self.checkSubscriptionStatus()
@@ -126,67 +126,67 @@ final class SubscriptionManager: NSObject, ObservableObject {
             if let rcError = error as? RevenueCat.ErrorCode {
                 switch rcError {
                 case .purchaseCancelledError:
-                    // Пользователь отменил покупку - не показываем ошибку
+                    // User cancelled purchase - don't show error
                     return
                 case .storeProblemError:
-                    errorMessage = "Проблема с App Store. Попробуйте позже."
+                    errorMessage = "App Store issue. Please try again later."
                 case .purchaseNotAllowedError:
-                    errorMessage = "Покупки не разрешены на этом устройстве."
+                    errorMessage = "Purchases not allowed on this device."
                 case .purchaseInvalidError:
-                    errorMessage = "Недействительная покупка."
+                    errorMessage = "Invalid purchase."
                 case .productNotAvailableForPurchaseError:
-                    errorMessage = "Продукт недоступен для покупки."
+                    errorMessage = "Product not available for purchase."
                 case .productAlreadyPurchasedError:
-                    errorMessage = "Продукт уже куплен."
+                    errorMessage = "Product already purchased."
                 case .receiptAlreadyInUseError:
-                    errorMessage = "Чек уже используется другим аккаунтом."
+                    errorMessage = "Receipt already used by another account."
                 case .invalidReceiptError:
-                    errorMessage = "Недействительный чек."
+                    errorMessage = "Invalid receipt."
                 case .missingReceiptFileError:
-                    errorMessage = "Файл чека отсутствует."
+                    errorMessage = "Receipt file missing."
                 case .networkError:
-                    errorMessage = "Ошибка сети. Проверьте подключение к интернету."
+                    errorMessage = "Network error. Check internet connection."
                 case .invalidCredentialsError:
-                    errorMessage = "Недействительные учетные данные."
+                    errorMessage = "Invalid credentials."
                 case .unexpectedBackendResponseError:
-                    errorMessage = "Неожиданный ответ сервера."
+                    errorMessage = "Unexpected server response."
                 case .receiptInUseByOtherSubscriberError:
-                    errorMessage = "Чек используется другим подписчиком."
+                    errorMessage = "Receipt used by another subscriber."
                 case .invalidAppUserIdError:
-                    errorMessage = "Недействительный ID пользователя."
+                    errorMessage = "Invalid user ID."
                 case .unknownBackendError:
-                    errorMessage = "Неизвестная ошибка сервера."
+                    errorMessage = "Unknown server error."
                 case .invalidSubscriberAttributesError:
-                    errorMessage = "Недействительные атрибуты подписчика."
+                    errorMessage = "Invalid subscriber attributes."
                 case .ineligibleError:
-                    errorMessage = "Недоступно для покупки."
+                    errorMessage = "Not available for purchase."
                 case .insufficientPermissionsError:
-                    errorMessage = "Недостаточно прав."
+                    errorMessage = "Insufficient permissions."
                 case .paymentPendingError:
-                    errorMessage = "Ожидается подтверждение платежа."
+                    errorMessage = "Payment confirmation pending."
                 case .logOutAnonymousUserError:
-                    errorMessage = "Нельзя выйти из анонимного аккаунта."
+                    errorMessage = "Cannot log out of anonymous account."
                 case .customerInfoError:
-                    errorMessage = "Ошибка информации о клиенте."
+                    errorMessage = "Customer information error."
                 case .systemInfoError:
-                    errorMessage = "Ошибка системной информации."
+                    errorMessage = "System information error."
                 case .beginRefundRequestError:
-                    errorMessage = "Ошибка начала запроса возврата."
+                    errorMessage = "Refund request initiation error."
                 case .apiEndpointBlockedError:
-                    errorMessage = "API endpoint заблокирован."
+                    errorMessage = "API endpoint blocked."
                 case .invalidAppleSubscriptionKeyError:
-                    errorMessage = "Недействительный ключ подписки Apple."
+                    errorMessage = "Invalid Apple subscription key."
                 case .unsupportedError:
-                    errorMessage = "Неподдерживаемая операция."
+                    errorMessage = "Unsupported operation."
                 case .productDiscountMissingIdentifierError:
-                    errorMessage = "Отсутствует идентификатор скидки продукта."
+                    errorMessage = "Product discount identifier missing."
                 case .productDiscountMissingSubscriptionGroupIdentifierError:
-                    errorMessage = "Отсутствует идентификатор группы подписки скидки продукта."
+                    errorMessage = "Product discount subscription group identifier missing."
                 default:
-                    errorMessage = "Ошибка покупки: \(rcError.localizedDescription)"
+                    errorMessage = "Purchase error: \(rcError.localizedDescription)"
                 }
             } else {
-                errorMessage = "Ошибка покупки: \(error.localizedDescription)"
+                errorMessage = "Purchase error: \(error.localizedDescription)"
             }
             throw error
         }
@@ -194,7 +194,7 @@ final class SubscriptionManager: NSObject, ObservableObject {
         isLoading = false
     }
     
-    /// Восстанавливает покупки
+    /// Restores purchases
     func restorePurchases() async throws {
         isLoading = true
         errorMessage = nil
@@ -204,19 +204,19 @@ final class SubscriptionManager: NSObject, ObservableObject {
             updateSubscriptionStatus(from: customerInfo)
         } catch {
             isLoading = false
-            errorMessage = "Ошибка при восстановлении покупок: \(error.localizedDescription)"
+            errorMessage = "Error restoring purchases: \(error.localizedDescription)"
             throw error
         }
         
         isLoading = false
     }
     
-    /// Получает пакет по идентификатору
+    /// Gets package by identifier
     func getPackage(identifier: String) -> Package? {
         return offerings?.offering(identifier: offeringID)?.package(identifier: identifier)
     }
     
-    /// Получает все доступные пакеты
+    /// Gets all available packages
     func getAvailablePackages() -> [Package] {
         return offerings?.offering(identifier: offeringID)?.availablePackages ?? []
     }
@@ -226,18 +226,18 @@ final class SubscriptionManager: NSObject, ObservableObject {
     private func updateSubscriptionStatus(from customerInfo: CustomerInfo) {
         self.customerInfo = customerInfo
         
-        // Проверяем доступ к entitlement "pro"
+        // Check access to "pro" entitlement
         let hasProAccess = customerInfo.entitlements[entitlementID]?.isActive == true
         let previousStatus = isPro
         isPro = hasProAccess
         
-        // Синхронизируем с iCloud
+        // Sync with iCloud
         CloudSync.shared.set(isPro, for: .isProSubscriber)
         
         print("✅ Subscription status updated: isPro = \(isPro)")
         print("✅ Previous status: \(previousStatus), New status: \(isPro)")
         
-        // Логируем детали entitlement
+        // Log entitlement details
         if let proEntitlement = customerInfo.entitlements[entitlementID] {
             print("✅ Pro entitlement details:")
             print("   - Is active: \(proEntitlement.isActive)")
@@ -248,11 +248,11 @@ final class SubscriptionManager: NSObject, ObservableObject {
             print("❌ Pro entitlement not found in customer info")
         }
         
-        // Логируем все активные entitlements
+        // Log all active entitlements
         print("✅ All active entitlements: \(customerInfo.entitlements.active.keys)")
         print("✅ All entitlements (active + inactive): \(customerInfo.entitlements.all.keys)")
         
-        // Логируем детали всех entitlements
+        // Log details of all entitlements
         for (key, entitlement) in customerInfo.entitlements.all {
             print("✅ Entitlement '\(key)': isActive=\(entitlement.isActive), willRenew=\(entitlement.willRenew)")
         }

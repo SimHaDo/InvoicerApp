@@ -51,10 +51,10 @@ struct CustomersScreen: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Анимированный фон
+                // Animated background
                 backgroundView
                 
-                // Плавающие элементы
+                // Floating elements
                 ForEach(floatingElements) { element in
                     Circle()
                         .fill(Color.primary.opacity(0.05))
@@ -69,7 +69,7 @@ struct CustomersScreen: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: UI.largeSpacing) {
 
-                        // Header с анимациями
+                        // Header with animations
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Customers")
@@ -90,7 +90,7 @@ struct CustomersScreen: View {
                             Spacer()
                         }
 
-                        // Actions с анимациями
+                        // Actions with animations
                         HStack(spacing: 16) {
                             Button { showAddCustomer = true } label: {
                                 HStack(spacing: 8) {
@@ -136,14 +136,14 @@ struct CustomersScreen: View {
                             .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.4), value: showContent)
                         }
 
-                        // Search с анимацией
+                        // Search with animation
                         SearchBar(text: $vm.query)
                             .padding(.top, 4)
                             .offset(y: showContent ? 0 : 20)
                             .opacity(showContent ? 1 : 0)
                             .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.5), value: showContent)
 
-                        // List с анимациями
+                        // List with animations
                         if app.customers.isEmpty {
                             emptyList
                         } else {
@@ -196,14 +196,14 @@ struct CustomersScreen: View {
         Group {
             if scheme == .light {
                 ZStack {
-                    // Основной градиент
+                    // Main gradient
                     LinearGradient(
                         colors: [Color.white, Color(white: 0.97), Color(white: 0.95)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                     
-                    // Радиальный градиент с анимацией
+                    // Radial gradient with animation
                     RadialGradient(
                         colors: [Color.white, Color(white: 0.96), .clear],
                         center: .topLeading,
@@ -212,7 +212,7 @@ struct CustomersScreen: View {
                     )
                     .blendMode(.screen)
                     
-                    // Анимированный shimmer эффект
+                    // Animated shimmer effect
                     LinearGradient(
                         colors: [.clear, Color.white.opacity(0.3), .clear],
                         startPoint: .leading,
@@ -221,7 +221,7 @@ struct CustomersScreen: View {
                     .offset(x: shimmerOffset * 400)
                     .blendMode(.overlay)
                     
-                    // Плавающие световые пятна
+                    // Floating light spots
                     ForEach(0..<3, id: \.self) { i in
                         Circle()
                             .fill(Color.primary.opacity(0.05))
@@ -242,7 +242,7 @@ struct CustomersScreen: View {
                 }
             } else {
                 ZStack {
-                    // Основной градиент для темной темы
+                    // Main gradient для темной темы
                     LinearGradient(
                         colors: [Color.black, Color.black.opacity(0.92)],
                         startPoint: .topLeading,
@@ -258,7 +258,7 @@ struct CustomersScreen: View {
                     )
                     .blendMode(.screen)
                     
-                    // Анимированный shimmer эффект для темной темы
+                    // Animated shimmer effect для темной темы
                     LinearGradient(
                         colors: [.clear, Color.white.opacity(0.1), .clear],
                         startPoint: .leading,
@@ -267,7 +267,7 @@ struct CustomersScreen: View {
                     .offset(x: shimmerOffset * 400)
                     .blendMode(.overlay)
                     
-                    // Плавающие световые пятна для темной темы
+                    // Floating light spots для темной темы
                     ForEach(0..<3, id: \.self) { i in
                         Circle()
                             .fill(Color.primary.opacity(0.08))
@@ -314,12 +314,12 @@ struct CustomersScreen: View {
     // MARK: - Helpers
 
     private func onCreateInvoice() {
-        // если лимит исчерпан и нет подписки — показываем paywall
+        // if limit exceeded and no subscription - show paywall
         guard app.canCreateInvoice else {
             showEmptyPaywall = true
             return
         }
-        // Открываем полноэкранный флоу создания инвойса
+        // Open full-screen invoice creation flow
         showInvoiceCreation = true
     }
 
@@ -382,7 +382,7 @@ struct CustomersScreen: View {
     }
 }
 
-// MARK: - Row (как было)
+// MARK: - Row (as before)
 
 private struct CustomerRow: View {
     @EnvironmentObject private var app: AppState
@@ -391,7 +391,7 @@ private struct CustomerRow: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 16) {
-            // Аватар с анимацией - центрирован по высоте
+            // Avatar with animation - centered by height
             ZStack {
                 Circle()
                     .fill(scheme == .light ? Color.black.opacity(0.08) : Color.white.opacity(0.15))
@@ -402,9 +402,9 @@ private struct CustomerRow: View {
                     .foregroundColor(.primary)
             }
 
-            // Основная информация
+            // Main information
             VStack(alignment: .leading, spacing: 10) {
-                // Имя и статус
+                // Name and status
                 HStack(alignment: .top) {
                     Text(customer.name)
                         .font(.system(size: 18, weight: .bold))
@@ -417,7 +417,7 @@ private struct CustomerRow: View {
                     CustomerStatusChip(status: customer.status)
                 }
 
-                // Контактная информация
+                // Contact information
                 VStack(alignment: .leading, spacing: 6) {
                     if !customer.email.isEmpty { 
                         HStack(spacing: 8) {
@@ -450,7 +450,7 @@ private struct CustomerRow: View {
                     }
                 }
 
-                // Статистика
+                // Statistics
                 HStack {
                     Text("\(invoicesCount) invoices")
                         .font(.system(size: 14, weight: .medium))
@@ -489,7 +489,7 @@ private struct CustomerRow: View {
     }
 }
 
-// MARK: - AddCustomerSheet (без изменений с методами оплаты)
+// MARK: - AddCustomerSheet (no changes with payment methods)
 
 // MARK: - AddCustomerSheet
 
@@ -807,7 +807,7 @@ struct AddCustomerSheet: View {
         Group {
             if scheme == .light {
                 ZStack {
-                    // Основной градиент
+                    // Main gradient
                     LinearGradient(
                         colors: [Color.white, Color(white: 0.97), Color(white: 0.95)],
                         startPoint: .topLeading,
@@ -825,7 +825,7 @@ struct AddCustomerSheet: View {
                 }
             } else {
                 ZStack {
-                    // Основной градиент для темной темы
+                    // Main gradient для темной темы
                     LinearGradient(
                         colors: [Color.black, Color.black.opacity(0.92)],
                         startPoint: .topLeading,

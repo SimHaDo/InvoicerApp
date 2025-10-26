@@ -18,11 +18,11 @@ private struct FloatingElement: Identifiable {
     var rotation: Double
 }
 
-// MARK: - Internal pricing meta (не меняем модель Product)
+// MARK: - Internal pricing meta (don't change Product model)
 
 private enum PricingKind: Equatable {
     case hourly
-    case perUnit(unit: String)     // "item", "day", "license" и т.п.
+    case perUnit(unit: String)     // "item", "day", "license" etc.
     case fixed
 }
 
@@ -101,10 +101,10 @@ struct ProductsScreen: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Анимированный фон
+                // Animated background
                 backgroundView
                 
-                // Плавающие элементы
+                // Floating elements
                 ForEach(floatingElements) { element in
                     Circle()
                         .fill(Color.primary.opacity(0.05))
@@ -119,7 +119,7 @@ struct ProductsScreen: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: UI.largeSpacing) {
 
-                        // Header с анимациями
+                        // Header with animations
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Products & Services")
@@ -140,7 +140,7 @@ struct ProductsScreen: View {
                             Spacer()
                         }
 
-                    // Actions с новым дизайном кнопок
+                    // Actions with new button design
                     HStack(spacing: 16) {
                         Button { showAddProduct = true } label: {
                             HStack(spacing: 8) {
@@ -261,12 +261,12 @@ struct ProductsScreen: View {
     // MARK: - Helpers
 
     private func onCreateInvoice() {
-        // если лимит исчерпан и нет подписки — показываем paywall
+        // if limit exceeded and no subscription - show paywall
         guard app.canCreateInvoice else {
             showEmptyPaywall = true
             return
         }
-        // Открываем полноэкранный флоу создания инвойса
+        // Open full-screen invoice creation flow
         showInvoiceCreation = true
     }
 
@@ -341,7 +341,7 @@ private struct ProductCard: View {
                     }
                 }
 
-                // Category capsule (под именем)
+                // Category capsule (under name)
                 Tag(text: product.category)
 
                 // Description
@@ -779,14 +779,14 @@ struct ProductFormView: View {
         Group {
             if scheme == .light {
                 ZStack {
-                    // Основной градиент
+                    // Main gradient
                     LinearGradient(
                         colors: [Color.white, Color(white: 0.97), Color(white: 0.95)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                     
-                    // Радиальный градиент
+                    // Radial gradient
                     RadialGradient(
                         colors: [Color.white, Color(white: 0.96), .clear],
                         center: .topLeading,
@@ -797,14 +797,14 @@ struct ProductFormView: View {
                 }
             } else {
                 ZStack {
-                    // Основной градиент для темной темы
+                    // Main gradient для темной темы
                     LinearGradient(
                         colors: [Color.black, Color.black.opacity(0.92)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                     
-                    // Радиальный градиент
+                    // Radial gradient
                     RadialGradient(
                         colors: [Color.white.opacity(0.08), .clear],
                         center: .topLeading,
@@ -860,14 +860,14 @@ extension ProductsScreen {
         Group {
             if scheme == .light {
                 ZStack {
-                    // Основной градиент
+                    // Main gradient
                     LinearGradient(
                         colors: [Color.white, Color(white: 0.97), Color(white: 0.95)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                     
-                    // Радиальный градиент с анимацией
+                    // Radial gradient с анимацией
                     RadialGradient(
                         colors: [Color.white, Color(white: 0.96), .clear],
                         center: .topLeading,
@@ -876,7 +876,7 @@ extension ProductsScreen {
                     )
                     .blendMode(.screen)
                     
-                    // Анимированный shimmer эффект
+                    // Animated shimmer effect
                     LinearGradient(
                         colors: [.clear, Color.white.opacity(0.3), .clear],
                         startPoint: .leading,
@@ -885,7 +885,7 @@ extension ProductsScreen {
                     .offset(x: shimmerOffset * 400)
                     .blendMode(.overlay)
                     
-                    // Плавающие световые пятна
+                    // Floating light spots
                     ForEach(0..<3, id: \.self) { i in
                         Circle()
                             .fill(Color.primary.opacity(0.05))
@@ -906,14 +906,14 @@ extension ProductsScreen {
                 }
             } else {
                 ZStack {
-                    // Основной градиент для темной темы
+                    // Main gradient для темной темы
                     LinearGradient(
                         colors: [Color.black, Color.black.opacity(0.92)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                     
-                    // Радиальный градиент
+                    // Radial gradient
                     RadialGradient(
                         colors: [Color.white.opacity(0.08), .clear],
                         center: .topLeading,
@@ -922,7 +922,7 @@ extension ProductsScreen {
                     )
                     .blendMode(.screen)
                     
-                    // Анимированный shimmer эффект для темной темы
+                    // Animated shimmer effect для темной темы
                     LinearGradient(
                         colors: [.clear, Color.white.opacity(0.1), .clear],
                         startPoint: .leading,
@@ -931,7 +931,7 @@ extension ProductsScreen {
                     .offset(x: shimmerOffset * 400)
                     .blendMode(.overlay)
                     
-                    // Плавающие световые пятна для темной темы
+                    // Floating light spots для темной темы
                     ForEach(0..<3, id: \.self) { i in
                         Circle()
                             .fill(Color.primary.opacity(0.08))

@@ -16,7 +16,7 @@ struct MyInfoView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.shouldDismissMyInfo) private var shouldDismissMyInfo
 
-    // локальный editable слепок компании
+    // local editable company snapshot
     @State private var editingCompany: Company = .init()
     @State private var isEditingCompany = false
     @State private var showAddEditMethod = false
@@ -27,13 +27,13 @@ struct MyInfoView: View {
 
     var body: some View {
         ZStack {
-            // Анимированный фон
+            // Animated background
             backgroundView()
             
             
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    // Header с анимациями
+                    // Header with animations
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("My Info")
@@ -94,27 +94,27 @@ struct MyInfoView: View {
             if !showContent {
                 showContent = true
             }
-            // Обновляем разрешения при появлении view
+            // Update permissions when view appears
             PermissionManager.shared.refreshPermissions()
         }
         .onDisappear {
-            // Очищаем состояние при исчезновении view (переключение табов)
-            // Особенно важно для iPad где NavigationSplitView может держать view в памяти
+            // Clear state when view disappears (tab switching)
+            // Especially important for iPad where NavigationSplitView can keep view in memory
             showContent = false
             print("MyInfoView: onDisappear called, clearing state")
         }
         .onChange(of: scenePhase) { newPhase in
             if newPhase == .active {
-                // Обновляем разрешения когда приложение становится активным
+                // Update permissions when app becomes active
                 PermissionManager.shared.refreshPermissions()
             } else if newPhase == .background {
-                // Очищаем состояние при переходе в фон
+                // Clear state when going to background
                 showContent = false
             }
         }
         .onChange(of: shouldDismissMyInfo) { newValue in
             if newValue {
-                // Принудительно очищаем состояние при переключении табов на iPad
+                // Force clear state when switching tabs on iPad
                 showContent = false
                 print("MyInfoView: Received dismiss signal, clearing state")
             }
@@ -241,7 +241,7 @@ private struct LogoSection: View {
                             isPresented: $showPermissionAlert,
                             onSettings: {
                                 permissionManager.openAppSettings()
-                                // Обновляем разрешения через 1 секунду после открытия настроек
+                                // Update permissions 1 second after opening settings
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                                     permissionManager.refreshPermissions()
                                 }
@@ -349,7 +349,7 @@ private struct LogoSection: View {
         Task {
             do {
                 if let data = try await new.loadTransferable(type: Data.self) {
-                    // Устанавливаем новый логотип напрямую (AppState сам очистит старый)
+                    // Set new logo directly (AppState will clear old one)
                     await MainActor.run {
                         app.logoData = data
                         isLoading = false
@@ -386,7 +386,7 @@ private struct LogoSection: View {
                     
                     let data = try Data(contentsOf: url)
                     
-                    // Устанавливаем новый логотип напрямую (AppState сам очистит старый)
+                    // Set new logo directly (AppState will clear old one)
                     await MainActor.run {
                         app.logoData = data
                         isLoading = false
@@ -412,7 +412,7 @@ private struct LogoSection: View {
                         showPhotosPicker = true
                     }
                 } else {
-                    // Если разрешение не дано, показываем алерт с переходом в настройки
+                    // If permission not granted, show alert with settings redirect
                     permissionType = .photoLibrary
                     showPermissionAlert = true
                 }

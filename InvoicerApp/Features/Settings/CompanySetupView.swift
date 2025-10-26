@@ -39,10 +39,10 @@ struct CompanySetupView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Анимированный фон
+                // Animated background
                 backgroundView
                 
-                // Плавающие элементы
+                // Floating elements
                 ForEach(floatingElements) { element in
                     Circle()
                         .fill(Color.primary.opacity(0.05))
@@ -56,7 +56,7 @@ struct CompanySetupView: View {
                 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
-                        // Header с анимациями
+                        // Header with animations
                         headerView
                         
                         // Company Information Card
@@ -76,7 +76,7 @@ struct CompanySetupView: View {
             pulseAnimation = true
             startShimmerAnimation()
             createFloatingElements()
-            // если уже была сохранена — подставим для редактирования
+            // if already saved - set for editing
             company = app.company ?? Company()
         }
     }
@@ -228,14 +228,14 @@ extension CompanySetupView {
         Group {
             if scheme == .light {
                 ZStack {
-                    // Основной градиент
+                    // Main gradient
                     LinearGradient(
                         colors: [Color.white, Color(white: 0.97), Color(white: 0.95)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                     
-                    // Радиальный градиент с анимацией
+                    // Radial gradient with animation
                     RadialGradient(
                         colors: [Color.white, Color(white: 0.96), .clear],
                         center: .topLeading,
@@ -244,7 +244,7 @@ extension CompanySetupView {
                     )
                     .blendMode(.screen)
                     
-                    // Анимированный shimmer эффект
+                    // Animated shimmer effect
                     LinearGradient(
                         colors: [.clear, Color.white.opacity(0.3), .clear],
                         startPoint: .leading,
@@ -253,7 +253,7 @@ extension CompanySetupView {
                     .offset(x: shimmerOffset * 400)
                     .blendMode(.overlay)
                     
-                    // Плавающие световые пятна
+                    // Floating light spots
                     ForEach(0..<3, id: \.self) { i in
                         Circle()
                             .fill(Color.primary.opacity(0.05))
@@ -274,7 +274,7 @@ extension CompanySetupView {
                 }
             } else {
                 ZStack {
-                    // Основной градиент для темной темы
+                    // Main gradient для темной темы
                     LinearGradient(
                         colors: [Color.black, Color.black.opacity(0.92)],
                         startPoint: .topLeading,
@@ -290,7 +290,7 @@ extension CompanySetupView {
                     )
                     .blendMode(.screen)
                     
-                    // Анимированный shimmer эффект для темной темы
+                    // Animated shimmer effect для темной темы
                     LinearGradient(
                         colors: [.clear, Color.white.opacity(0.1), .clear],
                         startPoint: .leading,
@@ -299,7 +299,7 @@ extension CompanySetupView {
                     .offset(x: shimmerOffset * 400)
                     .blendMode(.overlay)
                     
-                    // Плавающие световые пятна для темной темы
+                    // Floating light spots для темной темы
                     ForEach(0..<3, id: \.self) { i in
                         Circle()
                             .fill(Color.primary.opacity(0.08))

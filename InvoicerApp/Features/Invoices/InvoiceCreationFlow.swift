@@ -24,16 +24,16 @@ struct InvoiceCreationFlow: View {
     
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            // Начальный экран
+            // Initial screen
             Group {
                 if app.company == nil {
-                    // Если компания не настроена, начинаем с настройки компании
+                    // If company not configured, start with company setup
                     CompanySetupView()
                         .environmentObject(app)
                 } else {
-                    // Если компания настроена, начинаем с выбора шаблона
+                    // If company configured, start with template selection
                     TemplateSelectionView(onClose: { 
-                        // Закрываем флоу
+                        // Close flow
                         onClose?()
                     }, navigationPath: $navigationPath)
                         .environmentObject(app)
@@ -43,7 +43,7 @@ struct InvoiceCreationFlow: View {
                     switch step {
                     case .templateSelection:
                         TemplateSelectionView(onClose: { 
-                            // Закрываем флоу
+                            // Close flow
                             onClose?()
                         }, navigationPath: $navigationPath)
                             .environmentObject(app)
@@ -56,12 +56,12 @@ struct InvoiceCreationFlow: View {
                                 let completeTemplate = CompleteInvoiceTemplate(template: template, theme: selectedTheme)
                                 app.selectedTemplate = completeTemplate
                                 print("📄 Template set: \(completeTemplate.name) with theme: \(completeTemplate.theme.name)")
-                                // Переходим к первому шагу создания инвойса
+                                // Go to first step of invoice creation
                                 navigationPath.append(InvoiceCreationStep.companyInfo)
                                 print("🚀 Navigating to company info...")
                             },
                             onClose: {
-                                // Закрываем флоу
+                                // Close flow
                                 onClose?()
                             }
                         )
@@ -91,7 +91,7 @@ struct InvoiceCreationFlow: View {
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    // Показываем кнопку Back только если есть элементы в навигационном стэке
+                    // Show Back button only if there are elements in navigation stack
                     if navigationPath.count > 0 {
                         Button("Back") {
                             navigationPath.removeLast()
@@ -100,7 +100,7 @@ struct InvoiceCreationFlow: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: { 
-                        // Закрываем флоу
+                        // Close flow
                         onClose?()
                     }) {
                         Image(systemName: "xmark.circle.fill")
@@ -110,7 +110,7 @@ struct InvoiceCreationFlow: View {
                 }
             }
             .onChange(of: app.company) { company in
-                // Если компания была настроена, переходим к выбору шаблона
+                // If company was configured, go to template selection
                 if company != nil {
                     navigationPath.append(InvoiceCreationStep.templateSelection)
                 }
@@ -119,7 +119,7 @@ struct InvoiceCreationFlow: View {
     }
     
     private func configureFromAppState() {
-        // если пришли из кнопок "быстрого старта"
+        // if came from "quick start" buttons
         var jumped = false
         if vm.customer == nil, let pre = app.preselectedCustomer {
             vm.customer = pre
@@ -371,7 +371,7 @@ struct TemplateSelectionView: View {
         ], spacing: 16) {
             ForEach(filteredTemplates, id: \.id) { template in
                 TemplateCard(descriptor: template) {
-                    // Переходим к выбору цветовой схемы через append
+                    // Go to color scheme selection via append
                     print("🎨 Template selected: \(template.name)")
                     navigationPath.wrappedValue.append(InvoiceCreationStep.colorScheme(template))
                     print("🚀 Navigating to color scheme...")
@@ -486,7 +486,7 @@ struct InvoiceStepView: View {
     let navigationPath: Binding<NavigationPath>
     let onClose: (() -> Void)?
     
-    // Для ShareSheet
+    // For ShareSheet
     @State private var shareURL: URL?
     @State private var showShare = false
     @State private var shouldDismissAfterShare = false
@@ -519,7 +519,7 @@ struct InvoiceStepView: View {
                 ShareSheet(items: [url])
                     .onDisappear {
                         if shouldDismissAfterShare {
-                            // Закрываем флоу
+                            // Close flow
                             onClose?()
                         }
                     }
@@ -595,11 +595,11 @@ struct InvoiceStepView: View {
             items: vm.items
         )
 
-        // Применяем реквизиты и заметки, выбранные на шаге Payment Details
+        // Apply payment methods and notes selected on Payment Details step
         invoice.paymentMethods = resolvedPaymentMethods()
         invoice.paymentNotes = vm.paymentNotes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : vm.paymentNotes
         
-        // Применяем tax и discount настройки
+        // Apply tax and discount settings
         print("🔍 Tax settings: rate=\(vm.taxRate), type=\(vm.taxType)")
         print("🔍 Discount settings: enabled=\(vm.isDiscountEnabled), value=\(vm.discountValue), type=\(vm.discountType)")
         
@@ -632,7 +632,7 @@ struct InvoiceStepView: View {
             print("✅ ShareSheet should now be visible")
         } catch {
             print("❌ PDF generation error:", error)
-            // если что-то пошло не так — просто остаёмся в визарде
+            // if something went wrong - just stay in wizard
         }
     }
     

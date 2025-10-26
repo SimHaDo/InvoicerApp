@@ -230,10 +230,10 @@ struct AnalyticsScreen: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Анимированный фон
+                // Animated background
                 backgroundView
                 
-                // Плавающие элементы
+                // Floating elements
                 ForEach(floatingElements) { element in
                     Circle()
                         .fill(Color.primary.opacity(0.05))

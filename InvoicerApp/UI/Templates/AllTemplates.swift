@@ -872,7 +872,7 @@ struct ConsultingElegantTemplate: SimpleTemplateRenderer {
 }
 
 ///Second PArt
-// MARK: - Accounting Detailed Template (унифицирован, без спец. слоганов)
+// MARK: - Accounting Detailed Template (unified, no special slogans)
 
 struct AccountingDetailedTemplate: SimpleTemplateRenderer {
     let theme: TemplateTheme
@@ -887,7 +887,7 @@ struct AccountingDetailedTemplate: SimpleTemplateRenderer {
         let _ = theme.secondary
         let accent = theme.accent
 
-        // фон
+        // background
         R.fillRect(context: context, rect: page, color: .white)
 
         // Header c «бухгалтерской» сеткой
@@ -907,7 +907,7 @@ struct AccountingDetailedTemplate: SimpleTemplateRenderer {
         }
         context.strokePath()
 
-        // Логотип с рамкой
+        // Logo with frame
         let logoRect = CGRect(x: left + 7, y: 28, width: 75, height: 75)
         R.strokeRect(context: context, rect: logoRect, color: primary, width: 2)
         R.drawLogo(logo, in: logoRect, context: context, corner: 0, stroke: nil)
@@ -925,7 +925,7 @@ struct AccountingDetailedTemplate: SimpleTemplateRenderer {
         }
         // (убран узкоспециализированный подзаголовок)
 
-        // Инфобокс инвойса (справа)
+        // Invoice info box (right)
         let invBox = CGRect(x: right - 180, y: 35, width: 170, height: 80)
         R.fillRect(context: context, rect: invBox, color: accent.withAlphaComponent(0.10))
         R.strokeRect(context: context, rect: invBox, color: accent, width: 2)
@@ -956,7 +956,7 @@ struct AccountingDetailedTemplate: SimpleTemplateRenderer {
             by += 20
         }
 
-        // Таблица (пагинация)
+        // Table (pagination)
         let tableTop = bill.maxY + 18
         let headers = ["Description", "Qty", "Unit Price", "Disc.", "Total"]
         let specs: [CGFloat] = [0.48, 0.12, 0.12, 0.12, 0.16]
@@ -1006,7 +1006,7 @@ struct AccountingDetailedTemplate: SimpleTemplateRenderer {
         R.draw(R.text(R.cur(invoice.total, code: currency), font: .systemFont(ofSize: 17, weight: .semibold), color: .white),
                in: CGRect(x: totalBar.minX + 90, y: totalBar.minY + 14, width: 90, height: 22))
 
-        // Левый столбец: Payment Instructions / Notes
+        // Left column: Payment Instructions / Notes
         var infoTop = res.lastY + 12
         let infoWidth = (tx - left) - 16
 
@@ -1028,7 +1028,7 @@ struct AccountingDetailedTemplate: SimpleTemplateRenderer {
                    in: CGRect(x: box.minX + 8, y: box.minY + 26, width: box.width - 16, height: box.height - 36))
         }
 
-        // Footer — дженерик
+        // Footer - generic
         let fy = page.height - P.bottom
         R.draw(R.text("Thank you for your business.", font: .systemFont(ofSize: 11, weight: .regular), color: .gray),
                in: CGRect(x: left, y: fy - 16, width: right - left, height: 16))
@@ -1050,7 +1050,7 @@ struct ConsultingProfessionalTemplate: SimpleTemplateRenderer {
         let _ = theme.secondary
         let accent = theme.accent
 
-        // фон
+        // background
         R.fillRect(context: context, rect: page, color: .white)
 
         // Header с «профессиональными» линиями
@@ -1065,7 +1065,7 @@ struct ConsultingProfessionalTemplate: SimpleTemplateRenderer {
         }
         context.strokePath()
 
-        // Лого
+        // Logo
         let logoRect = CGRect(x: left + 8, y: 32, width: 70, height: 70)
         R.strokeRect(context: context, rect: logoRect, color: primary, width: 2)
         R.drawLogo(logo, in: logoRect, context: context, corner: 0, stroke: nil)
@@ -1083,7 +1083,7 @@ struct ConsultingProfessionalTemplate: SimpleTemplateRenderer {
         }
         // (убран узкоспециализированный слоган)
 
-        // Инфобокс инвойса (справа)
+        // Invoice info box (right)
         let inv = CGRect(x: right - 165, y: 38, width: 155, height: 75)
         R.fillRect(context: context, rect: inv, color: accent.withAlphaComponent(0.10))
         R.strokeRect(context: context, rect: inv, color: accent, width: 2)
@@ -1164,7 +1164,7 @@ struct ConsultingProfessionalTemplate: SimpleTemplateRenderer {
         R.draw(R.text(R.cur(invoice.total, code: currency), font: .systemFont(ofSize: 16, weight: .semibold), color: .white),
                in: CGRect(x: totalBar.minX + 92, y: totalBar.minY + 14, width: 78, height: 20))
 
-        // Левый столбец: Payment Instructions / Notes
+        // Left column: Payment Instructions / Notes
         var infoTop = res.lastY + 12
         let infoWidth = (tx - left) - 16
 
@@ -1186,7 +1186,7 @@ struct ConsultingProfessionalTemplate: SimpleTemplateRenderer {
                    in: CGRect(x: box.minX + 8, y: box.minY + 22, width: box.width - 16, height: box.height - 28))
         }
 
-        // Footer — дженерик
+        // Footer - generic
         let fy = page.height - P.bottom
         R.draw(R.text("Thank you for your business.", font: .systemFont(ofSize: 10, weight: .regular), color: .gray),
                in: CGRect(x: left, y: fy - 14, width: right - left, height: 14))
@@ -1281,7 +1281,7 @@ struct PhotographyCleanTemplate: SimpleTemplateRenderer {
         // Разделитель
         R.strokeLine(context: context, from: CGPoint(x: left, y: blockTop + 70), to: CGPoint(x: right, y: blockTop + 70), color: primary.withAlphaComponent(0.4), width: 1)
 
-        // Таблица (пагинация)
+        // Table (pagination)
         let tTop = blockTop + 82
         let headers = ["QTY", "DESCRIPTION", "UNIT PRICE", "DISCOUNT", "AMOUNT"]
         let specs: [CGFloat] = [0.10, 0.48, 0.13, 0.13, 0.16]
@@ -1348,7 +1348,7 @@ struct PhotographyCleanTemplate: SimpleTemplateRenderer {
                    in: CGRect(x: box.minX + 8, y: box.minY + 22, width: box.width - 16, height: 48))
         }
 
-        // Footer — дженерик
+        // Footer - generic
         let fy = page.height - P.bottom
         R.draw(R.text("Thank you for your business.", font: .systemFont(ofSize: 10), color: .gray),
                in: CGRect(x: left, y: fy - 14, width: right - left, height: 14), align: .left)
@@ -1490,7 +1490,7 @@ struct FashionElegantTemplate: SimpleTemplateRenderer {
                    in: CGRect(x: left, y: infoTop + 18, width: right - left, height: 60))
         }
 
-        // Footer — дженерик
+        // Footer - generic
         let fy = page.height - P.bottom
         R.draw(R.text("Thank you for your business.", font: .systemFont(ofSize: 10), color: .gray),
                in: CGRect(x: left, y: fy - 14, width: right - left, height: 14))
@@ -1623,7 +1623,7 @@ struct DesignStudioTemplate: SimpleTemplateRenderer {
                    in: CGRect(x: box.minX + 8, y: box.minY + 22, width: box.width - 16, height: 50))
         }
 
-        // Footer — дженерик
+        // Footer - generic
         let fy = page.height - P.bottom
         R.draw(R.text("Thank you for your business.", font: .systemFont(ofSize: 10), color: .gray),
                in: CGRect(x: left, y: fy - 14, width: right - left, height: 14))
@@ -1663,7 +1663,7 @@ struct ArtisticBoldTemplate: SimpleTemplateRenderer {
         R.draw(R.text("INVOICE", font: .systemFont(ofSize: 28, weight: .black), color: .white),
                in: CGRect(x: left, y: 24, width: 260, height: 32))
 
-        // Лого справа
+        // Logo справа
         R.drawLogo(logo, in: CGRect(x: right - 70, y: 25, width: 45, height: 45), context: context, corner: 0, stroke: nil)
 
         // Многострочный блок компании на тёмном фоне
@@ -1769,7 +1769,7 @@ struct ArtisticBoldTemplate: SimpleTemplateRenderer {
                    in: CGRect(x: box.minX + 8, y: box.minY + 22, width: box.width - 16, height: 52))
         }
 
-        // Footer — дженерик
+        // Footer - generic
         let fy = page.height - P.bottom
         R.draw(R.text("Thank you for your business.", font: .systemFont(ofSize: 10), color: .gray),
                in: CGRect(x: left, y: fy - 14, width: right - left, height: 14))

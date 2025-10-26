@@ -157,7 +157,7 @@ struct PremiumContentBlocker: View {
     
     var body: some View {
         VStack(spacing: 16) {
-            // Иконка
+            // Icon
             ZStack {
                 Circle()
                     .fill(Color.primary.opacity(0.1))
@@ -168,7 +168,7 @@ struct PremiumContentBlocker: View {
                     .foregroundColor(.primary)
             }
             
-            // Текст
+            // Text
             VStack(spacing: 8) {
                 Text(title)
                     .font(.headline)
@@ -182,7 +182,7 @@ struct PremiumContentBlocker: View {
                     .lineLimit(3)
             }
             
-            // Кнопка обновления
+            // Update button
             Button(action: onUpgrade) {
                 HStack(spacing: 8) {
                     Image(systemName: "crown.fill")
