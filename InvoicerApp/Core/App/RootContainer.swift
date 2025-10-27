@@ -26,7 +26,7 @@ struct RootContainer: View {
                             }
                         }
                     }
-            } else if app.hasCompletedOnboarding {
+            } else if app.hasCompletedOnboarding || subscriptionManager.isPro {
                 RootTabView()
                     .environmentObject(app)
                     .environmentObject(subscriptionManager)

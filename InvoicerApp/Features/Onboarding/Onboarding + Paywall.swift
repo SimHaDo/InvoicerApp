@@ -92,8 +92,8 @@ struct OnboardingView: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
 
-                // Dots + Footer with improved animations
-                VStack(spacing: 28) {
+                // Dots + Footer with improved animations - максимально низко
+                VStack(spacing: 20) {
                     FancyDots(count: 4, index: page)
                         .padding(.top, 8)
                         .opacity(appear ? 1 : 0)
@@ -101,12 +101,12 @@ struct OnboardingView: View {
                         .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2), value: appear)
 
                     FooterLinks(
-                        onRestore: { Task { try? await subscriptionManager.restorePurchases() } },
+                        onRestore: handleRestore,
                         onPrivacy: { openURL(privacyURL) },
                         onTerms:   { openURL(termsURL) }
                     )
                 }
-                .padding(.bottom, 32)
+                .padding(.bottom, 8)
             }
 
             // Floating Next / Continue button with improved effects
@@ -275,6 +275,28 @@ struct OnboardingView: View {
         // Delay before completing onboarding
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
             app.markOnboardingCompleted()
+        }
+    }
+    
+    private func handleRestore() {
+        Task {
+            do {
+                try await subscriptionManager.restorePurchases()
+                // Проверяем статус подписки после восстановления
+                await subscriptionManager.checkSubscriptionStatus()
+                
+                // Переходим на invoices screen только если подписка активна
+                if subscriptionManager.isPro {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        app.markOnboardingCompleted()
+                    }
+                } else {
+                    print("Restore completed but no active subscription found")
+                }
+            } catch {
+                // Ошибка обрабатывается в SubscriptionManager
+                print("Restore failed: \(error)")
+            }
         }
     }
 }

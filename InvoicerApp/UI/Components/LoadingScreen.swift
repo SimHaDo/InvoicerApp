@@ -81,6 +81,9 @@ struct LoadingScreen: View {
                         .frame(width: 320, height: 200)
                         .scaleEffect(logoScale * breatheScale)
                         .opacity(logoOpacity)
+                        .if(colorScheme == .dark) { view in
+                            view.colorInvert()
+                        }
                         .shadow(
                             color: colorScheme == .dark ? .white.opacity(0.3) : .black.opacity(0.2), 
                             radius: 20, x: 0, y: 0
