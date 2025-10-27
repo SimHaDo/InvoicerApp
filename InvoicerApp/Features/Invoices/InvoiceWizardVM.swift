@@ -1169,9 +1169,7 @@ struct StepPaymentDetailsView: View {
                     }
                     
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Payment Notes")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.primary)
+                      
                         
                         TextField("Shown below the payment block in PDF",
                                   text: $vm.paymentNotes,

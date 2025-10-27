@@ -86,7 +86,7 @@ struct OnboardingView: View {
                     )
                     .tag(2)
 
-                    PaywallScreen(onClose: finishOnboarding)
+                    PaywallScreen(onClose: finishOnboarding, useCustomBackground: false)
                         .environmentObject(subscriptionManager)
                         .tag(3)
                 }

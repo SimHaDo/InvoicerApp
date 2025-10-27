@@ -10,6 +10,7 @@ import RevenueCat
 
 struct PaywallScreen: View {
     var onClose: () -> Void = {}
+    var useCustomBackground: Bool = true
 
     @Environment(\.colorScheme) private var scheme
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
@@ -51,8 +52,10 @@ struct PaywallScreen: View {
             let spacing: CGFloat = isSmallScreen ? 8 : 12
             
             ZStack {
-                // Background
-                backgroundView
+                // Background - только если useCustomBackground = true
+                if useCustomBackground {
+                    backgroundView
+                }
                 
                 ScrollView {
                     VStack(spacing: spacing) {
@@ -108,31 +111,17 @@ struct PaywallScreen: View {
     // MARK: - Header View
     
     private func headerView(logoSize: CGFloat, titleSize: CGFloat, subtitleSize: CGFloat) -> some View {
-        VStack(spacing: 16) {
-            // Logo
-            Image("AppLogo")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: logoSize, height: logoSize)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .if(scheme == .dark) { view in
-                    view.colorInvert()
-                }
-                .shadow(
-                    color: scheme == .dark ? UI.darkAccent.opacity(0.4) : .black.opacity(0.1), 
-                    radius: 8, 
-                    y: 4
-                )
-            
-            // Title
+        VStack(spacing: 8) {
+            // Title - большой и привлекательный
             Text("Unlock Premium Features")
-                .font(.system(size: titleSize, weight: .bold))
+                .font(.system(size: 28, weight: .black))
                 .foregroundColor(.primary)
                 .multilineTextAlignment(.center)
+                .padding(.horizontal, 20)
             
             // Subtitle
             Text("Get unlimited access to all premium features and templates")
-                .font(.system(size: subtitleSize, weight: .medium))
+                .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 20)
@@ -142,12 +131,18 @@ struct PaywallScreen: View {
     // MARK: - Features View
     
     private var featuresView: some View {
-        VStack(spacing: 12) {
+        LazyVGrid(columns: [
+            GridItem(.flexible()),
+            GridItem(.flexible())
+        ], spacing: 12) {
             FeatureBadge(icon: "infinity", text: "Unlimited Invoices", delay: 0.0)
             FeatureBadge(icon: "doc.richtext.fill", text: "Premium Templates", delay: 0.1)
             FeatureBadge(icon: "chart.bar.fill", text: "Advanced Analytics", delay: 0.2)
             FeatureBadge(icon: "icloud.fill", text: "Cloud Sync", delay: 0.3)
         }
+        .padding(.horizontal, 10)
+        .padding(.top, 16)
+        .padding(.bottom, 20)
     }
     
     // MARK: - Plans View
@@ -203,12 +198,12 @@ struct PaywallScreen: View {
                         // Проверяем статус подписки после покупки
                         await subscriptionManager.checkSubscriptionStatus()
                         
-                        // Ждем немного и закрываем paywall
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                            onClose()
-                        }
+                        // Закрываем paywall только при успешной покупке
+                        // (onChange(of: subscriptionManager.isPro) уже обрабатывает это)
                     } catch {
                         // Ошибка обрабатывается в SubscriptionManager
+                        // НЕ закрываем paywall при ошибке или отмене
+                        print("Purchase failed or cancelled: \(error)")
                     }
                 }
             } label: {
@@ -254,15 +249,21 @@ struct PaywallScreen: View {
     
     private var backgroundView: some View {
         ZStack {
-            // Base gradient
-            LinearGradient(
-                colors: [
-                    scheme == .dark ? Color(.systemBackground) : Color(.systemBackground),
-                    scheme == .dark ? Color(.systemGray6) : Color(.systemGray6).opacity(0.3)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
+            // Base background - единый цвет для темной темы
+            if scheme == .dark {
+                Color(.systemBackground)
+                    .ignoresSafeArea()
+            } else {
+                LinearGradient(
+                    colors: [
+                        Color(.systemBackground),
+                        Color(.systemGray6).opacity(0.3)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+            }
             
             // Floating elements
             ForEach(floatingElements) { element in
@@ -377,30 +378,11 @@ struct RevenueCatPlanRow: View {
                         }
                     }
                     
-                    // Price and trial information
+                    // Price information
                     VStack(alignment: .leading, spacing: 2) {
-                        // Show trial information for weekly plan
-                        if package.identifier == "$rc_weekly" {
-                            Text("3-day free trial")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(.green)
-                        }
-                        
-                        // Show price with trial context for weekly plan
-                        if package.identifier == "$rc_weekly" {
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text("Free for 3 days")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.green)
-                                Text("then \(package.storeProduct.localizedPriceString)/week")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(.secondary)
-                            }
-                        } else {
-                            Text(package.storeProduct.localizedPriceString)
-                                .font(.system(size: 24, weight: .bold))
-                                .foregroundColor(.primary)
-                        }
+                        Text(package.storeProduct.localizedPriceString)
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(.primary)
                         
                         if let period = package.storeProduct.subscriptionPeriod {
                             Text(period.localizedDescription)
