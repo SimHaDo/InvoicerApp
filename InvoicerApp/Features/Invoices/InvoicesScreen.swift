@@ -160,7 +160,7 @@ struct InvoicesScreen: View {
                     }
                 }
                 .adaptiveContent()
-                .padding(.top, 16)
+                .padding(.top, 8)
             }
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(trailing: Button(action: onNewInvoice) {

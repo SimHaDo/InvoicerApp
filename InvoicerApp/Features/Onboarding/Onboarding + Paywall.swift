@@ -388,9 +388,9 @@ private struct FooterLinks: View {
 
     var body: some View {
         HStack(spacing: 16) {
-            Button("Restore", action: onRestore)
-            Bullet()
             Button("Privacy Policy", action: onPrivacy)
+            Bullet()
+            Button("Restore Purchase", action: onRestore)
             Bullet()
             Button("Terms of Use", action: onTerms)
         }

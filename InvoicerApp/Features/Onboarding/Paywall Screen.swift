@@ -34,6 +34,21 @@ struct PaywallScreen: View {
         packages.first { $0.identifier == "$rc_annual" }
     }
     
+    // Check if trial is available (not used before)
+    private var isTrialAvailable: Bool {
+        // If user already has active subscription, trial is not available
+        if subscriptionManager.isPro {
+            return false
+        }
+        
+        // Check if weekly package has introductory discount
+        if let weekly = weeklyPackage {
+            return weekly.storeProduct.introductoryDiscount != nil
+        }
+        
+        return false
+    }
+    
     private struct FloatingElement: Identifiable {
         let id = UUID()
         var x: Double
@@ -46,6 +61,7 @@ struct PaywallScreen: View {
     var body: some View {
         GeometryReader { geometry in
             let isSmallScreen = geometry.size.height < 700
+            let isLargeScreen = geometry.size.width >= 430 || UIDevice.current.userInterfaceIdiom == .pad
             let logoSize: CGFloat = isSmallScreen ? 40 : 50
             let titleSize: CGFloat = isSmallScreen ? 20 : 24
             let subtitleSize: CGFloat = isSmallScreen ? 12 : 14
@@ -57,33 +73,76 @@ struct PaywallScreen: View {
                     backgroundView
                 }
                 
-                ScrollView {
-                    VStack(spacing: spacing) {
-                        // Header
-                        headerView(logoSize: logoSize, titleSize: titleSize, subtitleSize: subtitleSize)
-                        
-                        // Features
-                        featuresView
-                        
-                        // Plans
-                        plansView
-                        
-                        // Buttons
-                        buttonsView
-                        
-                        // Error message
-                        if let errorMessage = subscriptionManager.errorMessage {
-                            Text(errorMessage)
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.red)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, 20)
-                                .padding(.top, 8)
+                if isLargeScreen {
+                    // Для больших экранов - кнопка внизу
+                    VStack(spacing: 0) {
+                        ScrollView {
+                            VStack(spacing: spacing) {
+                                // Header
+                                headerView(logoSize: logoSize, titleSize: titleSize, subtitleSize: subtitleSize)
+                                
+                                // Features
+                                featuresView
+                                
+                                // Plans
+                                plansView
+                                
+                                // Error message
+                                if let errorMessage = subscriptionManager.errorMessage {
+                                    Text(errorMessage)
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.red)
+                                        .multilineTextAlignment(.center)
+                                        .padding(.horizontal, 20)
+                                        .padding(.top, 8)
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.top, 20)
+                            .padding(.bottom, 20)
                         }
+                        
+                        // Кнопка внизу для больших экранов
+                        VStack(spacing: 12) {
+                            buttonsView
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 40)
+                        .background(
+                            Color(.systemBackground)
+                                .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: -5)
+                        )
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    .padding(.bottom, 40)
+                } else {
+                    // Для маленьких экранов - обычная структура
+                    ScrollView {
+                        VStack(spacing: spacing) {
+                            // Header
+                            headerView(logoSize: logoSize, titleSize: titleSize, subtitleSize: subtitleSize)
+                            
+                            // Features
+                            featuresView
+                            
+                            // Plans
+                            plansView
+                            
+                            // Buttons
+                            buttonsView
+                            
+                            // Error message
+                            if let errorMessage = subscriptionManager.errorMessage {
+                                Text(errorMessage)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.red)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 20)
+                                    .padding(.top, 8)
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 20)
+                        .padding(.bottom, 40)
+                    }
                 }
             }
         }
@@ -153,7 +212,7 @@ struct PaywallScreen: View {
                 RevenueCatPlanRow(
                     package: weekly,
                     title: "Weekly",
-                    tagText: "3-day free trial",
+                    tagText: isTrialAvailable ? "3-day free trial" : nil,
                     selected: selectedPackage?.identifier == weekly.identifier,
                     delay: 0.0
                 )
@@ -213,8 +272,8 @@ struct PaywallScreen: View {
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                             .scaleEffect(0.8)
                     } else {
-                        // Show different text based on selected package
-                        if selectedPackage?.identifier == "$rc_weekly" {
+                        // Show different text based on selected package and trial availability
+                        if selectedPackage?.identifier == "$rc_weekly" && isTrialAvailable {
                             Text("Start Free Trial")
                                 .font(.system(size: 16, weight: .bold))
                         } else {
