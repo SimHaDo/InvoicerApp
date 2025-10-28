@@ -261,8 +261,10 @@ struct ProductsScreen: View {
     // MARK: - Helpers
 
     private func onCreateInvoice() {
-        // if limit exceeded and no subscription - show paywall
-        guard app.canCreateInvoice else {
+        // Check if user has active subscription or can create free invoice
+        let canCreate = subscriptionManager.isPro || app.remainingFreeInvoices > 0
+        
+        if !canCreate {
             showEmptyPaywall = true
             return
         }
