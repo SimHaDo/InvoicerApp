@@ -22,6 +22,9 @@ struct InvoicerApp: App {
                 .environmentObject(app)
                 .environmentObject(subscriptionManager)
                 .task {
+                    // Start sync immediately for faster data loading
+                    app.syncFromCloud()
+                    
                     // Initialize RevenueCat
                     await initializeRevenueCat()
                     // Update subscription status on startup

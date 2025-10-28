@@ -171,6 +171,18 @@ struct InvoicesScreen: View {
         .onAppear {
             createFloatingElements()
         }
+        .onChange(of: app.invoices) { _ in
+            // Force UI update when invoices data changes
+            print("InvoicesScreen: Invoices data changed, updating UI...")
+        }
+        .onChange(of: app.customers) { _ in
+            // Force UI update when customers data changes
+            print("InvoicesScreen: Customers data changed, updating UI...")
+        }
+        .onChange(of: app.products) { _ in
+            // Force UI update when products data changes
+            print("InvoicesScreen: Products data changed, updating UI...")
+        }
             .fullScreenCover(isPresented: $showInvoiceCreation) {
                 InvoiceCreationFlow(onClose: {
                     showInvoiceCreation = false

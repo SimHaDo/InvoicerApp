@@ -41,6 +41,20 @@ struct PaywallScreen: View {
             return false
         }
         
+        // Check if user ever had a subscription before (even if expired)
+        let hadSubscriptionKey = "user_had_subscription"
+        if UserDefaults.standard.bool(forKey: hadSubscriptionKey) {
+            print("PaywallScreen: User had subscription before, trial not available")
+            return false
+        }
+        
+        // Check if trial was already used (stored locally)
+        let trialUsedKey = "trial_used_\(weeklyPackage?.storeProduct.productIdentifier ?? "")"
+        if UserDefaults.standard.bool(forKey: trialUsedKey) {
+            print("PaywallScreen: Trial already used for product: \(weeklyPackage?.storeProduct.productIdentifier ?? "unknown")")
+            return false
+        }
+        
         // Check if weekly package has introductory discount
         if let weekly = weeklyPackage {
             return weekly.storeProduct.introductoryDiscount != nil
@@ -253,6 +267,13 @@ struct PaywallScreen: View {
                 Task {
                     do {
                         try await subscriptionManager.purchase(package: package)
+                        
+                        // Mark trial as used if it was a weekly package with trial
+                        if package.identifier == "$rc_weekly" && isTrialAvailable {
+                            let trialUsedKey = "trial_used_\(package.storeProduct.productIdentifier)"
+                            UserDefaults.standard.set(true, forKey: trialUsedKey)
+                            print("PaywallScreen: Marked trial as used for product: \(package.storeProduct.productIdentifier)")
+                        }
                         
                         // Проверяем статус подписки после покупки
                         await subscriptionManager.checkSubscriptionStatus()

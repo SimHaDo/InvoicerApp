@@ -97,6 +97,10 @@ struct RootTabView: View {
                 showMyInfo = true
             }
         }
+        .onAppear {
+            // Sync data when RootTabView appears (for users who skip onboarding)
+            app.syncFromCloud()
+        }
     }
     
     @ViewBuilder

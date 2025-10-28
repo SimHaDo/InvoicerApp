@@ -184,7 +184,9 @@ final class AppState: ObservableObject {
             queue: .main
         ) { [weak self] _ in
             print("AppState: App became active, auto-pulling from CloudKit...")
-            self?.syncFromCloud()
+            Task { @MainActor in
+                self?.syncFromCloud()
+            }
         }
     }
 
@@ -248,7 +250,7 @@ final class AppState: ObservableObject {
         // Listen to Core Data changes
         coreDataAdapter.$isCloudKitAvailable
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] isAvailable in
+            .sink { isAvailable in
                 print("AppState: CloudKit available: \(isAvailable)")
             }
             .store(in: &cancellables)
@@ -297,6 +299,9 @@ final class AppState: ObservableObject {
         }
         
         print("AppState: Completed loading from Core Data - \(self.customers.count) customers, \(self.products.count) products, \(self.invoices.count) invoices")
+        
+        // Force UI update
+        self.objectWillChange.send()
     }
     
     func syncToCloud() {
@@ -306,8 +311,27 @@ final class AppState: ObservableObject {
     }
     
     func syncFromCloud() {
-        // Core Data automatically pulls from CloudKit
-        // Reload data from Core Data
+        print("AppState: Starting sync from CloudKit...")
+        
+        // Force CloudKit sync first
+        coreDataAdapter.forceSync()
+        
+        // Load data immediately (local data)
         loadDataFromCoreData()
+        
+        // Then try to sync from CloudKit with a delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            print("AppState: Attempting CloudKit sync after delay...")
+            self.coreDataAdapter.forceSync()
+            
+            // Load data again after CloudKit sync
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                print("AppState: Loading data after CloudKit sync...")
+                self.loadDataFromCoreData()
+                
+                // Force UI update after CloudKit sync
+                self.objectWillChange.send()
+            }
+        }
     }
 }

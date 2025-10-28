@@ -273,6 +273,17 @@ final class SubscriptionManager: NSObject, ObservableObject {
         for (key, entitlement) in customerInfo.entitlements.all {
             print("✅ Entitlement '\(key)': isActive=\(entitlement.isActive), willRenew=\(entitlement.willRenew)")
         }
+        
+        // Check if user ever had a subscription (even if expired)
+        let hadSubscriptionKey = "user_had_subscription"
+        let everHadSubscription = customerInfo.entitlements.all.values.contains { entitlement in
+            entitlement.isActive || entitlement.expirationDate != nil
+        }
+        
+        if everHadSubscription && !UserDefaults.standard.bool(forKey: hadSubscriptionKey) {
+            UserDefaults.standard.set(true, forKey: hadSubscriptionKey)
+            print("✅ User had subscription before, marking as used")
+        }
     }
 }
 
