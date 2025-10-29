@@ -1973,7 +1973,8 @@ struct AnalyticsScreen: View {
                                     showFullscreenCover = true
                                 }
                             }
-                            .frame(width: (UIScreen.main.bounds.width - 48) / 2, height: 180)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 180)
                             .offset(y: showContent ? 0 : 20)
                             .opacity(showContent ? 1 : 0)
                             .scaleEffect(cardAnimations[leftMetric.id] ?? false ? 1.0 : 0.8)
@@ -1989,7 +1990,8 @@ struct AnalyticsScreen: View {
                             )
                         } else {
                             Spacer()
-                                .frame(width: (UIScreen.main.bounds.width - 48) / 2, height: 180)
+                                .frame(maxWidth: .infinity)
+                            .frame(height: 180)
                         }
                         
                         // Right card
@@ -2001,7 +2003,8 @@ struct AnalyticsScreen: View {
                                     showFullscreenCover = true
                                 }
                             }
-                            .frame(width: (UIScreen.main.bounds.width - 48) / 2, height: 180)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 180)
                             .offset(y: showContent ? 0 : 20)
                             .opacity(showContent ? 1 : 0)
                             .scaleEffect(cardAnimations[rightMetric.id] ?? false ? 1.0 : 0.8)
@@ -2017,7 +2020,8 @@ struct AnalyticsScreen: View {
                             )
                         } else {
                             Spacer()
-                                .frame(width: (UIScreen.main.bounds.width - 48) / 2, height: 180)
+                                .frame(maxWidth: .infinity)
+                            .frame(height: 180)
                         }
                     }
                 }
@@ -2470,6 +2474,7 @@ struct LineChartView: View {
                 }
             }
         }
+        .frame(height: 200)
     }
 }
 
@@ -2480,16 +2485,16 @@ struct BarChartView: View {
     var body: some View {
         GeometryReader { geometry in
             let maxValue = data.map(\.value).max() ?? 1
+            let barWidth = max(4, geometry.size.width / CGFloat(data.count) - 4)
             
             HStack(alignment: .bottom, spacing: 4) {
                 ForEach(Array(data.enumerated()), id: \.offset) { index, point in
                     VStack(spacing: 4) {
+                        let barHeight = (CGFloat(point.value) / CGFloat(maxValue)) * geometry.size.height * CGFloat(animationProgress)
+                        
                         RoundedRectangle(cornerRadius: 4)
                             .fill(point.color)
-                            .frame(
-                                width: max(4, geometry.size.width / CGFloat(data.count) - 4),
-                                height: (CGFloat(point.value) / CGFloat(maxValue)) * geometry.size.height * animationProgress
-                            )
+                            .frame(width: barWidth, height: barHeight)
                             .animation(.easeInOut(duration: 0.8).delay(Double(index) * 0.1), value: animationProgress)
                         
                         Text(point.label)
@@ -2500,6 +2505,7 @@ struct BarChartView: View {
                 }
             }
         }
+        .frame(height: 200)
     }
 }
 
@@ -2536,6 +2542,7 @@ struct PieChartView: View {
                 }
             }
         }
+        .frame(height: 200)
     }
 }
 
@@ -2580,6 +2587,7 @@ struct RadarChartView: View {
                 }
             }
         }
+        .frame(height: 200)
     }
 }
 
@@ -2667,6 +2675,7 @@ struct HeatmapChartView: View {
                 }
             }
         }
+        .frame(height: 200)
     }
 }
 
@@ -2693,6 +2702,7 @@ struct DonutChartView: View {
                 }
             }
         }
+        .frame(height: 200)
     }
 }
 
@@ -2897,11 +2907,9 @@ private struct RevenueChartCard: View {
                                 .font(.system(size: 12, weight: .medium))
                                 .frame(width: 40, alignment: .leading)
                             
-                            GeometryReader { geometry in
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(Color.blue)
-                                    .frame(width: max(4, geometry.size.width * (item.revenue / (data.map(\.revenue).max() ?? 1))))
-                            }
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.blue)
+                                .frame(width: max(4, 200 * (item.revenue / (data.map(\.revenue).max() ?? 1))))
                             .frame(height: 20)
                             
                             Text(Money.fmt(Decimal(item.revenue), code: currency))
