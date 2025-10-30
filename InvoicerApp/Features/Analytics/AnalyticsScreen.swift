@@ -1389,14 +1389,11 @@ struct FullscreenMetricCoverView: View {
                         // Metric overview
                         metricOverviewCard
                         
-                        // Chart section
-                        chartSection
-                        
-                        // Heatmap section
-                        heatmapSection
-                        
                         // Additional insights
                         insightsSection
+                        
+                        // Why it matters
+                        whyItMattersSection
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
@@ -1538,68 +1535,22 @@ struct FullscreenMetricCoverView: View {
     }
     
     private var chartSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Detailed Chart")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundColor(scheme == .dark ? .white : .black)
-            
-            AnimatedChartView(
-                data: metric.chartData,
-                chartType: .line
-            )
-            .frame(height: 200)
-            .scaleEffect(x: chartAnimationProgress, y: 1)
-            .opacity(chartAnimationProgress)
-        }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(scheme == .dark ? Color.white.opacity(0.05) : Color.black.opacity(0.03))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(scheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.05), lineWidth: 1)
-                )
+        ChartCard(
+            title: "Detailed Chart",
+            subtitle: nil,
+            data: metric.chartData,
+            animationProgress: chartAnimationProgress,
+            scheme: scheme
         )
     }
     
     private var heatmapSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Heatmap Visualization")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundColor(scheme == .dark ? .white : .black)
-            
-            // Heatmap explanation
-            Text("Each cell represents data intensity - darker colors indicate higher values. This visualization helps identify patterns and trends in your data over time.")
-                .font(.system(size: 14, weight: .regular))
-                .foregroundColor(scheme == .dark ? .white.opacity(0.8) : .black.opacity(0.8))
-                .lineSpacing(2)
-            
-            // Convert heatmap data to chart data for visualization
-            let heatmapChartData = metric.heatmapData.map { heatmapPoint in
-                ChartDataPoint(
-                    label: heatmapPoint.label ?? "",
-                    value: heatmapPoint.value,
-                    color: heatmapPoint.color,
-                    date: nil
-                )
-            }
-            
-            AnimatedChartView(
-                data: heatmapChartData,
-                chartType: .heatmap
-            )
-            .frame(height: 120)
-            .scaleEffect(heatmapAnimationProgress)
-            .opacity(heatmapAnimationProgress)
-        }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white.opacity(0.05))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                )
+        HeatmapCard(
+            title: "Heatmap Visualization",
+            subtitle: "Patterns over time",
+            heatmap: metric.heatmapData,
+            animationProgress: heatmapAnimationProgress,
+            scheme: scheme
         )
     }
     
@@ -1623,6 +1574,207 @@ struct FullscreenMetricCoverView: View {
                         .stroke(scheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.05), lineWidth: 1)
                 )
         )
+    }
+
+    private var whyItMattersSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Why does it matter?")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(scheme == .dark ? .white : .black)
+            Text(whyItMattersText(for: metric))
+                .font(.system(size: 16))
+                .foregroundColor(scheme == .dark ? .white.opacity(0.9) : .black.opacity(0.9))
+                .lineSpacing(4)
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(scheme == .dark ? Color.white.opacity(0.05) : Color.black.opacity(0.03))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(scheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.05), lineWidth: 1)
+                )
+        )
+    }
+
+    private func whyItMattersText(for metric: AnalyticsMetric) -> String {
+        switch metric.category {
+        case .revenue:
+            return "Revenue reflects the health of your business and cash inflow dynamics. Tracking it helps you plan budgets, investments, and growth."
+        case .performance:
+            return "Performance metrics show operational efficiency and help uncover bottlenecks that slow down invoicing and payments."
+        case .customers:
+            return "Customer metrics highlight acquisition, retention, and value — crucial to improving loyalty and lifetime revenue."
+        case .efficiency:
+            return "Efficiency indicates how quickly and predictably your workflows deliver results, reducing costs and improving margins."
+        case .growth:
+            return "Growth metrics reveal momentum and trends over time, helping you forecast and align strategy with market reality."
+        case .payment:
+            return "Payment metrics show liquidity and risk exposure, helping you manage overdue invoices and stabilize cash flow."
+        }
+    }
+}
+
+// MARK: - Reusable Cards for Fullscreen (no GeometryReader)
+
+struct ChartCard: View {
+    let title: String
+    let subtitle: String?
+    let data: [ChartDataPoint]
+    let animationProgress: Double
+    let scheme: ColorScheme
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.primary)
+                if let subtitle { Text(subtitle).font(.subheadline).foregroundStyle(.secondary) }
+            }
+            
+            if data.isEmpty {
+                EmptyDataPlaceholder(icon: "chart.bar.fill", text: "No data yet")
+                    .frame(height: 200)
+                    .transition(.opacity)
+            } else {
+                Chart(data, id: \.id) { point in
+                    AreaMark(
+                        x: .value("Label", point.label),
+                        y: .value("Value", point.value)
+                    )
+                    .interpolationMethod(.catmullRom)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [point.color.opacity(0.35), point.color.opacity(0.05)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    
+                    LineMark(
+                        x: .value("Label", point.label),
+                        y: .value("Value", point.value)
+                    )
+                    .interpolationMethod(.catmullRom)
+                    .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [point.color, point.color.opacity(0.6)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                }
+                .chartXAxis {
+                    AxisMarks(position: .bottom, values: .automatic(desiredCount: 4)) { _ in
+                        AxisGridLine().foregroundStyle(.secondary.opacity(0.15))
+                        AxisTick()
+                        AxisValueLabel()
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks(position: .leading, values: .automatic(desiredCount: 4)) { _ in
+                        AxisGridLine().foregroundStyle(.secondary.opacity(0.15))
+                        AxisTick()
+                        AxisValueLabel()
+                    }
+                }
+                .frame(height: 220)
+                .opacity(animationProgress)
+                .animation(.easeInOut(duration: 0.6), value: animationProgress)
+                .transition(.opacity)
+            }
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.ultraThinMaterial)
+                .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
+        )
+    }
+}
+
+struct HeatmapCard: View {
+    let title: String
+    let subtitle: String?
+    let heatmap: [HeatmapDataPoint]
+    let animationProgress: Double
+    let scheme: ColorScheme
+    
+    // Colorful gradient palette
+    private var palette: [Color] { [Color.blue, Color.purple, Color.orange, Color.green] }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.primary)
+                if let subtitle { Text(subtitle).font(.subheadline).foregroundStyle(.secondary) }
+            }
+            
+            if heatmap.isEmpty {
+                EmptyDataPlaceholder(icon: "waveform.path.ecg", text: "No data yet")
+                    .frame(height: 140)
+                    .transition(.opacity)
+            } else {
+                // Represent heatmap as a smooth rectangle grid using Charts
+                Chart(heatmap, id: \.id) { point in
+                    RectangleMark(
+                        x: .value("X", point.x),
+                        y: .value("Y", point.y)
+                    )
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: palette,
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .opacity(min(max(point.value, 0.1), 1.0))
+                }
+                .chartXAxis(.hidden)
+                .chartYAxis(.hidden)
+                .frame(height: 160)
+                .opacity(animationProgress)
+                .animation(.easeInOut(duration: 0.6), value: animationProgress)
+                .transition(.opacity)
+            }
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.ultraThinMaterial)
+                .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
+        )
+    }
+}
+
+struct EmptyDataPlaceholder: View {
+    let icon: String
+    let text: String
+    
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 14)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.gray.opacity(0.12), Color.gray.opacity(0.06)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+            VStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                Text(text)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(8)
+        }
     }
 }
 
