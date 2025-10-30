@@ -1374,7 +1374,6 @@ struct FullscreenMetricCoverView: View {
         ZStack {
             // Background with blur effect - адаптировано для обеих тем
             (scheme == .dark ? Color.black : Color.white)
-                .opacity(scheme == .dark ? 0.6 : 0.8)
                 .ignoresSafeArea()
                 .blur(radius: backgroundBlur)
                 .animation(.easeInOut(duration: 0.3), value: backgroundBlur)
@@ -1839,6 +1838,9 @@ struct AnalyticsScreen: View {
             showContent = true
             pulseAnimation = true
             createFloatingElements()
+            loadMetrics()
+        }
+        .onChange(of: subscriptionManager.isPro) { _ in
             loadMetrics()
         }
     }
@@ -2353,7 +2355,14 @@ extension AnalyticsScreen {
     }
     
     private func loadMetrics() {
-        allMetrics = vm.getAllMetrics(for: app.invoices, currency: app.currency)
+        let allAvailableMetrics = vm.getAllMetrics(for: app.invoices, currency: app.currency)
+        
+        // Filter metrics based on subscription status
+        if subscriptionManager.isPro {
+            allMetrics = allAvailableMetrics
+        } else {
+            allMetrics = allAvailableMetrics.filter { !$0.isPremium }
+        }
         
         // Initialize animation states for each metric
         for metric in allMetrics {
